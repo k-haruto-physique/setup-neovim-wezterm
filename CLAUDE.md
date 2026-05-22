@@ -2,6 +2,20 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## CRITICAL: セッション開始プロトコル
+
+ユーザーが **`hi`** という単独メッセージでセッションを開始したら、最初の応答前に以下を**全て読む**:
+
+1. `CLAUDE.md`（本ファイル）
+2. `memory/` 配下の全 memory ファイル（MEMORY.md インデックス経由）
+3. `docs/initial-prompt.md` — user の方針宣言
+4. `docs/nvim-manual.md` — Neovim 実用ガイド
+5. `docs/keybinds.md` — 全キー早見表
+6. `docs/troubleshooting.md` — 既知の地雷一覧
+7. `README.md` — 全体構成
+
+読み込み完了後、「準備できた。何をやる?」相当の短い挨拶のみ返す（読んだファイル名の列挙は不要）。質問されてから読むのでは遅い。
+
 ## Purpose
 
 Windows 11 上の Neovim + LazyVim + WezTerm 環境を symlink で dotfiles 管理するリポジトリ。本リポジトリが**正本**で、`%LOCALAPPDATA%\nvim` と `%USERPROFILE%\.config\wezterm\wezterm.lua` はここへの symlink。

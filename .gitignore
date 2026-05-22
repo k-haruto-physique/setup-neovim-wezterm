@@ -71,6 +71,9 @@ yarn-error.log*
 .env.*
 !.env.example
 
+# Claude Code: ローカル個人上書き設定（.claude/settings.json は team-wide で追跡）
+.claude/settings.local.json
+
 # ---------- ログ・一時ファイル ----------
 *.log
 *.tmp

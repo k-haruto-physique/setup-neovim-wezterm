@@ -141,18 +141,27 @@ Vim 未経験者が **最初に詰む最大ポイント**。
 | キー | from → to | 用途 |
 |---|---|---|
 | `Esc` | Insert/Visual → **Normal** | デフォルトに戻る |
-| `i` | Normal → Insert | カーソル位置から挿入 |
-| `a` | Normal → Insert | カーソルの**次から**挿入 |
-| `I` | Normal → Insert | 行頭から挿入 |
+| **`Ctrl+[`** | Insert/Visual → **Normal** | `Esc` の代替（IME 透過するので Windows ではこちら推奨） |
+| `Ctrl+c` | Insert/Visual → **Normal** | 同上（一部 autocmd を発火しない違い） |
+| `i` | Normal → Insert | カーソル位置の**前**から挿入 |
+| `a` | Normal → Insert | カーソルの**次**から挿入（append） |
+| `I` | Normal → Insert | 行頭（最初の非空白）から挿入 |
 | `A` | Normal → Insert | **行末から**挿入（超頻出） |
 | `o` | Normal → Insert | 下に**新規行**を作って挿入 |
 | `O` | Normal → Insert | 上に新規行を作って挿入 |
+| `s` | Normal → Insert | 現在 1 文字を削除して挿入（substitute） |
+| `S` | Normal → Insert | 現在**行**を削除して挿入 |
+| `cc` | Normal → Insert | `S` と同じ（change line） |
+| `cw` | Normal → Insert | カーソル位置から単語末尾までを削除して挿入 |
+| `c{motion}` | Normal → Insert | motion 範囲を削除して挿入（例: `ciw`=単語丸ごと書直し、`ci"`=クォート内側書直し） |
+| `C` | Normal → Insert | カーソル位置から**行末まで**を削除して挿入 |
+| `r{char}` | （Normal のまま） | カーソル下 1 文字を `{char}` に置換（Insert に入らない） |
 | `v` | Normal → Visual | 文字選択 |
 | `V` | Normal → Visual Line | 行選択 |
 | `Ctrl+v` | Normal → Visual Block | 矩形選択 |
 | `:` | Normal → Command | Ex コマンド |
 
-> 🚨 **IME 罠**: 日本語 IME ON で `Esc` を押すと IME OFF はされるが Normal に戻らないことがある。Phase 4 で対策予定。当面は `Ctrl+[` を `Esc` 代替として使うのが安全。
+> 🚨 **IME 罠**: 日本語 IME ON で `Esc` を押すと IME OFF はされるが Normal に戻らないことがある。当面は `Ctrl+[` を `Esc` 代替として使うのが安全（IME 透過する）。
 
 ---
 

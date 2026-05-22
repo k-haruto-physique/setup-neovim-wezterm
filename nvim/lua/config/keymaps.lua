@@ -22,3 +22,7 @@ vim.keymap.set("n", "<leader>xe", function()
     local cwd = vim.fn.getcwd()
     os.execute('start "" "' .. cwd .. '"')
 end, { desc = "カレントディレクトリを Explorer で開く" })
+
+-- Neo-tree のルートをホームディレクトリに切替
+-- Space f h (file home)
+vim.keymap.set("n", "<leader>fh", "<cmd>Neotree dir=~<cr>", { desc = "Neo-tree: Home (~) をルートに" })

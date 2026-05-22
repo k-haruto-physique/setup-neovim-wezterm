@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>WezTerm + Neovim Cheat Sheet (A4 Landscape)</title>
+<style>
+  @page {
+    size: A4 landscape;
+    margin: 6mm;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: "Yu Gothic UI", "Meiryo UI", "Segoe UI", system-ui, sans-serif;
+    color: #111;
+    background: #fff;
+    font-size: 8.2pt;
+    line-height: 1.25;
+  }
+  .page {
+    width: 285mm;
+    height: 198mm;
+    padding: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: auto 1fr 1fr;
+    gap: 2.5mm;
+  }
+  header {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 1.2pt solid #333;
+    padding-bottom: 1mm;
+  }
+  header h1 {
+    font-size: 12pt;
+    margin: 0;
+    letter-spacing: 0.5px;
+  }
+  header .sub {
+    font-size: 7.5pt;
+    color: #555;
+  }
+  .box {
+    border: 0.8pt solid #888;
+    border-radius: 2mm;
+    padding: 1.8mm 2.2mm;
+    overflow: hidden;
+  }
+  .box h2 {
+    font-size: 9.2pt;
+    margin: 0 0 1mm 0;
+    padding-bottom: 0.8mm;
+    border-bottom: 0.6pt solid #aaa;
+    color: #1a3a6b;
+    display: flex;
+    justify-content: space-between;
+  }
+  .box h2 .layer {
+    font-size: 7pt;
+    color: #888;
+    font-weight: normal;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 7.8pt;
+  }
+  td {
+    padding: 0.3mm 0.5mm;
+    vertical-align: top;
+    border-bottom: 0.2pt dotted #ddd;
+  }
+  td.k {
+    font-family: "Consolas", "JetBrains Mono", monospace;
+    font-weight: 600;
+    color: #b03030;
+    white-space: nowrap;
+    width: 36%;
+  }
+  td.d { color: #222; }
+  .note {
+    font-size: 6.8pt;
+    color: #666;
+    margin-top: 1mm;
+    font-style: italic;
+  }
+  .star { color: #d09000; }
+  .warn {
+    background: #fff8d8;
+    border-left: 2pt solid #d4a800;
+    padding: 0.8mm 1.5mm;
+    margin-top: 1mm;
+    font-size: 6.8pt;
+  }
+  @media screen {
+    body {
+      background: #ccc;
+      padding: 20px;
+    }
+    .page {
+      background: #fff;
+      width: 297mm;
+      height: 210mm;
+      padding: 6mm;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <h1>WezTerm + Neovim (LazyVim) Cheat Sheet</h1>
+    <span class="sub">setup-neovim-wezterm / Windows 11 / A4 Landscape / ★★★ = 毎日 / ★★ = 週数回</span>
+  </header>
+
+  <!-- Box 1 -->
+  <section class="box">
+    <h2>WezTerm 操作 <span class="layer">★★★ ターミナル</span></h2>
+    <table>
+      <tr><td class="k">Ctrl+Shift+T</td><td class="d">新規タブ</td></tr>
+      <tr><td class="k">Ctrl+Shift+W</td><td class="d">タブ/ペイン閉じる</td></tr>
+      <tr><td class="k">Ctrl+Tab / Shift+Tab</td><td class="d">タブ前後切替</td></tr>
+      <tr><td class="k">Ctrl+Shift+1〜8</td><td class="d">タブ番号ジャンプ</td></tr>
+      <tr><td class="k">Ctrl+Shift+Alt+"</td><td class="d">ペイン上下分割</td></tr>
+      <tr><td class="k">Ctrl+Shift+Alt+%</td><td class="d">ペイン左右分割</td></tr>
+      <tr><td class="k">Ctrl+Shift+←↓↑→</td><td class="d">ペインフォーカス移動</td></tr>
+      <tr><td class="k">Ctrl+Shift+Alt+←↓↑→</td><td class="d">ペインリサイズ</td></tr>
+      <tr><td class="k">Ctrl+Shift+Z</td><td class="d">ペイン最大化トグル</td></tr>
+      <tr><td class="k">Ctrl+Shift+C / V</td><td class="d">コピー / 貼付</td></tr>
+      <tr><td class="k">Ctrl+Shift+F</td><td class="d">スクロールバック検索</td></tr>
+      <tr><td class="k">Ctrl+Shift+X</td><td class="d">コピーモード入（→Box2）</td></tr>
+      <tr><td class="k">Ctrl+Shift+I</td><td class="d">nvim 新規ウィンドウ</td></tr>
+      <tr><td class="k">Ctrl+Shift+N</td><td class="d">claude 新規ウィンドウ</td></tr>
+      <tr><td class="k">Ctrl++ / Ctrl+- / Ctrl+0</td><td class="d">フォント拡大/縮小/リセット</td></tr>
+      <tr><td class="k">Alt+Enter</td><td class="d">フルスクリーン</td></tr>
+    </table>
+  </section>
+
+  <!-- Box 2 -->
+  <section class="box">
+    <h2>WezTerm CopyMode <span class="layer">★★ コピーモード</span></h2>
+    <table>
+      <tr><td class="k">←↓↑→ / h j k l</td><td class="d">カーソル移動（IME ON 時は矢印推奨）</td></tr>
+      <tr><td class="k">w / b / e</td><td class="d">単語 前進 / 後退 / 末尾</td></tr>
+      <tr><td class="k">0 / ^ / $</td><td class="d">行頭 / 最初の非空白 / 行末</td></tr>
+      <tr><td class="k">g / G</td><td class="d">スクロールバック先頭 / 末尾</td></tr>
+      <tr><td class="k">H / M / L</td><td class="d">画面 上 / 中 / 下</td></tr>
+      <tr><td class="k">Ctrl+u / Ctrl+d</td><td class="d">半ページ ↑ / ↓</td></tr>
+      <tr><td class="k">Ctrl+b / Ctrl+f</td><td class="d">1 ページ ↑ / ↓</td></tr>
+      <tr><td class="k">PageUp / PageDown</td><td class="d">1 ページ ↑ / ↓（IME 無影響）</td></tr>
+      <tr><td class="k">Home / End</td><td class="d">スクロールバック先頭 / 末尾</td></tr>
+      <tr><td class="k">v / V / Ctrl+v</td><td class="d">セル / 行 / 矩形 選択開始</td></tr>
+      <tr><td class="k">y / Enter</td><td class="d">コピー + 終了</td></tr>
+      <tr><td class="k">Esc / q / Ctrl+c</td><td class="d">コピーモード終了（コピーなし）</td></tr>
+    </table>
+    <div class="warn">⚠ コピーモード中はカーソルが <b>黄色</b>。黄色くなければ未起動 → IME を OFF にして再度 Ctrl+Shift+X。</div>
+  </section>
+
+  <!-- Box 3 -->
+  <section class="box">
+    <h2>Nvim モード遷移 <span class="layer">★★★ Neovim</span></h2>
+    <table>
+      <tr><td class="k">Esc / Ctrl+[</td><td class="d">→ Normal（Ctrl+[ は IME 透過）</td></tr>
+      <tr><td class="k">Ctrl+c</td><td class="d">→ Normal（autocmd 一部非発火）</td></tr>
+      <tr><td class="k">i</td><td class="d">カーソル前で挿入</td></tr>
+      <tr><td class="k">a</td><td class="d">カーソル後で挿入（append）</td></tr>
+      <tr><td class="k">I</td><td class="d">行頭（最初の非空白）で挿入</td></tr>
+      <tr><td class="k">A</td><td class="d">行末で挿入 ★頻出</td></tr>
+      <tr><td class="k">o / O</td><td class="d">下 / 上に新行 + 挿入</td></tr>
+      <tr><td class="k">s</td><td class="d">1 文字削除 + 挿入</td></tr>
+      <tr><td class="k">S / cc</td><td class="d">行削除 + 挿入</td></tr>
+      <tr><td class="k">cw</td><td class="d">単語末尾まで削除 + 挿入</td></tr>
+      <tr><td class="k">c{motion}</td><td class="d">範囲削除 + 挿入（ciw, ci"）</td></tr>
+      <tr><td class="k">C</td><td class="d">行末まで削除 + 挿入</td></tr>
+      <tr><td class="k">r{char}</td><td class="d">1 文字置換（Insert に入らない）</td></tr>
+      <tr><td class="k">v / V / Ctrl+v</td><td class="d">Visual 文字 / 行 / 矩形</td></tr>
+      <tr><td class="k">:</td><td class="d">Command（Ex コマンド）</td></tr>
+    </table>
+  </section>
+
+  <!-- Box 4 -->
+  <section class="box">
+    <h2>Nvim 移動 <span class="layer">★★★ Normal</span></h2>
+    <table>
+      <tr><td class="k">h j k l / ←↓↑→</td><td class="d">1 文字</td></tr>
+      <tr><td class="k">w / b / e</td><td class="d">単語 前進 / 後退 / 末尾</td></tr>
+      <tr><td class="k">0 / ^ / $</td><td class="d">行頭 / 最初の非空白 / 行末</td></tr>
+      <tr><td class="k">gg / G</td><td class="d">ファイル先頭 / 末尾</td></tr>
+      <tr><td class="k">{N}G or :{N}</td><td class="d">N 行目へ</td></tr>
+      <tr><td class="k">Ctrl+d / Ctrl+u</td><td class="d">半画面 ↓ / ↑</td></tr>
+      <tr><td class="k">Ctrl+f / Ctrl+b</td><td class="d">1 画面 ↓ / ↑</td></tr>
+      <tr><td class="k">zz / zt / zb</td><td class="d">カーソル行を画面 中 / 上 / 下</td></tr>
+      <tr><td class="k">/pattern  ?pattern</td><td class="d">前方 / 後方検索</td></tr>
+      <tr><td class="k">n / N</td><td class="d">次 / 前マッチ</td></tr>
+      <tr><td class="k">*</td><td class="d">カーソル下単語を検索</td></tr>
+      <tr><td class="k">f{c} / t{c}</td><td class="d">行内で次の {c} へ / の直前へ</td></tr>
+      <tr><td class="k">; / ,</td><td class="d">f/t 繰返し / 逆方向</td></tr>
+      <tr><td class="k">% </td><td class="d">対応括弧へジャンプ</td></tr>
+      <tr><td class="k">:noh</td><td class="d">検索ハイライトを消す</td></tr>
+    </table>
+  </section>
+
+  <!-- Box 5 -->
+  <section class="box">
+    <h2>Nvim 編集 <span class="layer">★★★ Normal</span></h2>
+    <table>
+      <tr><td class="k">x</td><td class="d">1 文字削除</td></tr>
+      <tr><td class="k">dd</td><td class="d">行削除（カット）</td></tr>
+      <tr><td class="k">dw / d$ / D</td><td class="d">単語 / 行末まで / 行末まで</td></tr>
+      <tr><td class="k">d{motion}</td><td class="d">範囲削除（diw, di"）</td></tr>
+      <tr><td class="k">yy / yw / y$</td><td class="d">ヤンク（コピー）</td></tr>
+      <tr><td class="k">p / P</td><td class="d">後ろ / 前 へ貼付</td></tr>
+      <tr><td class="k">u</td><td class="d">Undo（連打で過去へ）</td></tr>
+      <tr><td class="k">Ctrl+r</td><td class="d">Redo</td></tr>
+      <tr><td class="k">J</td><td class="d">下の行を現在行末に連結</td></tr>
+      <tr><td class="k">&gt;&gt; / &lt;&lt;</td><td class="d">行を右 / 左へインデント</td></tr>
+      <tr><td class="k">=G</td><td class="d">カーソル位置から末尾まで自動整形</td></tr>
+      <tr><td class="k">. (ピリオド)</td><td class="d">直前の編集を繰り返し</td></tr>
+      <tr><td class="k">:%s/old/new/g</td><td class="d">バッファ全置換</td></tr>
+      <tr><td class="k">:%s/old/new/gc</td><td class="d">確認つき全置換</td></tr>
+    </table>
+    <div class="note">textobj: iw aw / i" a" / i( a( / it at / ip ap （inside / around）</div>
+  </section>
+
+  <!-- Box 6 -->
+  <section class="box">
+    <h2>Nvim LazyVim (Space) <span class="layer">★★★ プラグイン</span></h2>
+    <table>
+      <tr><td class="k">Space f f</td><td class="d">ファイル検索（Telescope）</td></tr>
+      <tr><td class="k">Space f r</td><td class="d">最近開いたファイル</td></tr>
+      <tr><td class="k">Space /  または s g</td><td class="d">プロジェクト全体 grep</td></tr>
+      <tr><td class="k">Space e</td><td class="d">neo-tree トグル</td></tr>
+      <tr><td class="k">Space f h</td><td class="d">neo-tree ルートを ~ へ ★ローカル追加</td></tr>
+      <tr><td class="k">Space b b</td><td class="d">バッファ一覧</td></tr>
+      <tr><td class="k">Space b d / b D</td><td class="d">バッファ閉じる / 強制</td></tr>
+      <tr><td class="k">Shift+H / Shift+L</td><td class="d">前 / 次 バッファ</td></tr>
+      <tr><td class="k">g d / g r / g I / g y</td><td class="d">定義 / 参照 / 実装 / 型</td></tr>
+      <tr><td class="k">K</td><td class="d">ホバー（型・docs）</td></tr>
+      <tr><td class="k">Space c a / c r / c f</td><td class="d">コードアクション / リネーム / 整形</td></tr>
+      <tr><td class="k">[d / ]d</td><td class="d">前 / 次 診断（エラー）</td></tr>
+      <tr><td class="k">Space x x</td><td class="d">診断一覧（Trouble）</td></tr>
+      <tr><td class="k">Space g g / g b</td><td class="d">LazyGit / line blame</td></tr>
+      <tr><td class="k">Space x o / x e</td><td class="d">OS 既定アプリ / Explorer 開く（ローカル）</td></tr>
+      <tr><td class="k">Space l  /  :Mason</td><td class="d">Lazy 管理 / Mason</td></tr>
+      <tr><td class="k">:Tutor</td><td class="d">公式チュートリアル（30 分・必須）</td></tr>
+    </table>
+  </section>
+</div>
+</body>
+</html>
