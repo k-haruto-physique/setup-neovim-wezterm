@@ -186,7 +186,11 @@ wezterm.on("update-status", function(window, pane)
     window:set_right_status("")
     window:set_left_status("")
 
-    local overrides = {}
+    -- 過去ハンドラ残骸が opacity を 0.85 等に書き換えるのを抑止するため、
+    -- 毎フレーム明示的に 0.95 を override する。
+    local overrides = {
+        window_background_opacity = 0.95,
+    }
 
     -- コピーモード等のキーテーブルアクティブ時: カーソル黄色化
     if window:active_key_table() then
@@ -200,9 +204,6 @@ wezterm.on("update-status", function(window, pane)
             },
         }
     end
-
-    -- 2026-05-22: nvim 動的透過率切替は Windows TUI で安定しなかったため撤去。
-    -- 静的 config.window_background_opacity = 0.95 で統一済み。
 
     window:set_config_overrides(overrides)
 end)

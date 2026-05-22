@@ -1,32 +1,12 @@
--- Markdown の見た目を素朴に: 背景塗りつぶし・conceal をオフ。
--- 「ちかちか感」を消す目的。シンタックスハイライトは Treesitter に任せる。
+-- Markdown の見た目を素朴に: 背景塗りつぶし系の装飾はすべてオフ。
+-- 文字の色分けは Treesitter シンタックスハイライトに任せる（プラグインなしで動く）。
 
 return {
-    -- LazyVim lang.markdown が入れる render-markdown.nvim を素朴化
+    -- LazyVim lang.markdown が入れる render-markdown.nvim を完全無効化
+    -- 個別オプションでチューニングするより全停止のほうがクリーン
     {
         "MeanderingProgrammer/render-markdown.nvim",
-        opts = {
-            heading = {
-                -- 見出し行の背景色を無効化
-                backgrounds = {},
-                -- 左マージンの装飾アイコンも無効化
-                signs = {},
-            },
-            code = {
-                -- コードブロックの背景塗りを無効化
-                style = "language",  -- "full" (背景塗り) → "language" (右上に言語名のみ)
-                sign = false,
-                border = "none",
-            },
-            quote = {
-                -- 引用ブロックの装飾を控えめに
-                repeat_linebreak = false,
-            },
-            -- パイプ表のセル背景も控えめに
-            pipe_table = {
-                style = "normal",  -- "full" (装飾あり) より控えめ
-            },
-        },
+        enabled = false,
     },
 
     -- markdown ファイルでは conceal をオフにして
@@ -53,6 +33,49 @@ return {
             opts.linters_by_ft = opts.linters_by_ft or {}
             opts.linters_by_ft.markdown = {}
             return opts
+        end,
+    },
+
+    -- Treesitter / 旧 syntax / tokyonight が markdown 系グループに乗せている bg を全て NONE に。
+    -- foreground 色だけは温存して、塗りつぶしだけを消す目的。
+    {
+        "nvim-treesitter/nvim-treesitter",
+        init = function()
+            vim.api.nvim_create_autocmd("ColorScheme", {
+                pattern = "*",
+                callback = function()
+                    local groups = {
+                        -- Treesitter (nvim >= 0.10 の @markup.* 系)
+                        "@markup.heading", "@markup.heading.markdown",
+                        "@markup.heading.1", "@markup.heading.1.markdown",
+                        "@markup.heading.2", "@markup.heading.2.markdown",
+                        "@markup.heading.3", "@markup.heading.3.markdown",
+                        "@markup.heading.4", "@markup.heading.4.markdown",
+                        "@markup.heading.5", "@markup.heading.5.markdown",
+                        "@markup.heading.6", "@markup.heading.6.markdown",
+                        "@markup.raw", "@markup.raw.block",
+                        "@markup.raw.markdown", "@markup.raw.markdown_inline",
+                        "@markup.raw.block.markdown", "@markup.raw.delimiter.markdown",
+                        "@markup.quote", "@markup.quote.markdown",
+                        "@markup.list", "@markup.list.markdown",
+                        "@markup.link", "@markup.link.label.markdown",
+                        "@markup.link.url.markdown",
+                        -- 旧 syntax グループ
+                        "markdownH1", "markdownH2", "markdownH3",
+                        "markdownH4", "markdownH5", "markdownH6",
+                        "markdownH1Delimiter", "markdownH2Delimiter",
+                        "markdownH3Delimiter", "markdownH4Delimiter",
+                        "markdownH5Delimiter", "markdownH6Delimiter",
+                        "markdownHeadingDelimiter",
+                        "markdownCode", "markdownCodeBlock", "markdownCodeDelimiter",
+                        "markdownBlockquote", "markdownListMarker",
+                    }
+                    for _, g in ipairs(groups) do
+                        -- guibg=NONE のみで上書き（fg は既存値を保つ）
+                        pcall(vim.cmd, string.format("highlight %s guibg=NONE", g))
+                    end
+                end,
+            })
         end,
     },
 }
