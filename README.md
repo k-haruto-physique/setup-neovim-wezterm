@@ -39,9 +39,10 @@ setup-neovim-wezterm/
 │   └── profile.ps1            # $PROFILE 用
 └── docs/
     ├── initial-prompt.md      # 初回依頼内容
-    ├── setup.md               # 初回セットアップログ
-    ├── keybinds.md            # 覚えるべきキーバインド一覧
-    └── troubleshooting.md     # トラブル対応記録
+    ├── nvim-manual.md         # Neovim/LazyVim 実用ガイド（VSCode 対応表つき）
+    ├── keybinds.md            # 全キーバインド一覧（チートシート）
+    ├── troubleshooting.md     # トラブル対応記録
+    └── legacy-nvim/           # 過去の手書き lazy.nvim 設定（参考保全）
 ```
 
 ### 実体配置

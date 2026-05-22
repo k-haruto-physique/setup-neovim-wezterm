@@ -14,8 +14,10 @@ config.use_ime = true
 ----------------------------------------------------
 -- 背景の透過・ぼかし（Windows用）
 ----------------------------------------------------
--- 元記事に合わせた透過率（0〜1、0に近いほど透過）
-config.window_background_opacity = 0.85
+-- 透過率（0〜1、0に近いほど透過）
+-- 2026-05-22: 当初 0.85 だったが、nvim 用 0.95 への動的切替が Windows TUI で
+-- 安定しないため 0.95 で統一。Acrylic はやや控えめだが nvim/claude 両方読みやすい。
+config.window_background_opacity = 0.95
 -- Windows 11 のシステムバックドロップ（Mac の macos_window_background_blur 相当）
 -- 選択肢: "Acrylic" / "Mica" / "Tabbed" / "Auto"
 config.win32_system_backdrop = "Auto"
@@ -107,6 +109,15 @@ end)
 -- ClearPattern は副作用で search overlay を表示することがあるため使わない
 config.keys = {
     { key = "x", mods = "CTRL|SHIFT", action = act.ActivateCopyMode },
+    -- 2026-05-22: nvim を別ウィンドウで起動（上モニターへドラッグ用）
+    -- Ctrl+Shift+I → 新規 WezTerm ウィンドウで nvim .
+    { key = "I", mods = "CTRL|SHIFT", action = act.SpawnCommandInNewWindow({
+        args = { "nvim", "." },
+    })},
+    -- Ctrl+Shift+N → 新規ウィンドウで claude（下モニターで複数 claude 用）
+    { key = "N", mods = "CTRL|SHIFT", action = act.SpawnCommandInNewWindow({
+        args = { "claude" },
+    })},
 }
 
 config.key_tables = {
@@ -171,26 +182,29 @@ config.key_tables = {
 -- UI 要素を追加しない、リサイズもしない、透過変化もしない。
 -- set_right_status は旧 addon 残骸対策で空文字を上書き。
 ----------------------------------------------------
-wezterm.on("update-status", function(window, _pane)
+wezterm.on("update-status", function(window, pane)
     window:set_right_status("")
     window:set_left_status("")
+
+    local overrides = {}
+
+    -- コピーモード等のキーテーブルアクティブ時: カーソル黄色化
     if window:active_key_table() then
-        -- コピーモード等: カーソルを黄色に
-        window:set_config_overrides({
-            colors = {
-                cursor_bg = "#FFEB3B",
-                cursor_fg = "#000000",
-                cursor_border = "#FFEB3B",
-                tab_bar = {
-                    background = "rgba(0, 0, 0, 0)",
-                    inactive_tab_edge = "none",
-                },
+        overrides.colors = {
+            cursor_bg = "#FFEB3B",
+            cursor_fg = "#000000",
+            cursor_border = "#FFEB3B",
+            tab_bar = {
+                background = "rgba(0, 0, 0, 0)",
+                inactive_tab_edge = "none",
             },
-        })
-    else
-        -- 通常: デフォルトに戻す
-        window:set_config_overrides({})
+        }
     end
+
+    -- 2026-05-22: nvim 動的透過率切替は Windows TUI で安定しなかったため撤去。
+    -- 静的 config.window_background_opacity = 0.95 で統一済み。
+
+    window:set_config_overrides(overrides)
 end)
 
 return config

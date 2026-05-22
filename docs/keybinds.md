@@ -61,7 +61,9 @@ WezTerm + LazyVim + PowerShell の **このリポジトリのセットアップ�
 
 | キー | 動作 |
 |---|---|
-| `Ctrl+Shift+T` | 新規タブ |
+| **`Ctrl+Shift+I`** | **nvim を新規ウィンドウで起動**（上モニター用） |
+| **`Ctrl+Shift+N`** | **claude を新規ウィンドウで起動**（下モニターで複数 claude 用） |
+| `Ctrl+Shift+T` | 新規タブ（同一ウィンドウ内） |
 | `Ctrl+Shift+W` | タブ/ペイン閉じる |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | タブ前後切替 |
 | `Ctrl+Shift+1〜8` | タブを番号で直接ジャンプ |
