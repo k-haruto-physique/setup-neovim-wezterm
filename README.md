@@ -1,0 +1,108 @@
+# setup-neovim-wezterm
+
+Windows 11 上の Neovim + LazyVim + WezTerm 環境を、シンボリックリンクで dotfiles 管理するリポジトリ。
+
+## 結論
+
+- **リポジトリを正本、実体側 (`%LOCALAPPDATA%\nvim` 等) はシンボリックリンク**で運用する
+- LazyVim をベースに、SQL / Markdown / Lua / Python 4 言語を `:LazyExtras` で有効化
+- WezTerm 既存設定（タブバー下端、Acrylic 透過、自動リロード）は保持したまま統合
+
+## 理由
+
+| 観点 | シンボリックリンク方式 | コピー方式 |
+|---|---|---|
+| Git 追跡 | ◎ 編集が即時反映 | △ 同期スクリプト要 |
+| 復元の容易さ | ◎ `mklink` 1 行 | × 手動コピー |
+| 学習コスト | ○ 管理者権限が初回必要 | ◎ ファイル操作のみ |
+| 中長期再現性 | ◎ | △ |
+
+戦略上、「凡庸な選択」を避けつつ可処分時間 (朝晩各 1-2h) を圧迫しない最小構成を採る。
+
+## ディレクトリ構成
+
+```text
+setup-neovim-wezterm/
+├── README.md                  # 本ファイル
+├── .gitignore
+├── nvim/                      # %LOCALAPPDATA%\nvim へリンク
+│   ├── init.lua               # LazyVim スターター由来
+│   ├── lua/
+│   │   ├── config/            # autocmds, keymaps, options, lazy
+│   │   └── plugins/           # カスタムプラグイン
+│   ├── lazyvim.json           # LazyVim Extras 管理
+│   ├── stylua.toml
+│   └── .neoconf.json
+├── wezterm/                   # %USERPROFILE%\.config\wezterm へリンク
+│   └── wezterm.lua
+├── powershell/
+│   └── profile.ps1            # $PROFILE 用
+└── docs/
+    ├── initial-prompt.md      # 初回依頼内容
+    ├── setup.md               # 初回セットアップログ
+    ├── keybinds.md            # 覚えるべきキーバインド一覧
+    └── troubleshooting.md     # トラブル対応記録
+```
+
+### 実体配置
+
+| リポジトリ側（正本） | 実体側（リンク） | コマンド |
+|---|---|---|
+| `setup-neovim-wezterm\nvim` | `%LOCALAPPDATA%\nvim` | `mklink /D` |
+| `setup-neovim-wezterm\wezterm\wezterm.lua` | `%USERPROFILE%\.config\wezterm\wezterm.lua` | `mklink` |
+
+シンボリックリンク作成は **PowerShell 管理者権限** が必要。
+
+## セットアップ手順（概要）
+
+詳細は `docs/setup.md` に記録する。
+
+### Phase 1: 環境準備（完了済み）
+
+- [x] Neovim インストール (`winget install Neovim.Neovim`)
+- [x] JetBrainsMono Nerd Font インストール
+- [ ] WezTerm `wezterm.lua` へのフォント反映確認
+- [ ] 依存ツール (Git, Node.js, ripgrep, fd) 確認
+
+### Phase 2: LazyVim 導入
+
+1. 依存ツール確認
+2. 既存 `%LOCALAPPDATA%\nvim` のバックアップ（存在時のみ）
+3. リポジトリ内 `nvim/` に LazyVim スターターを clone → `.git` 削除
+4. `%LOCALAPPDATA%\nvim` からシンボリックリンク作成
+5. `wezterm.lua` をリポジトリへ移動 + シンボリックリンク化
+6. 初回 `nvim` 起動でプラグイン自動 DL
+7. `:checkhealth` で動作確認
+
+### Phase 3: 基本操作習得
+
+- `:Tutor` を実行
+- 必須キーバインドを `docs/keybinds.md` に整理
+
+### Phase 4: 開発用カスタマイズ
+
+- `:LazyExtras` で `lang.sql` / `lang.markdown` / `lang.python` / `lang.lua` を有効化
+- 日本語 IME × Esc 問題の対処
+- WezTerm + Neovim + Claude Code の連携
+- `powershell/profile.ps1` にエイリアス追加
+
+## 編集対象の主言語
+
+**SQL (PostgreSQL/PostGIS), Markdown, Lua, Python**
+
+## トラブル対応の指針
+
+直近の教訓（Claude Code npm 版残骸問題）から：
+
+- PATH 関連変更後は **必ず新規ターミナル**で確認
+- 実体は `where.exe <cmd>` で確認
+- 削除前に `Get-ChildItem` で事前チェック
+- 「物理削除のみ」を信頼する（リネーム/退避は再混入の温床）
+
+## 環境
+
+- OS: Windows 11 (build 26200)
+- ターミナル: WezTerm
+- シェル: PowerShell（cmd.exe は使用しない）
+- パッケージ管理: winget
+- Claude Code: ネイティブ版 2.1.147

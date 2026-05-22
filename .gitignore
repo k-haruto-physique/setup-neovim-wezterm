@@ -1,0 +1,77 @@
+# ---------- Neovim / LazyVim ----------
+# LazyVim はリポジトリ側（nvim/）を正本にするが、実体側でしか生成されない
+# キャッシュ・状態ファイル類は混入を防ぐ
+
+# LazyVim / lazy.nvim が生成するロックファイル以外の状態
+nvim/lazy-lock.json.bak
+
+# プラグイン本体（実体側 %LOCALAPPDATA%\nvim-data に展開されるはずだが念のため）
+nvim/lazy/
+nvim/plugin/packer_compiled.lua
+
+# Lua 言語サーバ / フォーマッタの作業ファイル
+.luarc.json.bak
+luac.out
+*.luac
+
+# Neovim swap / undo / backup
+*.swp
+*.swo
+*.swn
+*.un~
+*~
+
+# Neovim ShaDa（履歴）
+*.shada
+*.shada.tmp
+
+# ---------- OS / エディタ ----------
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS（共同編集者対策）
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# JetBrains / VSCode（個人設定の混入防止）
+.idea/
+.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# ---------- 言語ツール ----------
+# Python（仮想環境・キャッシュ）
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node（LazyVim 依存だが、リポジトリには不要）
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ---------- ローカル秘密情報 ----------
+# 個人マシン固有の上書き設定
+*.local
+*.local.lua
+.env
+.env.*
+!.env.example
+
+# ---------- ログ・一時ファイル ----------
+*.log
+*.tmp
+*.bak
