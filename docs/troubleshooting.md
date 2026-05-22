@@ -114,6 +114,42 @@ PATH 順で勝者が決まるが、片方が自動更新で先行すると silen
 
 ---
 
+## 6. Markdown のヘッダー/コードブロックに背景塗りが残る
+
+### 症状
+
+`lang.markdown` Extras 有効化後、`render-markdown.nvim` を `enabled = false` にしても、見出し行・コードブロック・引用ブロックの**背景色塗り**が消えない。Treesitter の文字色付けは効いているのにベタ塗り背景だけが残る。
+
+### 原因
+
+**2 つの罠が重なっていた**:
+
+1. **`render-markdown.nvim` のさらに下層に、Treesitter の `@markup.*` ハイライトグループ自体に背景色が設定されている**。tokyonight などの colorscheme が下記グループに `bg` を入れているため、render-markdown を無効化しても下の層が残る:
+   - `@markup.heading.1.markdown` 〜 `@markup.heading.6.markdown`
+   - `@markup.raw.block.markdown`（コードフェンス）
+   - `@markup.quote.markdown`
+   - 旧 syntax 互換の `markdownH1`〜`markdownCodeBlock` も同様
+
+2. **`ColorScheme` autocmd だけでは取り逃す**。LazyVim は起動時に colorscheme をロード → `ColorScheme` イベント発火、そのあとにプラグイン spec の `init` が走るため、**autocmd が登録される時点で ColorScheme は既に発火し終わっている**。よって登録した autocmd が一度も呼ばれず、bg=NONE 上書きが効かない。
+
+### 対策
+
+`init` で 3 イベントに同じ callback を登録する:
+
+```lua
+vim.api.nvim_create_autocmd("ColorScheme",   { pattern = "*",  callback = strip })
+vim.api.nvim_create_autocmd("VimEnter",      { callback = strip })  -- 起動直後の決定打
+vim.api.nvim_create_autocmd("FileType",      { pattern = { "markdown" }, callback = strip })
+```
+
+`VimEnter` が決定打で、起動直後の colorscheme ロード済状態で必ず実行される。`FileType markdown` は実際に md を開いた時の念押し。
+
+### ステータス
+
+- 2026-05-22: `nvim/lua/plugins/markdown.lua` で対処完了。`render-markdown.nvim` 自体は `enabled = false` のまま、Treesitter のグループ bg だけを上書き除去している。
+
+---
+
 ## 5. 既存 `%LOCALAPPDATA%\nvim` が LazyVim ではなく手書き lazy.nvim 設定だった
 
 ### 症状
