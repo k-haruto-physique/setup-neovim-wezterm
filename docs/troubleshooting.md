@@ -167,3 +167,50 @@ LazyVim スターターを入れる前提だったが、既に手書き lazy.nvi
 ### ステータス
 
 - 2026-05-22: 完了。次フェーズで LazyVim スターターをクリーン導入予定。
+
+---
+
+## 7. nvim 起動時 `Unmet requirements for nvim-treesitter: C compiler ❌`
+
+### 症状
+
+LazyVim 起動直後（`VeryLazy` autocmd）に赤字エラー:
+
+```
+Error in User Autocommands for "VeryLazy":
+Unmet requirements for nvim-treesitter `main`:
+- ❌ `C compiler`
+- ✅ `curl`
+- ✅ `tar`
+- ✅ `tree-sitter (CLI)`
+Press ENTER or type command to continue
+```
+
+`curl` / `tar` / `tree-sitter` は揃っているが **C コンパイラだけ欠落**。
+
+### 原因
+
+`nvim-treesitter`（`main` ブランチ）は各言語パーサを**実行環境でCソースからその場コンパイル**する設計。Windows 11 素の状態には gcc/clang が無いため要件未達。放置するとパーサ生成に失敗し、シンタックスハイライト・インデントが効かない。
+
+### 対策
+
+エラーメッセージ自身が案内する winget コマンドで **WinLibs (MinGW-w64 / gcc)** を導入:
+
+```powershell
+winget install --id=BrechtSanders.WinLibs.POSIX.UCRT -e
+```
+
+導入後の確認（**PATH 関連の教訓どおり新規ターミナルで実体確認**）:
+
+| 確認項目 | コマンド | 期待値 |
+|---|---|---|
+| 実体パス | `where.exe gcc` | `...\WinLibs.POSIX.UCRT_..._8wekyb3d8bbwe\mingw64\bin\gcc.exe` |
+| バージョン | `gcc --version` | `gcc.exe (MinGW-W64 x86_64-ucrt-posix-seh ...) 16.1.0` |
+| nvim 側 | `:checkhealth nvim-treesitter` | `C compiler` が ✅ |
+
+User PATH に追加された bin（新規シェルで有効・既存シェルは要再起動）:
+`C:\Users\81809\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin`
+
+### ステータス
+
+- 2026-05-26: WinLibs gcc **16.1.0**（UCRT / POSIX threads）を winget で導入完了。インストール直後の既存シェルでは PATH 未反映のため、実体パス直叩きで `gcc --version` 動作を確認済。**WezTerm / Neovim を再起動**すれば PATH 反映され、`:checkhealth nvim-treesitter` で C compiler ✅ になる見込み。
