@@ -14,3 +14,11 @@ vim.opt.titlestring = "%t - NVIM (%{getcwd()})"
 vim.g.dbs = {
     { name = "kanro_db (local)", url = "postgresql://postgres@localhost:5432/kanro_db" },
 }
+
+-- PostgreSQL クライアント (psql) を nvim 自身の PATH に通す保険。
+-- 親 WezTerm が PATH 追記より前に起動していると、子 nvim から psql が見えず dadbod が DB に繋げない。
+-- nvim 起動時に bin を明示追加する（重複は回避）。これで WezTerm 完全再起動なしでも psql が効く。
+local pg_bin = "C:\\Program Files\\PostgreSQL\\18\\bin"
+if vim.fn.isdirectory(pg_bin) == 1 and not string.find(vim.env.PATH or "", pg_bin, 1, true) then
+    vim.env.PATH = (vim.env.PATH or "") .. ";" .. pg_bin
+end
