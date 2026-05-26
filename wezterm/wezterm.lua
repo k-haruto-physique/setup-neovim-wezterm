@@ -157,6 +157,13 @@ config.key_tables = {
         { key = "PageDown", mods = "NONE", action = act.CopyMode("PageDown") },
         { key = "Home",     mods = "NONE", action = act.CopyMode("MoveToScrollbackTop") },
         { key = "End",      mods = "NONE", action = act.CopyMode("MoveToScrollbackBottom") },
+        -- 検索マッチ間ジャンプ（検索自体は Ctrl+Shift+F から明示的に開始する）
+        { key = "n", mods = "NONE", action = act.CopyMode("NextMatch") },
+        { key = "N", mods = "NONE", action = act.CopyMode("PriorMatch") },
+        -- 意図しない検索バー誤発火の防止: コピーモード内で / ? を無効化（押しても何も起きない）。
+        -- 検索したい時は Ctrl+Shift+F で明示的に入る。
+        { key = "/", mods = "NONE", action = act.Nop },
+        { key = "?", mods = "NONE", action = act.Nop },
         -- 選択モード
         { key = "v", mods = "NONE", action = act.CopyMode({ SetSelectionMode = "Cell" }) },
         { key = "V", mods = "NONE", action = act.CopyMode({ SetSelectionMode = "Line" }) },

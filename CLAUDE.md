@@ -50,7 +50,7 @@ LSP 子プロセスが瞬間的に foreground を奪っても opacity が落ち�
 - `Ctrl+Shift+N` → 新規ウィンドウで `claude`（下モニターで複数 claude 用）
 - Neovim: `<leader>xo` = OS 既定アプリで開く（HTML→ブラウザ、PDF→Edge 等）/ `<leader>xe` = エクスプローラで cwd 開く
 
-CopyMode key_table は明示定義: 矢印キーを優位 + hjkl 併設。`PageUp/Down/Home/End` も同様の理由で追加。
+CopyMode key_table は明示定義: 矢印キーを優位 + hjkl 併設。`PageUp/Down/Home/End` も同様の理由で追加。`n`/`N` で検索マッチ間ジャンプ（検索開始は `Ctrl+Shift+F` のみ）。**意図しない検索バー誤発火を防ぐため `/` `?` は `act.Nop` で無効化**（検索パターンのリセットは検索バー内 `Ctrl+U`）。
 
 ## 編集対象言語
 
