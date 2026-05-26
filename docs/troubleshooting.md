@@ -214,3 +214,99 @@ User PATH に追加された bin（新規シェルで有効・既存シェルは
 ### ステータス
 
 - 2026-05-26: WinLibs gcc **16.1.0**（UCRT / POSIX threads）を winget で導入完了。インストール直後の既存シェルでは PATH 未反映のため、実体パス直叩きで `gcc --version` 動作を確認済。**WezTerm / Neovim を再起動**すれば PATH 反映され、`:checkhealth nvim-treesitter` で C compiler ✅ になる見込み。
+
+---
+
+## 8. SQL に LSP が無い（補完・定義ジャンプ不可） → postgres_lsp 導入
+
+### 症状
+
+`.sql` を開いても `K`（hover）も `g d`（定義ジャンプ）も補完も効かない。整形（`:w` で sqlfluff）と Treesitter 色分けは効く。
+
+### 原因
+
+LazyVim の `lang.sql` Extras は **整形/lint (sqlfluff) しか入れず、LSP サーバを入れない**。Mason 実体を直接確認したところ SQL 系 LSP のバイナリが一つも無かった（2026-05-26 調査）。設定漏れではなく Extras の仕様。
+
+### 対策（採用: postgres_lsp）
+
+候補比較の結論:
+
+| 候補 | 判定 | 理由 |
+|---|---|---|
+| `sqls` | ✗ | GitHub **archived**・Mason から消えた・lspconfig 非推奨 |
+| `sqlls`（sql-language-server） | △ | 汎用。PG 固有構文に弱く、補完に DB 接続必須 |
+| **`postgres_lsp`（postgres-language-server）** | ◎ **採用** | PostgreSQL 特化。本物の PG パーサ (libpg_query) で PostGIS も正しく解釈。**DB 未接続でも**構文診断・型チェック・関数補完・hover が動く。Supabase が活発にメンテ |
+
+設定: `nvim/lua/plugins/sql-lsp.lua`（lspconfig 登録 + Mason ensure_installed）。
+
+### 導入時の地雷（重要・mason registry v0.25.0 / lspconfig 実定義で確認済）
+
+1. **名前を間違えると Mason が起動時にエラーを出す**（初回これで踏んだ）。正しい名前:
+   - Mason パッケージ名 = **`postgres-language-server`**（×`postgrestools`。旧称につられると `ensure_installed` で「パッケージ無し」エラー）
+   - 実体バイナリ = `postgres-language-server`
+   - lspconfig サーバ名 = `postgres_lsp`
+   - `:MasonInstall postgres-language-server` で入れる。
+2. **lspconfig 既定 cmd は `{ "postgres-language-server", "lsp-proxy" }`** で正しい → `sql-lsp.lua` で cmd を上書きしない（最初 `postgrestools` で上書きしていたのが誤り）。
+3. mason-lspconfig 連携は使わず `mason = false` + mason.nvim の `ensure_installed` に一本化（決定的に・名前の取り違え防止）。registry には `neovim.lspconfig: postgres_lsp` マッピングが存在する。
+4. **起動条件が厳しい（最重要）**: lspconfig 定義が `workspace_required = true` / `root_markers = { "postgres-language-server.jsonc" }`。**プロジェクト直下にこのファイルが無いと attach しない**（単独 `.sql` では黙ったまま＝エラーも出ない）。使いたいプロジェクトで opt-in する設計。
+5. **設定ファイル名は `postgres-language-server.jsonc`**（root_markers で確定）。これが LSP 起動トリガ兼 DB 接続設定。`db` セクションでスキーマ補完解禁。接続情報は **git に commit しない**（要 `.gitignore`）。
+
+### ステータス
+
+- 2026-05-26: 当初 `sql-lsp.lua` で **パッケージ名を `postgrestools` と誤記** → nvim 起動時に Mason が「パッケージ無し」エラー。registry / lspconfig 実定義を確認し `postgres-language-server` に修正・cmd 上書きも撤去。
+- 2026-05-26（追記・真因判明）: 再起動でエラーが再発し続けた**本当の原因は Mason でも LSP でもなく、`sql-lsp.lua` のファイル末尾に `</content>` という不正タグが混入していたこと**（書き込み時のアーティファクト）。`</content>` の `/` が Lua のコードとして解釈され「`sql-lsp.lua:30: unexpected symbol near '/'`」= 構文エラー → プラグイン読込前に落ちるため `mason.log`/`lsp.log` には出ず、起動画面右上に "Failed to load plugins.sql-lsp" と表示。スクリーンショットで文言を確認して特定。同種の `</content>` 混入が `docs/` の 4 ファイル（cheatsheet / lang-workflows / practice-drills / vim-mental-model）にもあり除去済（md なので無害だった）。
+  - 教訓: 「プラグインが読めない」系は **まず該当 .lua の構文を疑う**。`nvim --headless -c "lua assert(loadfile([[path]]))" -c "qa!"` で一発判定できる。ログに出ない＝読込前のパースエラー。
+- 現状: `sql-lsp.lua` は `return {}` でクリーンに無効化（構文 OK を headless nvim で検証済）。SQL 作業は dadbod + sqlfluff + treesitter で回る。再有効化したくなったら、真因は単なる混入タグだったので**正しい設定（本項 1〜5）を入れれば素直に動く見込み**。
+
+---
+
+## 9. dadbod-ui で DB に繋いでも「中身が見えない」 → psql が PATH に無い
+
+### 症状
+
+`:DBUIToggle` で接続は出るが、展開してもテーブルが見えない／結果が出ない。「db postgres にしたけど見えない」。
+
+### 原因
+
+**vim-dadbod は PostgreSQL と話すのに `psql`（PostgreSQL クライアント）を内部で呼ぶ。** これが PATH に無いと、接続はできても問い合わせが空振りして中身が見えない。
+
+実体調査（2026-05-26）:
+- PostgreSQL 18 + PostGIS 3.6.2 は**インストール済・稼働中**（サービス `postgresql-x64-18` Running、5432 LISTEN）。pgAdmin 4 もあり。
+- しかし `where.exe psql` が**見つからない** = User PATH に PostgreSQL の bin が無い。`psql.exe` の実体は `C:\Program Files\PostgreSQL\18\bin\psql.exe`。
+
+> EDB / winget 版 PostgreSQL は **bin を自動で PATH に通さない**。これが Windows での dadbod 詰まりの定番。
+
+### 対策
+
+User PATH に `C:\Program Files\PostgreSQL\18\bin` を追記（`setx` は PATH を 1024 文字で切る事故があるため使わず、User スコープへ安全に追記）:
+
+```powershell
+$bin = "C:\Program Files\PostgreSQL\18\bin"
+$userPath = [Environment]::GetEnvironmentVariable("Path","User")
+if (-not ($userPath.Split(';') -contains $bin)) {
+  [Environment]::SetEnvironmentVariable("Path", $userPath.TrimEnd(';') + ';' + $bin, "User")
+}
+```
+
+そのあと **PATH 教訓どおり**:
+1. **新規ターミナル**を開く（既存シェル・既存 WezTerm は旧 PATH のまま）
+2. `where.exe psql` で実体確認（`...\PostgreSQL\18\bin\psql.exe` が出れば OK）
+3. **WezTerm を完全再起動**（nvim は起動元ターミナルの環境を継承するため、古い WezTerm 配下の nvim には新 PATH が届かない）
+4. nvim で `:DBUIToggle` → 接続展開 → テーブルが見えるか確認
+
+接続が一覧に無ければ `:DBUIAddConnection` で追加（`postgresql://postgres:＜インストール時のパスワード＞@localhost:5432/postgres`）。
+
+### ステータス
+
+- 2026-05-26: User PATH に `C:\Program Files\PostgreSQL\18\bin` 追記済（Claude が実行・確認済）。**新規ターミナル + WezTerm 完全再起動**でユーザー側が `where.exe psql` と `:DBUIToggle` を確認するのが残タスク。
+
+### 追記: 「見えない」の真因はもう一つあった ― 接続先 DB の間違い
+
+PATH（psql）に加え、**接続先 DB を間違えていた**のが主因。ユーザーは dadbod を初期 DB `postgres`（空）に向けていたが、実データは **`kanro_db`**（水道管路 GIS 業務 DB・14 スキーマ・テーブル 500 超）にあった。空 DB を覗いていたので「見えない」。
+
+対策:
+1. `nvim/lua/config/options.lua` に `vim.g.dbs` を定義し **接続先を `kanro_db` に固定**（`:DBUIToggle` に「kanro_db (local)」が最初から出る）。URL は `postgresql://postgres@localhost:5432/kanro_db`（パスワードは書かない）。
+2. 認証は **`%APPDATA%\postgresql\pgpass.conf`**（`localhost:5432:*:postgres:＜pw＞`）。psql/dadbod が無人で読む。
+3. **検証済（2026-05-26）**: `psql -w -d kanro_db`（pgpass 経由・プロンプト無し）で接続成功・21 スキーマ取得。dadbod も同経路。残るは WezTerm 完全再起動のみ。
+
+> 教訓: dadbod で「接続は出るのに空」のときは **(a) psql が PATH にあるか (b) 接続先 DB 名が正しいか** の 2 点を必ず疑う。MCP（`mcp__postgres__query`）で実 DB の中身を確認すると DB 名の取り違えが一発で分かる。

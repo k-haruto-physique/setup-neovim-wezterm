@@ -88,6 +88,10 @@ LazyVim Extras 有効化済: `lang.sql`, `lang.python`, `lang.markdown`（lang.l
 - `docs/initial-prompt.md` — 初回依頼の原文（user の意思決定背景）
 - `docs/nvim-manual.md` — VSCode 対応表つきの Neovim 実用ガイド
 - `docs/keybinds.md` — 全レイヤー（WezTerm + Neovim + PowerShell）のキー早見表
+- `docs/cheatsheet-1page.md` — 毎日使う最小キーだけの 1 枚（常時表示/印刷用）
+- `docs/lang-workflows.md` — 言語別実戦フロー（SQL/Python/Markdown/Lua）。Mason 実体ベース。**SQL は LSP 未導入**の注記あり
+- `docs/vim-mental-model.md` — 「動詞+名詞」文法・レジスタ・buffer/window/tab の思考モデル（初心者向け）
+- `docs/practice-drills.md` — Phase 別の具体練習メニュー（毎日 10-15 分）
 - `docs/troubleshooting.md` — 遭遇問題と対処の永久記録（新規問題は追記必須）
 - `docs/legacy-nvim/` — 旧 lazy.nvim 設定の参照保全
 

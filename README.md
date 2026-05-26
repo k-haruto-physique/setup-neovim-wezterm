@@ -40,7 +40,11 @@ setup-neovim-wezterm/
 └── docs/
     ├── initial-prompt.md      # 初回依頼内容
     ├── nvim-manual.md         # Neovim/LazyVim 実用ガイド（VSCode 対応表つき）
-    ├── keybinds.md            # 全キーバインド一覧（チートシート）
+    ├── keybinds.md            # 全キーバインド一覧（網羅版）
+    ├── cheatsheet-1page.md    # 毎日使う最小キー 1 枚（常時表示/印刷用）
+    ├── lang-workflows.md      # 言語別実戦フロー（SQL/Python/Markdown/Lua）
+    ├── vim-mental-model.md    # 「動詞+名詞」文法など思考モデル（初心者向け）
+    ├── practice-drills.md     # Phase 別の具体練習メニュー
     ├── troubleshooting.md     # トラブル対応記録
     └── legacy-nvim/           # 過去の手書き lazy.nvim 設定（参考保全）
 ```
