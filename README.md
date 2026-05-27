@@ -37,6 +37,8 @@ setup-neovim-wezterm/
 │   └── wezterm.lua
 ├── powershell/
 │   └── profile.ps1            # $PROFILE 用
+├── claude/                    # %USERPROFILE%\.claude へリンク
+│   └── statusline.ps1         # Claude Code statusLine スクリプト
 └── docs/
     ├── initial-prompt.md      # 初回依頼内容
     ├── nvim-manual.md         # Neovim/LazyVim 実用ガイド（VSCode 対応表つき）
@@ -55,6 +57,7 @@ setup-neovim-wezterm/
 |---|---|---|
 | `setup-neovim-wezterm\nvim` | `%LOCALAPPDATA%\nvim` | `mklink /D` |
 | `setup-neovim-wezterm\wezterm\wezterm.lua` | `%USERPROFILE%\.config\wezterm\wezterm.lua` | `mklink` |
+| `setup-neovim-wezterm\claude\statusline.ps1` | `%USERPROFILE%\.claude\statusline.ps1` | `mklink` |
 
 シンボリックリンク作成は **PowerShell 管理者権限** が必要。
 

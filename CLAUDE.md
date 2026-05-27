@@ -25,6 +25,7 @@ Windows 11 上の Neovim + LazyVim + WezTerm 環境を symlink で dotfiles 管�
 - **編集は必ずリポジトリ側のパス**で行う:
   - `setup-neovim-wezterm/nvim/...`
   - `setup-neovim-wezterm/wezterm/wezterm.lua`
+  - `setup-neovim-wezterm/claude/statusline.ps1`（Claude Code statusLine。`%USERPROFILE%\.claude\statusline.ps1` へ symlink）
 - 実体側 (`%LOCALAPPDATA%\nvim` 等) 経由で Edit ツールを叩くと **`Refusing to write through symlink` エラー**が出る。リポジトリ側パスへ切り替えること。
 - symlink 構成は管理者権限 PowerShell で作成済。再構築が必要なら `docs/troubleshooting.md` 参照。
 
