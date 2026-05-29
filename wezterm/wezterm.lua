@@ -118,6 +118,12 @@ config.keys = {
     { key = "N", mods = "CTRL|SHIFT", action = act.SpawnCommandInNewWindow({
         args = { "claude" },
     })},
+    -- 2026-05-29: ペイン入れ替え（分割の向きは変えられないが中身の位置交換は可能）
+    -- Ctrl+Shift+S → アクティブペインと選択ペインをスワップ。各ペインにラベルが出るので
+    -- 表示された文字を打って相手を指定（3 ペイン以上でも狙って交換できる）。
+    { key = "S", mods = "CTRL|SHIFT", action = act.PaneSelect({ mode = "SwapWithActive" }) },
+    -- Ctrl+Shift+E → ペイン回転。2 ペインなら押すだけで位置交換（ラベル不要・最速）。
+    { key = "E", mods = "CTRL|SHIFT", action = act.RotatePanes("Clockwise") },
 }
 
 config.key_tables = {
