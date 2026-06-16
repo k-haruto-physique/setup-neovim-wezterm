@@ -6,10 +6,29 @@
 #   left  - [directory][ git_branch ][ git_status ]
 #   right - model (Claude-specific) | context (Claude-specific) | time (%R)
 
-# Force UTF-8 I/O so Nerd Font glyphs survive on Japanese Windows (default CP932 breaks the output)
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-[Console]::InputEncoding  = [System.Text.Encoding]::UTF8
-$OutputEncoding = [System.Text.Encoding]::UTF8
+# Read stdin (Claude's JSON) as UTF-8 FIRST — before touching any Console encoding.
+# Root cause of "N of M panes show blank / ◆ Claude ▸ ?": setting [Console]::InputEncoding while
+# stdin is redirected/piped makes the subsequent stdin read return 0 bytes (or, with the old
+# unguarded setter, throws and blanks the line). We decode input ourselves here, so we never set
+# InputEncoding at all. (Verified: identical read WITHOUT the InputEncoding set returns the full
+# payload; WITH it, 0 bytes.)
+$raw = ""
+try {
+    $stdin  = [Console]::OpenStandardInput()
+    $reader = New-Object System.IO.StreamReader($stdin, [System.Text.Encoding]::UTF8)
+    $raw    = $reader.ReadToEnd()
+    $reader.Dispose()
+} catch {
+    $raw = ""
+}
+# NOTE: deliberately NO reference to the automatic $input variable anywhere in this script.
+# Merely mentioning $input makes PowerShell pre-drain stdin into it at startup, after which
+# [Console]::OpenStandardInput() reads 0 bytes -> the "◆ Claude / ▸ ?" fallback on every pane.
+
+# Only NOW make stdout UTF-8 so Nerd Font glyphs survive on Japanese Windows (default CP932 would
+# mangle them). Guarded: the setter can throw with piped stdout (no real console); never abort.
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
+try { $OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
 
 # --- ANSI 24-bit colors (Catppuccin Frappe palette — Mocha の落ち着き版) ---
 # Frappe は Mocha より彩度・明度を抑えた公式バリアントで、長時間見ても疲れにくい
@@ -50,8 +69,6 @@ function Format-ResetIn($resetsAt) {
         return "${m}m"
     } catch { return "" }
 }
-
-$raw = $input | Out-String
 
 # --- Dump raw stdin so WezTerm-side reader (wezterm.lua) can pick it up ---
 # Failure here must never block the statusline output.
@@ -224,15 +241,15 @@ try {
             $u = [math]::Round($fiveHour.used_percentage)
             $c = Get-StageColor $u
             $r = Format-ResetIn $fiveHour.resets_at
-            $resetIn = if ($r -ne "") { "${DIM}↺${r}${RESET}" } else { "" }
-            $parts5h += "${DIM}◐ 5h:${c}${u}% ${resetIn}".TrimEnd()
+            $resetIn = if ($r -ne "") { "${DIM}↺${r}" } else { "" }
+            $parts5h += ("${DIM}◐ 5h:${c}${u}% ${resetIn}").TrimEnd() + $RESET
         }
         if ($null -ne $sevenDay -and $null -ne $sevenDay.used_percentage) {
             $u = [math]::Round($sevenDay.used_percentage)
             $c = Get-StageColor $u
             $r = Format-ResetIn $sevenDay.resets_at
-            $resetIn = if ($r -ne "") { "${DIM}↺${r}${RESET}" } else { "" }
-            $parts5h += "${DIM}◑ 7d:${c}${u}% ${resetIn}".TrimEnd()
+            $resetIn = if ($r -ne "") { "${DIM}↺${r}" } else { "" }
+            $parts5h += ("${DIM}◑ 7d:${c}${u}% ${resetIn}").TrimEnd() + $RESET
         }
         if ($parts5h.Count -gt 0) {
             $rateLimitStr = $parts5h -join " "
@@ -278,5 +295,5 @@ if ($gitBranch -ne "") {
     $line2 += "  ⎇ $gitBranch$gitStatus"
 }
 
-Write-Output $line1
-Write-Output $line2
+Write-Output ($line1 + $RESET)
+Write-Output ($line2 + $RESET)
