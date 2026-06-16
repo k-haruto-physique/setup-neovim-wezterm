@@ -357,3 +357,42 @@ claude mcp remove postgres -s user; claude mcp remove playwright -s user; claude
 
 - **MCP が「list では OK なのに /doctor で timeout」=同時コールド起動の競合**。`claude mcp list` の逐次 ✓ に騙されない。真偽は `%LOCALAPPDATA%\claude-cli-nodejs\Cache\<proj>\mcp-logs-<srv>\*.jsonl` の `Successfully connected in Nms` / `timed out` で確定する。
 - **stdio 系 MCP は `npx` を介さず実体直叩きが最速・最安定**。npx は「未導入でも動く」利便性と引換えに毎回レジストリ解決コストを払う。常用するなら固定版グローバル導入＋直叩き一択。
+
+---
+
+## 11. 同名 `"LazyVim/LazyVim"` spec に `init` を複数書くと黙って 1 つしか動かない
+
+### 症状
+
+- markdown を開いても `conceallevel` が 0 にならない（実測 2 のまま）＝ `markdown.lua` の conceal オフ設定が効かない。
+- 非 tokyonight カラースキームに対する「透過保険」ColorScheme autocmd（`colorscheme.lua`）も発火しない。
+- エラーは一切出ない（黙って死ぬので気づきにくい）。
+
+### 原因
+
+`nvim/lua/plugins/` の複数ファイルが同じプラグイン名 `"LazyVim/LazyVim"` の spec に **それぞれ `init` を書いていた**（`colorscheme.lua` 透過保険 / `markdown.lua` conceallevel=0 / `markdown.lua` strip_md_bg の計 3 つ）。
+
+lazy.nvim は同名 spec の fragment を**マージするが、`init`/`config` は `opts` のように合成せず last-wins（最後の 1 つだけ採用）**する。`opts`/`cmd`/`event`/`ft`/`keys` はリスト/テーブルマージされるが、`init`/`config` は metatable の `__index` チェーンでスカラ解決され、最も後ろの fragment の値だけが残る（`lazy.core.plugin` の `M._values` に init は含まれない）。fragment 順 = **ファイル名アルファベット順 → ファイル内の配列順**。
+
+結果、`markdown.lua` 内の最後の init（strip_md_bg）だけが生き残り、他 2 つの init は一度も呼ばれていなかった。
+
+### 対策
+
+**同名 spec の `init` は 1 つに統合する**（衝突自体を消す）。`colorscheme.lua` の単一 `"LazyVim/LazyVim"` spec の init 内で、透過保険・conceallevel=0・strip_md_bg の 3 つの autocmd 登録をまとめて行うようにした。`markdown.lua` からは `"LazyVim/LazyVim"` spec を削除（render-markdown 無効化と nvim-lint の spec は別プラグインなので残す）。
+
+> ❌ **`config/autocmds.lua` への移設は今回は不適**。autocmds.lua は **VeryLazy で読まれる**ため、そこで `VimEnter` autocmd を登録しても VimEnter は既に発火済みで動かず、`ColorScheme` も既にロード済テーマに fire しない。init は colorscheme ロード前に登録される必要がある（strip_md_bg が VimEnter を「決定打」にしている理由）。よって init 集約が正解。
+
+### 検証
+
+```bash
+nvim --headless probe.md -c 'lua vim.defer_fn(function() print(vim.wo.conceallevel) vim.cmd("qa!") end,1200)'   # → 0
+# ColorScheme autocmd 一覧に透過保険 + strip_md_bg の両方が出ること
+```
+
+### ステータス
+
+- 2026-06-16: `colorscheme.lua` に 3 autocmd を集約・`markdown.lua` の重複 spec を削除。headless で conceallevel=0・ColorScheme autocmd 8 件を確認。各 spec ファイルに「init を分けて書くな」と注記済。
+
+### 教訓
+
+- **同名プラグイン spec に `init`/`config` を分散させない**。複数の起動時処理が必要なら 1 つの init に集約するか、別々の一意なプラグイン名にぶら下げる。`opts` は安全にマージされるが `init`/`config` は last-wins で黙って消える。
