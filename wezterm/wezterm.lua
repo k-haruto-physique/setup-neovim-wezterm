@@ -107,6 +107,24 @@ end)
 ----------------------------------------------------
 -- 入口を明示バインド（デフォルト依存をやめる保険）
 -- ClearPattern は副作用で search overlay を表示することがあるため使わない
+
+-- 2026-06-05: ファイルパスを nvim（新規ウィンドウ）で開く共通関数。
+-- Ctrl+Click（hyperlink）と Ctrl+Shift+O（QuickSelect）両方から呼ぶ。
+local function open_path_in_nvim(window, pane, path)
+    if not path or path == "" then return end
+    path = path:gsub("^%s+", ""):gsub("%s+$", "")
+    local spawn = { args = { "nvim", path } }
+    -- ペイン cwd を nvim の作業ディレクトリへ（相対パス解決のため。OSC 7 必須）
+    local cwd_uri = pane:get_current_working_dir()
+    if cwd_uri then
+        -- 新しめの WezTerm は Url オブジェクト（.file_path）、古いと文字列
+        local cwd = cwd_uri.file_path or tostring(cwd_uri)
+        cwd = cwd:gsub("^file://[^/]*", ""):gsub("^/([A-Za-z]:)", "%1")
+        if cwd ~= "" then spawn.cwd = cwd end
+    end
+    window:perform_action(act.SpawnCommandInNewWindow(spawn), pane)
+end
+
 config.keys = {
     { key = "x", mods = "CTRL|SHIFT", action = act.ActivateCopyMode },
     -- 2026-05-22: nvim を別ウィンドウで起動（上モニターへドラッグ用）
@@ -124,6 +142,29 @@ config.keys = {
     { key = "S", mods = "CTRL|SHIFT", action = act.PaneSelect({ mode = "SwapWithActive" }) },
     -- Ctrl+Shift+E → ペイン回転。2 ペインなら押すだけで位置交換（ラベル不要・最速）。
     { key = "E", mods = "CTRL|SHIFT", action = act.RotatePanes("Clockwise") },
+    -- 2026-06-05: 画面に出ているファイルパスを QuickSelect で拾って nvim で開く。
+    -- Ctrl+Shift+O → 対象拡張子のパスにラベル付与 → 文字を打つと、その 1 ファイルを
+    -- 新規 WezTerm ウィンドウの nvim で開く（ペイン cwd 基準で相対パスも解決）。
+    -- Ctrl+Shift+O: マウスで選択中のパスがあればそれを nvim で開く（最確実・IME 無関係）。
+    -- 選択が無ければ数字ラベル QuickSelect にフォールバック。
+    { key = "O", mods = "CTRL|SHIFT", action = wezterm.action_callback(function(window, pane)
+        local sel = window:get_selection_text_for_pane(pane)
+        if sel and sel:gsub("%s", "") ~= "" then
+            open_path_in_nvim(window, pane, sel)
+        else
+            window:perform_action(act.QuickSelectArgs({
+                label = "open in nvim",
+                -- 数字ラベル: IME ON でも素通しする（a/s/d… は IME に吸われるため避ける）
+                alphabet = "123456789",
+                patterns = {
+                    "(?:[A-Za-z]:)?[\\w.\\-/\\\\]+\\.(?:md|markdown|lua|py|sql|txt|json|toml|ya?ml|tsx?|jsx?|sh|ps1|conf|ini|cfg|html?|css|rs|go)",
+                },
+                action = wezterm.action_callback(function(w, p)
+                    open_path_in_nvim(w, p, w:get_selection_text_for_pane(p))
+                end),
+            }), pane)
+        end
+    end)},
 }
 
 config.key_tables = {
@@ -219,6 +260,27 @@ wezterm.on("update-status", function(window, pane)
     end
 
     window:set_config_overrides(overrides)
+end)
+
+----------------------------------------------------
+-- 2026-06-05: Ctrl+Click でファイルパスを nvim で開く
+-- ターミナルに出ているパスを hyperlink 化し、Ctrl+Click で nvim（新規ウィンドウ）起動。
+-- ラベル入力が不要なので IME の影響を一切受けない（クリックするだけ）。
+----------------------------------------------------
+config.hyperlink_rules = wezterm.default_hyperlink_rules()
+table.insert(config.hyperlink_rules, {
+    -- 相対/絶対パス + 主要拡張子。マッチ文字列を nvimopen: スキームに載せて open-uri へ渡す。
+    regex = [[(?:[A-Za-z]:)?[\w.\-/\\]+\.(?:md|markdown|lua|py|sql|txt|json|toml|ya?ml|tsx?|jsx?|sh|ps1|conf|ini|cfg|html?|css|rs|go)]],
+    format = "nvimopen:$0",
+})
+
+wezterm.on("open-uri", function(window, pane, uri)
+    local prefix = "nvimopen:"
+    if uri:sub(1, #prefix) == prefix then
+        open_path_in_nvim(window, pane, uri:sub(#prefix + 1))
+        return false -- デフォルトの URL オープンを抑止
+    end
+    -- それ以外（http 等）はデフォルト動作に任せる
 end)
 
 return config
