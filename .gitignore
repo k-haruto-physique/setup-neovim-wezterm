@@ -74,6 +74,15 @@ yarn-error.log*
 # Claude Code: ローカル個人上書き設定（.claude/settings.json は team-wide で追跡）
 .claude/settings.local.json
 
+# PostgreSQL LSP のローカル接続設定（docs/lang-workflows.md がパスワード同梱で作成を指示）
+postgres-language-server.jsonc
+# pgpass 認証ファイル（万一リポジトリ内に置かれた場合の保険）
+pgpass
+pgpass.conf
+*.pgpass
+# sqlfluff ローカル方言設定（個人環境差分の混入防止）
+.sqlfluff
+
 # ---------- ログ・一時ファイル ----------
 *.log
 *.tmp

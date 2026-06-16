@@ -1,0 +1,9 @@
+# EOL を LF に統一する（core.autocrlf=true 環境での CRLF 混入・差分汚染を防ぐ）。
+# dotfiles / Lua / 設定は LF 一本でよい。PowerShell も LF で問題なく動く。
+* text=auto eol=lf
+
+# 明示的にバイナリ扱い（差分・EOL 変換の対象外）
+*.pdf  binary
+*.png  binary
+*.jpg  binary
+*.ico  binary
