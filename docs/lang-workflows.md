@@ -12,9 +12,9 @@ SQL / Python / Markdown / Lua を **このリポジトリの LazyVim で実際�
 | **Python** | `pyright` ✅ | `ruff` ✅ | `ruff` ✅ | フル装備 ◎ |
 | **Lua** | `lua-language-server` ✅ | `stylua` ✅ | LSP 内蔵 | フル装備 ◎ |
 | **Markdown** | `marksman` ✅ | `markdownlint-cli2` / `markdown-toc` | **無効化済**（意図的）| LSP あり・preview なし ○ |
-| **SQL** | `postgres_lsp`（導入設定済・要初回 install）✅ | `sqlfluff` ✅ | `sqlfluff` / `postgres_lsp` ✅ | 設定完了・初回 install 待ち ○ |
+| **SQL** | **無効化中**（`sql-lsp.lua` が `return {}`）❌ | `sqlfluff` ✅ | `sqlfluff` ✅ | sqlfluff + dadbod-ui + treesitter のみ ○ |
 
-> **SQL は当初 LSP なし**（sqlfluff だけ）だったが、2026-05-26 に `postgres_lsp` 導入を決定（`nvim/lua/plugins/sql-lsp.lua`）。Mason パッケージ名は **`postgres-language-server`**。プロジェクトに `postgres-language-server.jsonc` がある時だけ起動する opt-in 方式（下記 SQL 節）。
+> **SQL は LSP なし**（補完・定義ジャンプ・hover は効かない）。`postgres_lsp` 導入を 2026-05-26 に検討したが、現状 `nvim/lua/plugins/sql-lsp.lua` は `return {}` で**クリーンに無効化**されている。SQL 作業は **sqlfluff（整形/lint）＋ dadbod-ui（DB 閲覧）＋ treesitter（色分け）** で回す。再有効化したい場合の正規手順は `docs/troubleshooting.md` 第 8 項（Mason パッケージ名 `postgres-language-server`、`postgres-language-server.jsonc` がある時だけ起動する opt-in 方式）。
 
 ---
 
@@ -144,18 +144,23 @@ LSP・フォーマッタの実体は Mason が `%LOCALAPPDATA%\nvim-data\mason\`
 
 ---
 
-## SQL（postgres_lsp + dadbod-ui + sqlfluff）◎
+## SQL（dadbod-ui + sqlfluff、LSP なし）○
 
-PostgreSQL / PostGIS 用。SQL は **3 つのツールが役割分担**する:
+PostgreSQL / PostGIS 用。
+
+> ❌ **現状 SQL の LSP は無効**（`nvim/lua/plugins/sql-lsp.lua` が `return {}`）。`.sql` を開いても補完・定義ジャンプ・`K` hover・構文診断は**効かない**。再有効化手順は `docs/troubleshooting.md` 第 8 項。本節下部「（参考）postgres_lsp を再有効化する場合」は戻した後にのみ当てはまる。
+
+いま実際に動くのは **3 つ＋色分け**:
 
 | ツール | 役割 | pgAdmin で言うと |
 |---|---|---|
-| `postgres_lsp`（postgres-language-server） | SQL を**書く**補助：補完・構文/型エラー・hover | クエリエディタの入力支援 |
 | `vim-dadbod-ui`（lang.sql で既存） | DB に**繋ぐ**：接続・スキーマツリー閲覧・クエリ実行・結果表示 | **pgAdmin 本体そのもの** |
 | `vim-dadbod-completion`（既存） | 繋いだ DB の実テーブル/カラムを補完 | 入力中のテーブル候補 |
 | `sqlfluff` | 整形 + lint | — |
+| `treesitter` | 構文の色分け | シンタックスハイライト |
+| ~~`postgres_lsp`~~ | 補完・構文/型エラー・hover | **現在無効**（再有効化で利用可） |
 
-整形・lint は `sqlfluff`、書く補助は `postgres_lsp`（2026-05-26 導入・`nvim/lua/plugins/sql-lsp.lua`）、**DB クライアント（pgAdmin 的な利用）は `vim-dadbod-ui`**。
+整形・lint は `sqlfluff`、**DB クライアント（pgAdmin 的な利用）は `vim-dadbod-ui`**。書く補助（LSP）は現状なし。
 
 ### pgAdmin 的に DB を触る（dadbod-ui）
 
@@ -174,9 +179,11 @@ PostgreSQL / PostGIS 用。SQL は **3 つのツールが役割分担**する:
 
 **pgAdmin との差**: 接続・ツリー閲覧・クエリ実行・結果表示・補完は nvim で完結。ただし**結果グリッドのセル直接編集・ER 図・サーバ管理 GUI・EXPLAIN 可視化は pgAdmin/DBeaver が上**。重い視覚作業は GUI 併用が定石。
 
-### 初回セットアップ（1 回だけ・必須）
+### （参考）postgres_lsp を再有効化する場合
 
-`postgres_lsp` 本体は Mason パッケージ **`postgres-language-server`**（旧称 postgrestools ではない）。`sql-lsp.lua` の `ensure_installed` で**次回 nvim 起動時に自動 DL** される。すぐ入れたいなら手動:
+> ⚠️ ここから「DB 接続でスキーマ補完を解禁」までは **`sql-lsp.lua` を `return {}` から正規設定へ戻した後**にのみ当てはまる（正本: `docs/troubleshooting.md` 第 8 項）。現状は LSP 無効のため `.sql` を開いても attach せず、以下の hover/補完/構文診断は動かない。
+
+**初回セットアップ**: `postgres_lsp` 本体は Mason パッケージ **`postgres-language-server`**（旧称 postgrestools ではない）。再有効化したら `sql-lsp.lua` に lspconfig 登録 + `ensure_installed` を書く（現状は両方とも無い）。すぐ入れたいなら手動:
 
 ```vim
 :MasonInstall postgres-language-server
@@ -184,14 +191,14 @@ PostgreSQL / PostGIS 用。SQL は **3 つのツールが役割分担**する:
 
 > ⚠️ **この LSP はプロジェクトに `postgres-language-server.jsonc` が無いと attach しない**（lspconfig: `workspace_required = true`, `root_markers = postgres-language-server.jsonc`）。単独の `.sql` を開いても**黙ったまま＝エラーも出ない**。使いたいプロジェクト直下に下記の設定ファイルを置いて初めて起動する。普段は邪魔しない opt-in 方式。
 
-### 日常フロー
+**日常フロー**（再有効化後）
 
 1. `postgres-language-server.jsonc` がある プロジェクトで `.sql` を開く → postgres_lsp が attach（`K` で hover、構文エラーを即検出）
 2. 入力中にキーワード・関数の補完（DB 接続時はテーブル/カラムも）
 3. 保存 `:w` → `sqlfluff` が整形
 4. 赤波線は postgres_lsp（構文・型）と sqlfluff（lint）の両方 → `]d` で巡回
 
-### 効く範囲（DB 接続の有無で変わる）
+**効く範囲（再有効化後・DB 接続の有無で変わる）**
 
 | 機能 | DB 未接続 | DB 接続時 |
 |---|---|---|
@@ -203,7 +210,7 @@ PostgreSQL / PostGIS 用。SQL は **3 つのツールが役割分担**する:
 
 > **まず DB 未接続で使い始めて OK**。本物の PostgreSQL パーサなので `ST_Intersects(...)` 等の PostGIS も正しく解釈する。テーブル/カラム補完が欲しくなったら下記で DB を繋ぐ。
 
-### DB 接続でスキーマ補完を解禁（任意・Phase 2）
+**DB 接続でスキーマ補完を解禁（再有効化後・任意）**
 
 SQL を編集する**プロジェクトの直下**に設定ファイル **`postgres-language-server.jsonc`** を置く（このファイルが LSP の起動トリガも兼ねる）。中身:
 

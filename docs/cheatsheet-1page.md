@@ -69,7 +69,7 @@
 |---|---|---|
 | `Space f f` | ファイル名で開く | Ctrl+P |
 | `Space /` | プロジェクト全文 grep | Ctrl+Shift+F |
-| `Space e` | ファイラ開閉（neo-tree） | サイドバー |
+| `Space e` | ファイラ開閉（snacks explorer） | サイドバー |
 | `Space f r` | 最近開いたファイル | — |
 | `/文字` → `n`/`N` | 今のファイル内検索 → 次/前 | Ctrl+F |
 | `:noh` | 検索ハイライト消す | — |

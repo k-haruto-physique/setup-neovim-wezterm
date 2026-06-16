@@ -35,7 +35,7 @@ WezTerm + LazyVim + PowerShell の **このリポジトリのセットアップ�
 | 4 | `:q` | 終了（変更あれば `:q!` で破棄） | Neovim |
 | 5 | `Space` | **LazyVim Leader（メニュー出現）** | Neovim |
 | 6 | `Space + f + f` | ファイル検索（Telescope） | Neovim |
-| 7 | `Space + e` | ファイラ開く（neo-tree） | Neovim |
+| 7 | `Space + e` | ファイラ開く（snacks explorer） | Neovim |
 | 8 | `Ctrl+Shift+T` | 新規タブ | WezTerm |
 | 9 | `Ctrl+Shift+Alt+"` | ペイン分割（上下） | WezTerm |
 | 10 | `Ctrl+Shift+矢印` | ペイン移動 | WezTerm |
@@ -44,7 +44,7 @@ WezTerm + LazyVim + PowerShell の **このリポジトリのセットアップ�
 
 ## 🪟 WezTerm: ペイン・タブ・ウィンドウ
 
-**現在の設定は WezTerm デフォルト**（`wezterm.lua` line 94-100 でカスタム解除済）。
+**現在の設定は WezTerm デフォルト**（`wezterm.lua` の「キーバインド」コメントブロック直下、コメントアウトされた `config.keys`/`config.key_tables`/`config.leader` の 4 行でカスタム解除済）。
 
 ### ペイン操作 ★★★
 
@@ -137,7 +137,7 @@ WezTerm + LazyVim + PowerShell の **このリポジトリのセットアップ�
 | `Alt+Enter` | フルスクリーン切替 |
 | `Ctrl+Shift+L` | デバッグオーバーレイ |
 
-> 💡 **再カスタマイズしたい場合**: `wezterm/wezterm.lua` line 97-100 のコメントを外せば、過去の tmux 風キーバインド（`keybinds.lua`、leader = `Ctrl+Q`）が復活。今は学習の妨げになるためデフォルトを推奨。
+> 💡 **再カスタマイズしたい場合**: `wezterm/wezterm.lua` のコメントアウトされた `config.keys`/`config.key_tables`/`config.leader` 行を外せば、過去の tmux 風キーバインド（`keybinds.lua`、leader = `Ctrl+Q`）が復活。今は学習の妨げになるためデフォルトを推奨。
 
 ---
 
@@ -317,10 +317,11 @@ Vim 未経験者が **最初に詰む最大ポイント**。
 
 | キー | 動作 |
 |---|---|
-| `Space e` | **neo-tree トグル**（ファイラ） |
-| `Space E` | neo-tree をカレントディレクトリ起点で開く |
+| `Space e` / `Space f e` | **snacks explorer トグル**（ファイラ、root 起点） |
+| `Space E` / `Space f E` | snacks explorer を cwd 起点で開く |
 
-**neo-tree 内**: `a` 新規、`d` 削除、`r` リネーム、`y` コピー、`p` 貼付、`Enter` 開く、`H` 隠しファイル切替
+**snacks explorer 内**: `a` 新規、`d` 削除、`r` リネーム、`Enter` 開く、`H` 隠しファイル(dotfiles)トグル、`I` gitignore 対象トグル、`?` 全キー表示（**リフレッシュ `R` は無い**）
+**neo-tree を使う場合**: `:Neotree` コマンドで開く（キーバインドは未割当）
 
 ### ウィンドウ分割 ★★
 

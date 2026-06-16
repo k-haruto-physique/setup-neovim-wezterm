@@ -34,15 +34,14 @@ Windows 11 上の Neovim + LazyVim + WezTerm 環境を symlink で dotfiles 管�
 - **WezTerm**: `config.automatically_reload_config = true`。ファイル保存で即座に再読込。ただし `wezterm.on(...)` 登録イベントハンドラは reload で**解除されない**ため、addon 系の挙動変更は WezTerm の完全再起動（プロセス kill）が必要なケースがある。
 - **Neovim**: `:Lazy reload <plugin>` か `:qa` → `nvim` 再起動が確実。
 
-## WezTerm の nvim 検出 (重要・自前実装)
+## WezTerm の透過率（現状: 静的 0.95 統一 / nvim 検出は廃止済）
 
-`pane_is_nvim()` が **4 段検出**で透過率を 0.85 → 0.95 に動的切替:
-1. `pane:get_user_vars().IS_NVIM == "1"` ← nvim 側 `nvim/lua/config/options.lua` が OSC 1337 で送信（最強シグナル）
-2. ペインタイトルに `"NVIM"`（`titlestring = "%t - NVIM (..)"` 固定）
-3. foreground プロセス名 = `nvim` / `nvim.exe`
-4. foreground の children に nvim
+透過率は静的 `config.window_background_opacity = 0.95`（`wezterm/wezterm.lua`）で統一。
+**nvim ペインを検出して透過率を動的切替する仕組み（`pane_is_nvim()` / OSC 1337 `IS_NVIM` 送信 / 0.85↔0.95 切替）は実装していない**。当初は動的切替を検討したが Windows TUI で `get_user_vars()`・title・foreground プロセス検出のいずれも不安定（LSP 子プロセスが一瞬 foreground を奪う等）で廃止した。経緯は `docs/troubleshooting.md` 第 2 項。
 
-LSP 子プロセスが瞬間的に foreground を奪っても opacity が落ちないよう冗長化済。
+残っているのは次の 2 つのみ:
+- `nvim/lua/config/options.lua` の `titlestring = "%t - NVIM (%{getcwd()})"`（ペイン名で nvim を視認しやすくする用途。透過率制御には未使用）
+- `wezterm.lua` の `update-status` ハンドラが、過去 addon ハンドラ残骸による opacity 書換えを抑止するため毎フレーム 0.95 を明示 override
 
 ## キーバインド（このリポジトリ独自）
 
@@ -80,7 +79,7 @@ LazyVim Extras 有効化済: `lang.sql`, `lang.python`, `lang.markdown`（lang.l
 
 観察された慣習:
 - 件名は短く目的のみ（70 char 以下）
-- Co-Authored-By 行: `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>`
+- Co-Authored-By 行: `Co-Authored-By: <現在のセッションのモデル名> <noreply@anthropic.com>`（モデル名は版を固定せず、その時の環境指定に従う。例: `Claude Opus 4.8 (1M context)`）
 - HEREDOC で commit message を渡す（改行を保つため）
 
 ## ドキュメント map
