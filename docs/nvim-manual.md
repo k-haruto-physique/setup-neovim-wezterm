@@ -68,7 +68,7 @@ LazyVim では `:Dashboard` で出るはず。試してダメなら方法 A 推�
 
 ---
 
-## 📂 VSCode 風サイドバー（neo-tree）
+## 📂 VSCode 風サイドバー（ファイラ）
 
 ### 起動
 
@@ -78,7 +78,9 @@ Space → e
 
 画面左に**ディレクトリツリー**が出る。↑↓ で選択、Enter で開く。**VSCode のサイドバーと完全に同じ使い勝手**。
 
-### neo-tree 内のキーバインド（よく使うのだけ）
+> ℹ️ **現行の `Space e` は snacks.nvim の explorer**（LazyVim 既定）。下表の `H`(隠しファイル)・基本操作は snacks でも同様だが、`R`(リフレッシュ) は snacks には無い・代わりに `I` で gitignore 表示トグル・`?` で全キー一覧。**neo-tree を使いたい場合は `:Neotree` コマンド**で開く（下表は neo-tree のキー）。
+
+### neo-tree（`:Neotree`）内のキーバインド（よく使うのだけ）
 
 | キー | 動作 |
 |---|---|
