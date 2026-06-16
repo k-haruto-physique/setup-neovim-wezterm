@@ -311,3 +311,49 @@ PATH（psql）に加え、**接続先 DB を間違えていた**のが主因。�
 3. **検証済（2026-05-26）**: `psql -w -d kanro_db`（pgpass 経由・プロンプト無し）で接続成功・21 スキーマ取得。dadbod も同経路。残るは WezTerm 完全再起動のみ。
 
 > 教訓: dadbod で「接続は出るのに空」のときは **(a) psql が PATH にあるか (b) 接続先 DB 名が正しいか** の 2 点を必ず疑う。MCP（`mcp__postgres__query`）で実 DB の中身を確認すると DB 名の取り違えが一発で分かる。
+
+---
+
+## 10. MCP（postgres/playwright/notionApi）が `/doctor` で 3 件 timeout エラー
+
+### 症状
+
+- `/doctor` で postgres / playwright / notionApi の 3 つが `connection timed out after 30000ms`。
+- だが `claude mcp list` では全部 ✓ Connected と出る（**1 個ずつ順に確認するため取りこぼす**）。
+- 2026-06-16 のログで確定: その日の**最初の起動（16:44, コールド）で 3 つ同時に 30s timeout → 2 分後の再起動（16:46, ウォーム）では 3 つとも 2〜3 秒で成功**。
+
+### 原因
+
+`npx -y <pkg>@<ver>` は**バージョン固定でも起動のたびに npm レジストリへ解決問い合わせが走る**。3 つ同時のコールド起動（その日初回・npm キャッシュ冷え・ディスク冷え）で 30s 制限を超過する。2026-06-08 の「バージョン固定＋グローバル導入」対処は**ウォーム起動を 1.3s に縮めただけ**で、コールド timeout は残っていた。DB 到達・ブラウザ・トークンは無関係。
+
+### 対策（恒久・採用）
+
+**`npx` を完全に外し、グローバル導入済みパッケージの実体を `node <entry.js>` で直叩き**する。npx のレジストリ解決がゼロになり、コールドでも即起動（実測: postgres 172ms / playwright 432ms）。
+
+`claude mcp` CLI で user スコープを surgical に書換え（`.claude.json` は巨大かつ casing 重複キーがあり手編集・JSON round-trip は危険なので CLI を使う）:
+
+```powershell
+$node = "C:\Program Files\nodejs\node.exe"
+$nm   = "C:\Users\81809\AppData\Roaming\npm\node_modules"
+# notion トークンは既存 config から読み出して保全（画面に出さない）
+$tok  = (Get-Content "$env:USERPROFILE\.claude.json" -Raw | ConvertFrom-Json -AsHashtable).mcpServers['notionApi'].env['NOTION_TOKEN']
+
+claude mcp remove postgres -s user; claude mcp remove playwright -s user; claude mcp remove notionApi -s user
+& claude mcp add postgres   -s user -- $node "$nm\@modelcontextprotocol\server-postgres\dist\index.js" "postgresql://postgres:postgres@localhost:5432/kanro_db"
+& claude mcp add playwright -s user -- $node "$nm\@playwright\mcp\cli.js"
+& claude mcp add notionApi  -s user -e "NOTION_TOKEN=$tok" -- $node "$nm\@notionhq\notion-mcp-server\bin\cli.mjs"
+```
+
+実体 entry は各 package の `package.json` の `bin` フィールドで確認（postgres=`dist/index.js`、playwright=`cli.js`、notion=`bin/cli.mjs`）。node は絶対パス推奨（MCP 起動コンテキストの PATH に依存しない）。
+
+> パッケージ更新時は `npm i -g <pkg>@<新ver>` するだけ。**entry パスは変わらない**ので MCP 設定の再編集は不要。これも npx 版より楽。
+
+### ステータス
+
+- 2026-06-16: 3 サーバを node 直叩きへ移行・`claude mcp list` で全 ✓・直接起動を実測（172/432ms）。playwright も `0.0.75 → 0.0.76` に更新。**反映は次回 Claude Code 起動から**（`/doctor` で 3 件消えるか確認が残タスク）。
+- 注意（別件・要確認）: notion トークンが config 上はまだ `ntn_526683...`。memory では 06-08 に「旧 `ntn_526...` 失効 → 新統合トークンに差し替え済」とあるが値が一致して見える。timeout とは無関係（接続成功＝プロセス起動成功で、401 は API 呼び出し時にしか出ない）。Notion が空応答／401 のときはトークン再発行と対象ページの Connections 追加を疑う。
+
+### 教訓
+
+- **MCP が「list では OK なのに /doctor で timeout」=同時コールド起動の競合**。`claude mcp list` の逐次 ✓ に騙されない。真偽は `%LOCALAPPDATA%\claude-cli-nodejs\Cache\<proj>\mcp-logs-<srv>\*.jsonl` の `Successfully connected in Nms` / `timed out` で確定する。
+- **stdio 系 MCP は `npx` を介さず実体直叩きが最速・最安定**。npx は「未導入でも動く」利便性と引換えに毎回レジストリ解決コストを払う。常用するなら固定版グローバル導入＋直叩き一択。
