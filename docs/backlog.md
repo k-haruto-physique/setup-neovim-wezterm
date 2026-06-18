@@ -12,9 +12,9 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 | # | タスク | 状態 | 次の一手 | 起点 |
 |---|---|---|---|---|
 | B2 | **open-path-in-nvim 対話 UX** | **静的検証は 2026-06-18 完了**（config パースエラー無し・Ctrl+Shift+O/Ctrl+Click 実装健全）。残るは GUI 実動作のみ（私は GUI 操作不可） | WezTerm **完全再起動**後に、あなたがパス上で `Ctrl+Shift+O` or `Ctrl+Click` → 選択 UI → nvim で開くを 1 回確認 | memory: WIP |
-| B5 | **全体監査の残り 30 件** | 35 件中 最優先 5 件のみ修正・push 済。残り 30 件は未着手 | 監査リストから次バッチ（中優先）を選び着手 | memory: audit_2026_05_29 |
+| B5 | **`powershell/profile.ps1` 不在** | README が実在の構成要素として記載するが repo に存在しない。再監査(2026-06-18)で唯一の「ユーザー判断要」項目 | (A) 実際に作成し symlink 運用へ / (B) README を実態へ是正、の二択をユーザーに確認 | 監査 doc-impl-02 |
 
-> B2 は GUI 実機 1 操作のみ残（あなたの手が必要）。B3/B4 は 2026-06-18 に headless で検証完了し CLOSED。
+> B2 は GUI 実機 1 操作のみ残（あなたの手が必要）。B5 は方針二択待ち。旧「監査残 30 件」は 2026-06-18 の再監査で superseded（下記 CLOSED）。
 
 ---
 
@@ -34,6 +34,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 | 2026-06-18 | 旧 statusline 独立リポを本リポへ合体（`b4e93ae`） | `claude/` に script＋`statusline-spec.md`＋`CHANGELOG.md`＋`README.md` を集約。旧リポの古い ps1 は破棄。**旧リポ実体 `Repositories/statusline` は物理削除済（2026-06-18・全内容吸収後）** |
 | 2026-06-18 | B4 treesitter C compiler（#7） | gcc 16.1.0 が PATH・nvim も `executable('gcc')=1`・**treesitter パーサ 27 個コンパイル済**（sql/python/lua/markdown 含む。パーサ生成は gcc 成功が前提）。`:checkhealth` の C compiler ✅ 相当を headless で確定 |
 | 2026-06-18 | B3 dadbod 可視（#9） | psql 18.3 が PATH・pgpass 無人接続成功・kanro_db = **587 テーブル/15 スキーマ**（psql と MCP で二重確認）。`vim.g.dbs`=kanro_db(postgres@)・`:DBUI` 存在・dadbod 3 プラグイン実体あり。GUI ツリー目視を除き全層検証済 |
+| 2026-06-18 | repo 全体 再監査 + auto 修正（`1f51111`） | 6 次元 fan-out＋敵対的検証で確定 20 件。**auto 19 件を適用**（秘密漏れ 2 件＝Notion トークン prefix マスク・MCP 接続文字列の DB パスワード除去 / README・nvim-manual・keybinds・wezterm の実装乖離 / statusline 仕様に eff・reset・編集行数を同期 / 陳腐化 cheatsheet.pdf を git rm）。残 1 件は B5。旧 05-29 監査の 30 件リストは現状乖離のため superseded |
 
 ---
 
