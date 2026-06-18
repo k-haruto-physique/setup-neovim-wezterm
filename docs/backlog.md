@@ -33,6 +33,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 | 日付 | タスク | 確定根拠 |
 |---|---|---|
 | 2026-06-18 | MCP /doctor の 3 件 timeout（#10） | 当日初回コールドで postgres 644 / playwright 635 / notion 392ms。MCP ログ実測で sub-second 確認 |
+| 2026-06-18 | 旧 statusline 独立リポを本リポへ合体（`b4e93ae`） | `claude/` に script＋`statusline-spec.md`＋`CHANGELOG.md`＋`README.md` を集約。旧リポの古い ps1 は破棄。**旧リポ実体 `Repositories/statusline` の物理削除はユーザー判断待ち** |
 
 ---
 
