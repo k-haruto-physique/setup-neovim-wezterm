@@ -49,7 +49,7 @@ Windows 11 上の Neovim + LazyVim + WezTerm 環境を symlink で dotfiles 管�
 - `Ctrl+Shift+X` → CopyMode（明示バインド）。突入時カーソル黄色化で視認。
 - `Ctrl+Shift+I` → 新規 WezTerm ウィンドウで `nvim .`（マルチモニター運用向け、上モニター用）
 - `Ctrl+Shift+N` → 新規ウィンドウで `claude`（下モニターで複数 claude 用）
-- Neovim: `<leader>xo` = OS 既定アプリで開く（HTML→ブラウザ、PDF→Edge 等）/ `<leader>xe` = エクスプローラで cwd 開く
+- Neovim: `<leader>xo` = OS 既定アプリで開く（HTML→ブラウザ、PDF→Edge 等）/ `<leader>xe` = エクスプローラで cwd 開く / `<leader>fh` = neo-tree を ~（ホーム）ルートで開く（LazyVim 既定の help 検索を上書き）
 
 CopyMode key_table は明示定義: 矢印キーを優位 + hjkl 併設。`PageUp/Down/Home/End` も同様の理由で追加。`n`/`N` で検索マッチ間ジャンプ（検索開始は `Ctrl+Shift+F` のみ）。**意図しない検索バー誤発火を防ぐため `/` `?` は `act.Nop` で無効化**（検索パターンのリセットは検索バー内 `Ctrl+U`）。
 

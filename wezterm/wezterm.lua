@@ -93,7 +93,8 @@ end)
 
 ----------------------------------------------------
 -- キーバインド（2026-04-21: WezTerm デフォルトに戻した）
--- 以下 4 行を有効化すると tmux 風カスタムに復帰。keybinds.lua は残してある。
+-- 以下 4 行を有効化すると tmux 風カスタムに復帰。設定は keybinds.lua.legacy に退避済
+-- （復帰時はまず keybinds.lua に戻す。require("keybinds") は .legacy 拡張子を解決しない）。
 ----------------------------------------------------
 -- config.disable_default_key_bindings = true
 -- config.keys = require("keybinds").keys

@@ -83,6 +83,11 @@ pgpass.conf
 # sqlfluff ローカル方言設定（個人環境差分の混入防止）
 .sqlfluff
 
+# ---------- ドキュメント派生物 ----------
+# md/html が正本。PDF 等の派生物は陳腐化（drift）の温床なので追跡しない
+# （印刷は docs/cheatsheet.html を使う）。意図的に追跡するなら git add -f。
+*.pdf
+
 # ---------- ログ・一時ファイル ----------
 *.log
 *.tmp

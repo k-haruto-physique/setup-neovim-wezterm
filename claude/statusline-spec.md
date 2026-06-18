@@ -14,11 +14,11 @@ WezTerm 側 statusline addon は 2026-05-21 に廃止済み（表示は Claude C
 Claude Code 入力欄の真上に 2 段表示。
 
 ```
-◆ Opus 4.7 │ ◈ ctx:58%/1.0M │ ◐ 5h:20% ◑ 7d:75%
-▸ ~/Documents/Repositories/statusline  ⎇ master !?
+◆ Opus 4.8 │ ◇ eff:high │ ◈ ctx:58%/1M │ ◐ 5h:20% ↺3d3h ◑ 7d:75% │ +12 -3
+▸ ~/Documents/Repositories/setup-neovim-wezterm  ⎇ master !?
 ```
 
-- **1 段目**: ランタイム情報(モデル / コンテキスト使用率 / 5h・7d レート使用率)
+- **1 段目**: ランタイム情報(モデル / effort レベル / コンテキスト使用率 / 5h・7d レート使用率+reset 残時間 / 編集行数 +追加 -削除)
 - **2 段目**: 開発コンテキスト(現在地 / git ブランチ + status)
 
 ### カラーパレット (Catppuccin Frappe)
@@ -28,22 +28,26 @@ Mocha の公式落ち着き版。長時間視認しても疲れにくい muted �
 | 用途 | 色 | hex |
 |---|---|---|
 | sep / labels / brackets / size 表記 | overlay0 | `#737994` |
-| dir, time | blue | `#8caaee` |
-| git branch / safe (<50%) | green | `#a6d189` |
+| git branch / safe (<50%) / 追加行 (+N) | green | `#a6d189` |
 | ctx ラベル | teal | `#81c8be` |
 | model | mauve | `#ca9ee6` |
-| vim / git status symbols | peach | `#ef9f76` |
+| vim mode / xhigh effort | peach | `#ef9f76` |
 | warn (50-80%) | yellow | `#e5c890` |
-| danger (≥80%) | red | `#e78284` |
+| danger (≥80%) / 削除行 (-N) | red | `#e78284` |
+| (定義のみ・未使用 dead) | blue | `#8caaee` |
+
+> dir / branch は**無着色（プレーン）**で描画（旧 blue 割当は廃止、`$BLUE` は定義のみで未使用）。effort レベルは離散値で色が変わる（下記「effort セグメント」）。
 
 ### アイコン (Unicode 標準幾何記号 — Nerd Font 不要)
 
 | 項目 | 記号 | コード |
 |---|---|---|
 | model | ◆ | U+25C6 BLACK DIAMOND |
+| effort | ◇ | U+25C7 WHITE DIAMOND |
 | ctx | ◈ | U+25C8 |
 | 5h | ◐ | U+25D0 |
 | 7d | ◑ | U+25D1 |
+| reset 残時間 | ↺ | U+21BA ANTICLOCKWISE OPEN CIRCLE ARROW |
 | dir | ▸ | U+25B8 |
 | branch | ⎇ | U+2387 ALTERNATIVE KEY SYMBOL |
 
@@ -54,6 +58,15 @@ ctx / 5h / 7d はすべて **使用率(USED %)** 表示で統一(大きいほど
 - `< 50%` 緑(safe)
 - `50-80%` 黄(warn)
 - `>= 80%` 赤(danger)
+
+### effort セグメント (◇ eff:)
+
+`data.effort.level` を離散表示（USED% ではないので上記 <50/50-80/≥80 閾値とは別系統）:
+`low`=overlay0(dim) / `medium`=green / `high`=yellow / `xhigh`=peach / `max`=red。
+
+### reset 残時間 (↺)
+
+5h/7d は `resets_at`(Unix epoch) から残時間を算出し ↺ 付きで併記: `>=1d → 3d3h` / `>=1h → 2h13m` / それ未満 → `47m`。absent または経過済みなら非表示。
 
 ### Git status symbols (Starship `$all_status` 準拠)
 
@@ -102,10 +115,12 @@ Claude Code は Windows + Git Bash インストール環境では statusLine コ
 | 表示項目 | ソース |
 |---|---|
 | モデル名 | `data.model.display_name` |
+| effort レベル | `data.effort.level` |
 | ディレクトリ | `data.workspace.current_dir`(`~` 短縮 + 末尾 10 階層) |
 | Git ブランチ / dirty / ahead-behind | `git rev-parse` / `git status --porcelain` / `git rev-list` |
 | Context 使用率 | `data.context_window.used_percentage` + `context_window_size` |
-| 5h / 7d レート使用率 | `data.rate_limits.{five_hour,seven_day}.used_percentage` |
+| 5h / 7d レート使用率 + reset 残時間 | `data.rate_limits.{five_hour,seven_day}.used_percentage` / `.resets_at` |
+| 編集行数 (+追加 / -削除) | `data.cost.total_lines_added` / `data.cost.total_lines_removed`（>0 のみ表示） |
 | Vim mode | `data.vim.mode` |
 
 レート情報は Claude.ai Pro/Max 加入者のみ初回 API 応答後に含まれる。それまでは `rate_limits` フィールド自体が無いのでセグメントは非表示になる(コード側でガード済み)。

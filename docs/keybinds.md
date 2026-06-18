@@ -319,6 +319,7 @@ Vim 未経験者が **最初に詰む最大ポイント**。
 |---|---|
 | `Space e` / `Space f e` | **snacks explorer トグル**（ファイラ、root 起点） |
 | `Space E` / `Space f E` | snacks explorer を cwd 起点で開く |
+| `Space f h` | **neo-tree を ~（ホーム）ルートで開く**（独自キー・LazyVim 既定の Telescope help を上書き。help は `Space s h`） |
 
 **snacks explorer 内**: `a` 新規、`d` 削除、`r` リネーム、`Enter` 開く、`H` 隠しファイル(dotfiles)トグル、`I` gitignore 対象トグル、`?` 全キー表示（**リフレッシュ `R` は無い**）
 **neo-tree を使う場合**: `:Neotree` コマンドで開く（キーバインドは未割当）

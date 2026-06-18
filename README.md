@@ -5,8 +5,8 @@ Windows 11 上の Neovim + LazyVim + WezTerm 環境を、シンボリックリ�
 ## 結論
 
 - **リポジトリを正本、実体側 (`%LOCALAPPDATA%\nvim` 等) はシンボリックリンク**で運用する
-- LazyVim をベースに、SQL / Markdown / Lua / Python 4 言語を `:LazyExtras` で有効化
-- WezTerm 既存設定（タブバー下端、Acrylic 透過、自動リロード）は保持したまま統合
+- LazyVim をベースに、SQL / Markdown / Python を `:LazyExtras` で有効化（Lua はコア同梱で有効化不要）
+- WezTerm 既存設定（タブバー上部、Acrylic 透過、自動リロード）は保持したまま統合
 
 ## 理由
 
@@ -89,7 +89,7 @@ setup-neovim-wezterm/
 
 ### Phase 4: 開発用カスタマイズ
 
-- `:LazyExtras` で `lang.sql` / `lang.markdown` / `lang.python` / `lang.lua` を有効化
+- `:LazyExtras` で `lang.sql` / `lang.markdown` / `lang.python` を有効化（`lang.lua` は LazyVim コア同梱のため有効化不要）
 - 日本語 IME × Esc 問題の対処
 - WezTerm + Neovim + Claude Code の連携
 - `powershell/profile.ps1` にエイリアス追加

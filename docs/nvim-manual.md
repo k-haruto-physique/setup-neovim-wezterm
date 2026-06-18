@@ -76,7 +76,7 @@ LazyVim では `:Dashboard` で出るはず。試してダメなら方法 A 推�
 Space → e
 ```
 
-画面左に**ディレクトリツリー**が出る。↑↓ で選択、Enter で開く。**VSCode のサイドバーと完全に同じ使い勝手**。
+画面左に**ディレクトリツリー**が出る（既定は **snacks.nvim の explorer**）。↑↓ で選択、Enter で開く。**VSCode のサイドバーと完全に同じ使い勝手**。下表は `:Neotree` で開いた時のキー（snacks 側の操作キーは下の注記と `docs/keybinds.md` 参照）。
 
 > ℹ️ **現行の `Space e` は snacks.nvim の explorer**（LazyVim 既定）。下表の `H`(隠しファイル)・基本操作は snacks でも同様だが、`R`(リフレッシュ) は snacks には無い・代わりに `I` で gitignore 表示トグル・`?` で全キー一覧。**neo-tree を使いたい場合は `:Neotree` コマンド**で開く（下表は neo-tree のキー）。
 
@@ -94,7 +94,7 @@ Space → e
 | `H` | 隠しファイルの表示トグル |
 | `R` | ツリー再読み込み |
 | `q` | neo-tree 閉じる |
-| `Space e` | トグル（もう一度押すと閉じる） |
+| `Space e` | （これは snacks explorer のトグル。neo-tree の開閉は `:Neotree toggle`） |
 
 ### マウスでも動く
 
@@ -209,7 +209,7 @@ Space → f → r
 | `Ctrl+P`（ファイル開く） | `Space f f` | Telescope |
 | `Ctrl+Shift+F`（全文検索） | `Space /` or `Space s g` | live_grep |
 | `Ctrl+Shift+P`（コマンドパレット） | `:` （Ex コマンド） or `Space s c` | |
-| サイドバーのファイラ | `Space e` | neo-tree |
+| サイドバーのファイラ | `Space e` | snacks explorer（neo-tree は `:Neotree`） |
 | `Ctrl+S`（保存） | `:w` Enter | or `Ctrl+S` も多くは効く |
 | `Ctrl+W`（タブ閉じる） | `Space b d` | バッファ閉じる |
 | `Ctrl+Tab`（次のタブ） | `Shift+L` | バッファ切替 |

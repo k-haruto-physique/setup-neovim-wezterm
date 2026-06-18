@@ -1,10 +1,9 @@
 # Claude Code statusline script
-# Mirrors Starship layout: [ dir ][ branch status ] | model | ctx | time
-# Reads JSON from stdin, dumps it to statusline_input.json for WezTerm, then
-# prints a single-line status string for Claude Code's UI.
-# starship.toml reference:
-#   left  - [directory][ git_branch ][ git_status ]
-#   right - model (Claude-specific) | context (Claude-specific) | time (%R)
+# Prints a 2-line status string for Claude Code's UI (no time/clock field):
+#   line 1: ◆ model │ ◇ eff │ ◈ ctx │ ◐ 5h ↺reset ◑ 7d ↺reset │ +/- lines  [vim]
+#   line 2: ▸ dir   ⎇ branch status
+# Reads JSON from stdin (UTF-8). Also writes a legacy statusline_input.json dump
+# (no live reader since the WezTerm display layer was retired — see statusline-spec.md).
 
 # Read stdin (Claude's JSON) as UTF-8 FIRST — before touching any Console encoding.
 # Root cause of "N of M panes show blank / ◆ Claude ▸ ?": setting [Console]::InputEncoding while
@@ -42,7 +41,7 @@ $RED    = "${ESC}[38;2;231;130;132m"   # #e78284 danger >=80%
 $BLUE   = "${ESC}[38;2;140;170;238m"   # #8caaee dir
 $PURPLE = "${ESC}[38;2;202;158;230m"   # #ca9ee6 mauve model
 $TEAL   = "${ESC}[38;2;129;200;190m"   # #81c8be ctx label
-$ORANGE = "${ESC}[38;2;239;159;118m"   # #ef9f76 peach vim / git status
+$ORANGE = "${ESC}[38;2;239;159;118m"   # #ef9f76 peach vim mode / xhigh effort
 
 function Get-StageColor([double]$pct) {
     if ($pct -ge 80) { return $RED }
@@ -70,7 +69,8 @@ function Format-ResetIn($resetsAt) {
     } catch { return "" }
 }
 
-# --- Dump raw stdin so WezTerm-side reader (wezterm.lua) can pick it up ---
+# --- Legacy dump: kept for backward-compat only; no live reader since the
+#     WezTerm display layer was retired (see statusline-spec.md 技術的負債) ---
 # Failure here must never block the statusline output.
 if (-not [string]::IsNullOrWhiteSpace($raw)) {
     try {
