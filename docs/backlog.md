@@ -3,7 +3,7 @@
 セッション開始（`hi`）時に**必ず読む**未完タスク・仕様書の単一台帳。
 troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約点。**完了したら CLOSED へ落とし、起点ファイル（#番号 / memory）にも反映**する。
 
-最終更新: 2026-06-18
+最終更新: 2026-06-18（B3/B4 を headless 検証で CLOSED、残 OPEN は B2 GUI 実機・B5 監査残）
 
 ---
 
@@ -11,12 +11,10 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | # | タスク | 状態 | 次の一手 | 起点 |
 |---|---|---|---|---|
-| B2 | **open-path-in-nvim 実機確認** | `bff65d2` でコミット済・構文OK。Ctrl+Shift+O / Ctrl+Click の対話 UX が未検証 | WezTerm **完全再起動**後にパス選択 UI を実機で叩く | memory: WIP |
-| B3 | **dadbod 可視確認** | psql PATH 追記・kanro_db 固定済。最終的な「テーブルが見える」確認が WezTerm 再起動待ち | 新規 WezTerm で `where.exe psql` → nvim `:DBUIToggle` で kanro_db 展開 | troubleshooting #9 |
-| B4 | **treesitter C compiler 確認** | WinLibs gcc 16.1.0 導入済。再起動後の `:checkhealth` 確認が未記録 | nvim で `:checkhealth nvim-treesitter` → C compiler ✅ を確認し本欄を閉じる | troubleshooting #7 |
+| B2 | **open-path-in-nvim 対話 UX** | **静的検証は 2026-06-18 完了**（config パースエラー無し・Ctrl+Shift+O/Ctrl+Click 実装健全）。残るは GUI 実動作のみ（私は GUI 操作不可） | WezTerm **完全再起動**後に、あなたがパス上で `Ctrl+Shift+O` or `Ctrl+Click` → 選択 UI → nvim で開くを 1 回確認 | memory: WIP |
 | B5 | **全体監査の残り 30 件** | 35 件中 最優先 5 件のみ修正・push 済。残り 30 件は未着手 | 監査リストから次バッチ（中優先）を選び着手 | memory: audit_2026_05_29 |
 
-> B2 / B3 / B4 は**いずれも「WezTerm 完全再起動 1 回」で同時に検証できる**。再起動したらまとめて潰す。
+> B2 は GUI 実機 1 操作のみ残（あなたの手が必要）。B3/B4 は 2026-06-18 に headless で検証完了し CLOSED。
 
 ---
 
@@ -34,6 +32,8 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 |---|---|---|
 | 2026-06-18 | MCP /doctor の 3 件 timeout（#10） | 当日初回コールドで postgres 644 / playwright 635 / notion 392ms。MCP ログ実測で sub-second 確認 |
 | 2026-06-18 | 旧 statusline 独立リポを本リポへ合体（`b4e93ae`） | `claude/` に script＋`statusline-spec.md`＋`CHANGELOG.md`＋`README.md` を集約。旧リポの古い ps1 は破棄。**旧リポ実体 `Repositories/statusline` は物理削除済（2026-06-18・全内容吸収後）** |
+| 2026-06-18 | B4 treesitter C compiler（#7） | gcc 16.1.0 が PATH・nvim も `executable('gcc')=1`・**treesitter パーサ 27 個コンパイル済**（sql/python/lua/markdown 含む。パーサ生成は gcc 成功が前提）。`:checkhealth` の C compiler ✅ 相当を headless で確定 |
+| 2026-06-18 | B3 dadbod 可視（#9） | psql 18.3 が PATH・pgpass 無人接続成功・kanro_db = **587 テーブル/15 スキーマ**（psql と MCP で二重確認）。`vim.g.dbs`=kanro_db(postgres@)・`:DBUI` 存在・dadbod 3 プラグイン実体あり。GUI ツリー目視を除き全層検証済 |
 
 ---
 

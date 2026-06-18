@@ -215,6 +215,7 @@ User PATH に追加された bin（新規シェルで有効・既存シェルは
 ### ステータス
 
 - 2026-05-26: WinLibs gcc **16.1.0**（UCRT / POSIX threads）を winget で導入完了。インストール直後の既存シェルでは PATH 未反映のため、実体パス直叩きで `gcc --version` 動作を確認済。**WezTerm / Neovim を再起動**すれば PATH 反映され、`:checkhealth nvim-treesitter` で C compiler ✅ になる見込み。
+- **2026-06-18: 解決確認（CLOSE）**。`where.exe gcc` → WinLibs 16.1.0、nvim headless で `vim.fn.executable('gcc')=1`、さらに **treesitter パーサが 27 個コンパイル済**（bash/c/lua/sql/python/markdown 等）。パーサ生成は gcc 成功が前提なので C compiler は実働確定。backlog B4 CLOSED。
 
 ---
 
@@ -309,6 +310,14 @@ PATH（psql）に加え、**接続先 DB を間違えていた**のが主因。�
 1. `nvim/lua/config/options.lua` に `vim.g.dbs` を定義し **接続先を `kanro_db` に固定**（`:DBUIToggle` に「kanro_db (local)」が最初から出る）。URL は `postgresql://postgres@localhost:5432/kanro_db`（パスワードは書かない）。
 2. 認証は **`%APPDATA%\postgresql\pgpass.conf`**（`localhost:5432:*:postgres:＜pw＞`）。psql/dadbod が無人で読む。
 3. **検証済（2026-05-26）**: `psql -w -d kanro_db`（pgpass 経由・プロンプト無し）で接続成功・21 スキーマ取得。dadbod も同経路。残るは WezTerm 完全再起動のみ。
+
+### ステータス（2026-06-18 CLOSE）
+
+headless で全層検証し解決確定（backlog B3 CLOSED）:
+- `where.exe psql` → PostgreSQL 18.3。**pgpass 無人接続成功**（`psql -U postgres -w -d kanro_db`）で **587 テーブル / 15 スキーマ**取得。MCP `mcp__postgres__query` でも 587/15 一致（別経路で裏取り）。
+- nvim 実 config で `vim.g.dbs` = `kanro_db (local)` / `postgresql://postgres@localhost:5432/kanro_db`（user=postgres → pgpass 一致）。`:DBUI` コマンド存在・`vim-dadbod`/`-ui`/`-completion` 実体あり。
+- 残るは GUI で `:DBUIToggle` のツリー目視のみ（下層が全通過のため飾り）。
+- 罠（自戒）: 素の `psql -w -d kanro_db` は **OS ユーザー名で接続**するため pgpass(`postgres`)と不一致で `no password supplied`。dadbod と同条件にするには **`-U postgres` 明示**が必須。
 
 > 教訓: dadbod で「接続は出るのに空」のときは **(a) psql が PATH にあるか (b) 接続先 DB 名が正しいか** の 2 点を必ず疑う。MCP（`mcp__postgres__query`）で実 DB の中身を確認すると DB 名の取り違えが一発で分かる。
 
