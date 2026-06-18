@@ -16,3 +16,32 @@ function vrepo { repo; nvim . }    # dotfiles を nvim で開く
 
 # --- DB（kanro_db / pgpass 無人接続）---
 function kanro { psql -U postgres -d kanro_db }
+
+# --- Claude Code 使用量を「API 従量課金だった場合」の額で表示（USD + 円換算）---
+#   usage          月別（既定）
+#   usage daily    日別
+#   usage session  セッション別
+# 実額は Max 20x の月 $200 固定。下に出るのは「もし従量だったら」の理論値。
+# 円レートは frankfurter.app から取得（オフライン時は概算 155 にフォールバック）。
+function usage {
+    param([string]$Period = 'monthly')
+    $env:NO_COLOR = '1'
+    $data = ccusage $Period --json 2>$null | ConvertFrom-Json
+    if (-not $data) { Write-Host 'ccusage の出力を取得できませんでした（ccusage 導入を確認）'; return }
+
+    $rate = try {
+        [double](Invoke-RestMethod 'https://api.frankfurter.app/latest?base=USD&symbols=JPY' -TimeoutSec 6).rates.JPY
+    } catch { 155.0 }
+
+    # monthly/daily/sessions いずれの配列でも拾えるよう、最初の配列プロパティを使う
+    $rows = ($data.PSObject.Properties | Where-Object { $_.Value -is [array] } | Select-Object -First 1).Value
+    "{0,-12} {1,13} {2,15}" -f 'Period', 'USD(従量換算)', 'JPY(円)'
+    foreach ($r in $rows) {
+        $p = if ($r.period) { $r.period } elseif ($r.date) { $r.date } else { '-' }
+        "{0,-12} {1,13} {2,15}" -f $p, ('$' + ('{0:N2}' -f [double]$r.totalCost)), ('¥' + ('{0:N0}' -f ([double]$r.totalCost * $rate)))
+    }
+    $tc = [double]$data.totals.totalCost
+    "{0,-12} {1,13} {2,15}" -f '------', '------', '------'
+    "{0,-12} {1,13} {2,15}" -f 'TOTAL', ('$' + ('{0:N2}' -f $tc)), ('¥' + ('{0:N0}' -f ($tc * $rate)))
+    "  USD/JPY=$rate ・ 実額は Max20x 月 `$200 固定（上は従量だった場合の理論値）"
+}
