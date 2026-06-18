@@ -11,13 +11,20 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | # | タスク | 状態 | 次の一手 | 起点 |
 |---|---|---|---|---|
-| B1 | **statusline symlink 切れ** | `~/.claude/statusline.ps1` が実体ファイル化（リンク不在）。repo 側 `claude/statusline.ps1` の編集が反映されない | **管理者 PowerShell** で `New-Item -ItemType SymbolicLink` 再リンク（実体を退避→リンク作成） | memory: statusLine |
 | B2 | **open-path-in-nvim 実機確認** | `bff65d2` でコミット済・構文OK。Ctrl+Shift+O / Ctrl+Click の対話 UX が未検証 | WezTerm **完全再起動**後にパス選択 UI を実機で叩く | memory: WIP |
 | B3 | **dadbod 可視確認** | psql PATH 追記・kanro_db 固定済。最終的な「テーブルが見える」確認が WezTerm 再起動待ち | 新規 WezTerm で `where.exe psql` → nvim `:DBUIToggle` で kanro_db 展開 | troubleshooting #9 |
 | B4 | **treesitter C compiler 確認** | WinLibs gcc 16.1.0 導入済。再起動後の `:checkhealth` 確認が未記録 | nvim で `:checkhealth nvim-treesitter` → C compiler ✅ を確認し本欄を閉じる | troubleshooting #7 |
 | B5 | **全体監査の残り 30 件** | 35 件中 最優先 5 件のみ修正・push 済。残り 30 件は未着手 | 監査リストから次バッチ（中優先）を選び着手 | memory: audit_2026_05_29 |
 
 > B2 / B3 / B4 は**いずれも「WezTerm 完全再起動 1 回」で同時に検証できる**。再起動したらまとめて潰す。
+
+---
+
+## 🟡 WATCH（潜在リスク・今は無対応でよい）
+
+| # | 項目 | なぜ今やらないか | いつ顕在化するか |
+|---|---|---|---|
+| W1 | **statusline symlink 切れ** | `~/.claude/statusline.ps1` は実体ファイルだが repo 正本と**ハッシュ完全一致（2026-06-18 確認）**。表示も中身も正しく、再起動不要 | **次に repo 側 `claude/statusline.ps1` を編集した時**だけ。編集が live に伝播しないので、その時に手動コピー or 管理者で再リンク。それまで放置可 |
 
 ---
 
