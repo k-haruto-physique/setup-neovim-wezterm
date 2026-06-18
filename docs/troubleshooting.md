@@ -351,6 +351,7 @@ claude mcp remove postgres -s user; claude mcp remove playwright -s user; claude
 ### ステータス
 
 - 2026-06-16: 3 サーバを node 直叩きへ移行・`claude mcp list` で全 ✓・直接起動を実測（172/432ms）。playwright も `0.0.75 → 0.0.76` に更新。**反映は次回 Claude Code 起動から**（`/doctor` で 3 件消えるか確認が残タスク）。
+- **2026-06-18: 解決確認（CLOSE）**。MCP ログ（`mcp-logs-*/*.jsonl` の `debug` フィールド）実測で、当日初回コールド起動でも postgres 644ms / playwright 635ms / notionApi 392ms と全て sub-second 接続。06-16 朝の npx 版コールド（3 件とも 30s timeout）と対照になり、`npx→node 直叩き`の恒久対処が効いていると確定。`docs/backlog.md` の CLOSED へ転記済。
 - 注意（別件・要確認）: notion トークンが config 上はまだ `ntn_526683...`。memory では 06-08 に「旧 `ntn_526...` 失効 → 新統合トークンに差し替え済」とあるが値が一致して見える。timeout とは無関係（接続成功＝プロセス起動成功で、401 は API 呼び出し時にしか出ない）。Notion が空応答／401 のときはトークン再発行と対象ページの Connections 追加を疑う。
 
 ### 教訓

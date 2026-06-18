@@ -13,8 +13,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 5. `docs/keybinds.md` — 全キー早見表
 6. `docs/troubleshooting.md` — 既知の地雷一覧
 7. `README.md` — 全体構成
+8. `docs/backlog.md` — 未完タスク・仕様書の集約台帳（**GO ゲート回収**）
 
-読み込み完了後、「準備できた。何をやる?」相当の短い挨拶のみ返す（読んだファイル名の列挙は不要）。質問されてから読むのでは遅い。
+読み込み完了後、短い挨拶を返す（読んだファイル名の列挙は不要）。**ただし `docs/backlog.md` の OPEN 件数と上位 2-3 項目を挨拶に必ず含める**（例:「準備できた。OPEN 5 件（statusline 再リンク / open-path 実機確認 / dadbod 可視確認 …）。何をやる?」）。質問されてから読むのでは遅い。
 
 ## Purpose
 
@@ -93,6 +94,7 @@ LazyVim Extras 有効化済: `lang.sql`, `lang.python`, `lang.markdown`（lang.l
 - `docs/vim-mental-model.md` — 「動詞+名詞」文法・レジスタ・buffer/window/tab の思考モデル（初心者向け）
 - `docs/practice-drills.md` — Phase 別の具体練習メニュー（毎日 10-15 分）
 - `docs/troubleshooting.md` — 遭遇問題と対処の永久記録（新規問題は追記必須）
+- `docs/backlog.md` — 未完タスク・仕様書の集約台帳（`hi` の GO ゲートで回収。残タスクが出たら troubleshooting/memory と同時に 1 行追加）
 - `docs/legacy-nvim/` — 旧 lazy.nvim 設定の参照保全
 
 ## User 個別事項
