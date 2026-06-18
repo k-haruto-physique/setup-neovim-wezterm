@@ -15,7 +15,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 7. `README.md` — 全体構成
 8. `docs/backlog.md` — 未完タスク・仕様書の集約台帳（**GO ゲート回収**）
 
-読み込み完了後、短い挨拶を返す（読んだファイル名の列挙は不要）。**ただし `docs/backlog.md` の OPEN 件数と上位 2-3 項目を挨拶に必ず含める**（例:「準備できた。OPEN 5 件（statusline 再リンク / open-path 実機確認 / dadbod 可視確認 …）。何をやる?」）。質問されてから読むのでは遅い。
+読み込み完了後、短い挨拶を返す（読んだファイル名の列挙は不要）。**ただし `docs/backlog.md` の OPEN 件数と上位 2-3 項目を挨拶に必ず含める**（例:「準備できた。OPEN 1 件（open-path の GUI 実機確認）。何をやる?」）。質問されてから読むのでは遅い。
+
+> 上記 1-8 は**運用コア**の auto-read。それ以外の設定仕様（`claude/statusline-spec.md`・`powershell/profile.ps1`・`docs/lang-workflows.md` 等）の所在は本ファイル末尾の **ドキュメント map** が完全索引。必要時にそこから辿れる＝「すべての設定仕様が GO ゲートから到達可能」。
 
 ## Purpose
 
@@ -96,7 +98,13 @@ LazyVim Extras 有効化済: `lang.sql`, `lang.python`, `lang.markdown`（lang.l
 - `docs/practice-drills.md` — Phase 別の具体練習メニュー（毎日 10-15 分）
 - `docs/troubleshooting.md` — 遭遇問題と対処の永久記録（新規問題は追記必須）
 - `docs/backlog.md` — 未完タスク・仕様書の集約台帳（`hi` の GO ゲートで回収。残タスクが出たら troubleshooting/memory と同時に 1 行追加）
+- `claude/` — Claude Code statusLine 一式: `statusline.ps1`(正本) + `statusline-spec.md`(設計仕様: 色/アイコン/数値セマンティクス/eff/reset/編集行数/データソース) + `CHANGELOG.md` + `README.md`。`%USERPROFILE%\.claude\statusline.ps1` へ反映
+- `powershell/profile.ps1` — PowerShell プロファイル正本（`repo`/`dotfiles`/`v`/`vrepo`/`kanro`/`usage` 関数）。`$PROFILE` から **dot-source**（pwsh7・5.1 両対応＝UTF-8 BOM）。管理者不要
+- `docs/usage-log.md` — 使用量の従量換算ログ（**ローカル限定・gitignore**。`usage` 関数で再生成。repo 公開のため非追跡）
+- `docs/cheatsheet.html` — 印刷用 1 枚（md が正本。PDF は陳腐化のため廃止・`*.pdf` は gitignore）
 - `docs/legacy-nvim/` — 旧 lazy.nvim 設定の参照保全
+
+> このドキュメント map が**全設定仕様の完全索引**。GO ゲート（`hi`）の auto-read は上記 1-8 の運用コアに絞り、それ以外（statusline-spec / profile / 各 docs）は本 map から必要時に参照する設計。
 
 ## User 個別事項
 
