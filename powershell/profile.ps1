@@ -1,4 +1,4 @@
-# setup-neovim-wezterm 管理の PowerShell プロファイル（正本）
+﻿# setup-neovim-wezterm 管理の PowerShell プロファイル（正本）
 #
 # 配置方式: symlink ではなく **dot-source**。
 #   $PROFILE（C:\Users\81809\Documents\PowerShell\Microsoft.PowerShell_profile.ps1）が
