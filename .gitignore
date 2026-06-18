@@ -88,6 +88,9 @@ pgpass.conf
 # （印刷は docs/cheatsheet.html を使う）。意図的に追跡するなら git add -f。
 *.pdf
 
+# 使用量ログ（個人の従量換算コスト）。repo は公開なのでローカル限定で追跡しない
+docs/usage-log.md
+
 # ---------- ログ・一時ファイル ----------
 *.log
 *.tmp
