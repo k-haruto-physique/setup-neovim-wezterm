@@ -3,7 +3,7 @@
 セッション開始（`hi`）時に**必ず読む**未完タスク・仕様書の単一台帳。
 troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約点。**完了したら CLOSED へ落とし、起点ファイル（#番号 / memory）にも反映**する。
 
-最終更新: 2026-06-18（B3/B4 を headless 検証で CLOSED、残 OPEN は B2 GUI 実機・B5 監査残）
+最終更新: 2026-06-19（Remote Control 採否を B6 追加。OPEN は B2・B6）
 
 ---
 
@@ -12,7 +12,9 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 | # | タスク | 状態 | 次の一手 | 起点 |
 |---|---|---|---|---|
 | B2 | **open-path-in-nvim 対話 UX** | **静的検証は 2026-06-18 完了**（config パースエラー無し・Ctrl+Shift+O/Ctrl+Click 実装健全）。残るは GUI 実動作のみ（私は GUI 操作不可） | WezTerm **完全再起動**後に、あなたがパス上で `Ctrl+Shift+O` or `Ctrl+Click` → 選択 UI → nvim で開くを 1 回確認 | memory: WIP |
-> B2 は GUI 実機 1 操作のみ残（あなたの手が必要）。旧「監査残 30 件」は 2026-06-18 の再監査で superseded（下記 CLOSED）。**現 OPEN は B2 のみ**（B5 は 2026-06-18 にユーザーが A を選択し実装・CLOSED）。
+| B6 | **Remote Control 自動起動の採否** | 公式機能と確認済（CLI セッションをアプリ/web から遠隔操作）。あなたの v2.1.181 に `--remote-control` フラグ実在。自動起動は `/config` の「Enable for all sessions」トグル（あなた実行）。**harness は私のフック自作をブロック済**＝私は設定を裏で書かない | (a) `/config` で all-sessions ON（自動・公式・あなた実行）/ (b) profile.ps1 に `remote` 関数（手動・私が即追加可）/ (c) 見送り | [[project_remote_control]] |
+
+> 現 OPEN は **B2（GUI 実機 1 操作）** と **B6（Remote Control 採否・あなた判断）**。旧「監査残 30 件」は 2026-06-18 の再監査で superseded（下記 CLOSED）。B5 は 2026-06-18 にユーザーが A を選択し実装・CLOSED。
 
 ---
 
