@@ -268,6 +268,32 @@ end)
 -- ターミナルに出ているパスを hyperlink 化し、Ctrl+Click で nvim（新規ウィンドウ）起動。
 -- ラベル入力が不要なので IME の影響を一切受けない（クリックするだけ）。
 ----------------------------------------------------
+-- 2026-07-02: Ctrl+Click でだけリンク(=nvimopen パス)を開く。
+-- 既定はプレーンクリックの CompleteSelectionOrOpenLinkAtMouseCursor がリンクを開いてしまい、
+-- パス文字列を軽くクリックしただけで nvim が新規ウィンドウで開く事故が起きる。
+-- そこでプレーンクリックは選択完了のみに戻し、Ctrl+Click に OpenLink を明示バインドする
+-- （このバージョンには Ctrl+Click の既定 OpenLink バインドが無いため Ctrl+Click が無反応だった）。
+config.mouse_bindings = {
+    -- プレーンクリック = 選択完了のみ（リンクは開かない → 誤爆防止）
+    {
+        event = { Up = { streak = 1, button = "Left" } },
+        mods = "NONE",
+        action = act.CompleteSelection("ClipboardAndPrimarySelection"),
+    },
+    -- Ctrl+Click = リンク(nvimopen パス)を開く（意図的操作でだけ nvim を起動）
+    {
+        event = { Up = { streak = 1, button = "Left" } },
+        mods = "CTRL",
+        action = act.OpenLinkAtMouseCursor,
+    },
+    -- Ctrl+Down は Nop（Ctrl 押下で選択が始まって Up の OpenLink を邪魔しないように）
+    {
+        event = { Down = { streak = 1, button = "Left" } },
+        mods = "CTRL",
+        action = act.Nop,
+    },
+}
+
 config.hyperlink_rules = wezterm.default_hyperlink_rules()
 table.insert(config.hyperlink_rules, {
     -- 相対/絶対パス + 主要拡張子。マッチ文字列を nvimopen: スキームに載せて open-uri へ渡す。
