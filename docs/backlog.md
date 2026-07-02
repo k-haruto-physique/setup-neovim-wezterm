@@ -3,7 +3,7 @@
 セッション開始（`hi`）時に**必ず読む**未完タスク・仕様書の単一台帳。
 troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約点。**完了したら CLOSED へ落とし、起点ファイル（#番号 / memory）にも反映**する。
 
-最終更新: 2026-07-02（ペイン入力不能=修飾キー stuck を WATCH W2 追加。OPEN は B2・B6）
+最終更新: 2026-07-02（B6 を profile.ps1 の remote 関数で CLOSED。ペイン入力不能=修飾キー stuck を W2 追加。OPEN は B2 のみ）
 
 ---
 
@@ -12,9 +12,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 | # | タスク | 状態 | 次の一手 | 起点 |
 |---|---|---|---|---|
 | B2 | **open-path-in-nvim 対話 UX** | **静的検証は 2026-06-18 完了**（config パースエラー無し・Ctrl+Shift+O/Ctrl+Click 実装健全）。残るは GUI 実動作のみ（私は GUI 操作不可） | WezTerm **完全再起動**後に、あなたがパス上で `Ctrl+Shift+O` or `Ctrl+Click` → 選択 UI → nvim で開くを 1 回確認 | memory: WIP |
-| B6 | **Remote Control 自動起動の採否** | 公式機能と確認済（CLI セッションをアプリ/web から遠隔操作）。あなたの v2.1.181 に `--remote-control` フラグ実在。自動起動は `/config` の「Enable for all sessions」トグル（あなた実行）。**harness は私のフック自作をブロック済**＝私は設定を裏で書かない | (a) `/config` で all-sessions ON（自動・公式・あなた実行）/ (b) profile.ps1 に `remote` 関数（手動・私が即追加可）/ (c) 見送り | [[project_remote_control]] |
-
-> 現 OPEN は **B2（GUI 実機 1 操作）** と **B6（Remote Control 採否・あなた判断）**。旧「監査残 30 件」は 2026-06-18 の再監査で superseded（下記 CLOSED）。B5 は 2026-06-18 にユーザーが A を選択し実装・CLOSED。
+> 現 OPEN は **B2（GUI 実機 1 操作）** のみ。旧「監査残 30 件」は 2026-06-18 の再監査で superseded（下記 CLOSED）。B5 は 2026-06-18・B6 は 2026-07-02 に決着（CLOSED）。
 
 ---
 
@@ -31,6 +29,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | 日付 | タスク | 確定根拠 |
 |---|---|---|
+| 2026-07-02 | B6 Remote Control 採否 | ユーザーが (b) を選択。`powershell/profile.ps1` に手動起動の **`remote` 関数**を追加（公式フラグ `--remote-control [name]` を `claude --help` で裏取り）。全セッション自動 ON はせず、必要時のみ手動起動する方針で決着 |
 | 2026-06-18 | MCP /doctor の 3 件 timeout（#10） | 当日初回コールドで postgres 644 / playwright 635 / notion 392ms。MCP ログ実測で sub-second 確認 |
 | 2026-06-18 | 旧 statusline 独立リポを本リポへ合体（`b4e93ae`） | `claude/` に script＋`statusline-spec.md`＋`CHANGELOG.md`＋`README.md` を集約。旧リポの古い ps1 は破棄。**旧リポ実体 `Repositories/statusline` は物理削除済（2026-06-18・全内容吸収後）** |
 | 2026-06-18 | B4 treesitter C compiler（#7） | gcc 16.1.0 が PATH・nvim も `executable('gcc')=1`・**treesitter パーサ 27 個コンパイル済**（sql/python/lua/markdown 含む。パーサ生成は gcc 成功が前提）。`:checkhealth` の C compiler ✅ 相当を headless で確定 |

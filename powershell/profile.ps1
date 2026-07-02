@@ -17,6 +17,15 @@ function vrepo { repo; nvim . }    # dotfiles を nvim で開く
 # --- DB（kanro_db / pgpass 無人接続）---
 function kanro { psql -U postgres -d kanro_db }
 
+# --- Claude Code を Remote Control 有効で起動（アプリ/web から遠隔操作）---
+#   remote           無名セッションで起動（名前は hostname 由来で自動採番）
+#   remote fix-bug   名前付きで起動（アプリ/web 側で識別しやすい）
+# 公式フラグ --remote-control [name]。全セッション自動 ON にはせず、必要な時だけ手動起動する方針。
+function remote {
+    param([string]$Name)
+    if ($Name) { claude --remote-control $Name } else { claude --remote-control }
+}
+
 # --- Claude Code 使用量を「API 従量課金だった場合」の額で表示（USD + 円換算）---
 #   usage          月別（既定）
 #   usage daily    日別
