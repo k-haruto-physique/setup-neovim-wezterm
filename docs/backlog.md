@@ -3,7 +3,7 @@
 セッション開始（`hi`）時に**必ず読む**未完タスク・仕様書の単一台帳。
 troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約点。**完了したら CLOSED へ落とし、起点ファイル（#番号 / memory）にも反映**する。
 
-最終更新: 2026-07-02（B2 GUI 実機確認 CLOSED＝Ctrl+Click 修正。B6 も remote 関数で CLOSED。W2 追加。**OPEN は 0 件**）
+最終更新: 2026-07-03（**W3 追加**＝Claude TUI 描画 wedge 型のペイン入力不能。#12 修飾 stuck とは別種・遠隔修復不可を確定。**OPEN は 0 件**）
 
 ---
 
@@ -23,6 +23,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 |---|---|---|---|
 | W1 | **statusline symlink 切れ** | `~/.claude/statusline.ps1` は実体ファイルだが repo 正本と**ハッシュ完全一致（2026-06-18 確認）**。表示も中身も正しく、再起動不要 | **次に repo 側 `claude/statusline.ps1` を編集した時**だけ。編集が live に伝播しないので、その時に手動コピー or 管理者で再リンク。それまで放置可 |
 | W2 | **ペイン入力不能（修飾キー stuck）** | 2026-07-02 発生・原因確定（修飾キーの key-up 取りこぼし）。**コードでは直せない**（WezTerm×Windows 積年の既知問題・設定フラグ無し）。運用回避で足りる | 固まったら **Ctrl/Shift/Alt/Win を 1 回タップ**で復活。予防は「修飾キー押したまま Alt+Tab しない」。詳細 troubleshooting #12 |
+| W3 | **ペイン入力不能（Claude TUI 描画 wedge）** | 2026-07-03 発生・W2 とは別種（修飾キータップで直らない）。特定 Claude ペインが "Esc to cancel" オーバーレイで wedge。**遠隔修復不可を実証**（send-text は Claude TUI に届かず・zoom-pane は mux CLI をデッドロックさせた）。頻発申告あり | 復旧は**ユーザー直接操作**: クリック→`Esc`×1-2→`Ctrl+C`→最終手段 `claude --continue`（会話復元）。`get-text` にオーバーレイが見えたら W3 確定。詳細 troubleshooting #13 |
 
 ---
 

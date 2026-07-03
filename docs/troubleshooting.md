@@ -444,3 +444,63 @@ WezTerm × Windows の**積年の既知問題**。`20260117` 系（最新）で�
 ### 教訓
 
 - 「1 ペインだけ入力不能 → 勝手に復活」= **ほぼ修飾キー stuck**。まず修飾キーをタップさせる。設定を疑う前に `wezterm cli list` で全ペイン生存・非 zoom・非コピーモードを確認すれば、config 側の犯人探しに時間を溶かさずに済む。
+
+---
+
+## 13. あるペインだけ入力不能 → 修飾キータップで直らない版（Claude Code TUI の描画 wedge）
+
+> #12（修飾キー stuck）と**症状が似ているが別物**。#12 の直し方（修飾キータップ）が効かなかったらこちら。
+
+### 症状
+
+- **特定の Claude Code ペイン**（アイドル ✳）だけキーボード入力を受けつけない。
+- **勝手に画面下部へスクロール**する／末尾に貼り付いたまま。
+- `Ctrl/Shift/Alt/Win` の単独タップ（#12 の対処）でも**直らない**。
+
+### 切り分け（`wezterm cli get-text` で中を覗く）
+
+```powershell
+wezterm cli list --format json | ConvertFrom-Json | Where-Object { $_.pane_id -eq <N> } | Format-List pane_id,is_zoomed,cursor_visibility
+wezterm cli get-text --pane-id <N>
+```
+
+2026-07-03 の実例では、入力不能ペインの中身が:
+
+```
+ Esc to cancel · Tab to amend · ctrl+e to
+ explain
+（以下、本文は空白）
+```
+
+で `cursor_visibility: Hidden`。これは **Claude Code の TUI（Ink/React 製）が何らかのオーバーレイ状態で描画 wedge している**状態。OS の修飾キー stuck ではなく、**そのペインの Claude プロセス側の TUI 状態**が原因。
+
+### 対策（ユーザーの直接操作＝これが確実）
+
+上から順に:
+
+1. **マウスでペイン内を物理クリック**してフォーカス（クリックは focus/修飾 stuck を迂回）
+2. **`Esc` を1〜2回**（フッターの "Esc to cancel" が正規の脱出）→ `❯` プロンプトに戻る
+3. 戻らなければ **`Ctrl+C`** 1回（現在処理の割り込み）
+4. それでも wedge なら最終手段: **そのペインを閉じて、同じ cwd で `claude --continue`**（セッション＝会話は復元される。ペインだけ作り直す）
+
+### 🚫 やってはいけない: Claude（アシスタント）側からの遠隔修復
+
+2026-07-03 に遠隔修復を試みて**逆効果**だったので明記する:
+
+| 遠隔手段 | 結果 |
+|---|---|
+| `wezterm cli send-text`（Esc/文字を注入） | **Claude Code の TUI に入力として届かない**。send-text は「paste 扱い」で送るが、Claude Code は bracketed-paste モードのため注入文字をキーストロークとして拾わない。**正常なペインでも `a` が composer に出ない**ことで確認済 |
+| `wezterm cli zoom-pane`（SIGWINCH 再描画狙い） | wedge を解けないうえ **mux の CLI 応答をデッドロック**させた。以後 `wezterm cli list` すら 8s timeout（exit 124）。ハングした `wezterm.exe`（**`wezterm-gui.exe` ではない** client プロセス）を kill しても mux は復旧せず |
+
+重要: **この mux ハングはユーザーのキーボード入力には影響しない**（GUI のキー処理は別系統で生きている）。影響は「Claude の遠隔操作」だけ。だが遠隔で直そうとすると副作用が出るので、**入力不能ペインの復旧は必ずユーザーの直接操作で行う**。mux は放置すれば回復するか、wedge ペインが解消すれば戻る（GUI 再起動は全セッションを閉じるので不可）。
+
+- kill してよいのは `wezterm.exe`（CLI client 残留）だけ。`wezterm-gui.exe`（実ウィンドウ本体・複数モニターで複数存在しうる）は**絶対 kill しない**。判別: `Get-Process wezterm*` で ProcessName と StartTime を見る。
+
+### ステータス
+
+- 2026-07-03: 4 ペイン運用中、アイドルの Claude ペイン（Instagram-project-v2）が入力不能＋末尾自動スクロール。修飾キータップで直らず。`get-text` で "Esc to cancel" オーバーレイの wedge と特定。**遠隔修復（send-text / zoom-pane）は不発かつ mux CLI をデッドロックさせたため打ち切り**。復旧はユーザーの直接操作（クリック→Esc→Ctrl+C→最終 `claude --continue`）に一本化。頻発するとの申告。backlog **W3** に登録。
+
+### 教訓
+
+- **#12 と #13 の分岐点は「修飾キータップで直るか」**。直れば #12（OS の修飾 stuck）、直らず `get-text` にオーバーレイが見えたら #13（Claude TUI の描画 wedge）。
+- **入力不能ペインを Claude（アシスタント）に遠隔で直させようとしない**。send-text は Claude TUI に届かず、pane 操作系は mux を wedge させるリスク。人間の直接操作が最短・最安全。
