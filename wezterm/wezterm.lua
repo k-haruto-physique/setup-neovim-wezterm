@@ -292,6 +292,20 @@ config.mouse_bindings = {
         mods = "CTRL",
         action = act.Nop,
     },
+    -- 2026-07-06: Shift+Click / Shift+Alt+Click にも既定の
+    -- CompleteSelectionOrOpenLinkAtMouseCursor が残っており誤爆経路になる
+    -- （mouse_bindings は既定とマージされ上書きされない）ため選択完了のみに封鎖。
+    -- 修飾キー stuck（troubleshooting #12）の復旧クリック時に Shift が残っていても安全。
+    {
+        event = { Up = { streak = 1, button = "Left" } },
+        mods = "SHIFT",
+        action = act.CompleteSelection("ClipboardAndPrimarySelection"),
+    },
+    {
+        event = { Up = { streak = 1, button = "Left" } },
+        mods = "SHIFT|ALT",
+        action = act.CompleteSelection("PrimarySelection"),
+    },
 }
 
 config.hyperlink_rules = wezterm.default_hyperlink_rules()
