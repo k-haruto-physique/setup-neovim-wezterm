@@ -15,17 +15,18 @@ $greetings = @('hi', 'おはよう', 'こんにちは', 'やあ', 'hello', 'hey'
 if ($greetings -notcontains $prompt) { exit 0 }
 
 $reminder = @'
-セッション開始プロトコル: 最初の応答前に以下を**全て**読み込むこと。
+セッション開始プロトコル: 最初の応答前に以下を**全て**読み込むこと（正本は CLAUDE.md 冒頭の「セッション開始プロトコル」。本リマインダーと差異があれば CLAUDE.md が勝つ）。
 
 1. CLAUDE.md（冒頭の「セッション開始プロトコル」を確認）
-2. docs/initial-prompt.md
-3. docs/nvim-manual.md
-4. docs/keybinds.md
-5. docs/troubleshooting.md
-6. README.md
-7. memory/MEMORY.md とそこからリンクされる個別 memory ファイル全て
+2. memory/MEMORY.md とそこからリンクされる個別 memory ファイル全て
+3. docs/initial-prompt.md
+4. docs/nvim-manual.md
+5. docs/keybinds.md
+6. docs/troubleshooting.md
+7. README.md
+8. docs/backlog.md（未完タスクの単一台帳＝GO ゲート回収）
 
-読み込み完了後、簡潔に「準備できた。何やる?」相当の短い挨拶のみ返すこと。読んだファイル名を列挙する必要はない。
+読み込み完了後、短い挨拶を返す。読んだファイル名の列挙は不要だが、**docs/backlog.md の OPEN 件数と上位 2-3 項目を挨拶に必ず含める**こと（例:「準備できた。OPEN 1 件（〜）。何をやる?」）。
 '@
 
 $output = @{
