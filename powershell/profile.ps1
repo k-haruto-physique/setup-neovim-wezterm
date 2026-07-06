@@ -34,8 +34,16 @@ function remote {
 # 円レートは frankfurter.app から取得（オフライン時は概算 155 にフォールバック）。
 function usage {
     param([string]$Period = 'monthly')
+    # NO_COLOR は ccusage 呼び出しの間だけ立てる（$env: はプロセス全体に効くため、
+    # 放置すると以後の git/gh/claude 等のカラー出力がセッション全体で消える）
+    $oldNoColor = $env:NO_COLOR
     $env:NO_COLOR = '1'
-    $data = ccusage $Period --json 2>$null | ConvertFrom-Json
+    try {
+        $data = ccusage $Period --json 2>$null | ConvertFrom-Json
+    } finally {
+        if ($null -eq $oldNoColor) { Remove-Item Env:NO_COLOR -ErrorAction SilentlyContinue }
+        else { $env:NO_COLOR = $oldNoColor }
+    }
     if (-not $data) { Write-Host 'ccusage の出力を取得できませんでした（ccusage 導入を確認）'; return }
 
     $rate = try {
