@@ -52,6 +52,8 @@ Windows 11 上の Neovim + LazyVim + WezTerm 環境を symlink で dotfiles 管�
 - `Ctrl+Shift+X` → CopyMode（明示バインド）。突入時カーソル黄色化で視認。
 - `Ctrl+Shift+I` → 新規 WezTerm ウィンドウで `nvim .`（マルチモニター運用向け、上モニター用）
 - `Ctrl+Shift+N` → 新規ウィンドウで `claude`（下モニターで複数 claude 用）
+- `Ctrl+Shift+O` → 選択中のパスを nvim で開く（無選択時は QuickSelect 数字ラベル → 選んで開く）
+- マウス: **Ctrl+Click = リンク/パスを開く**・プレーン/Shift+Click = 選択のみ（誤爆防止で既定の click-opens-link を無効化済。B2/2026-07-02）
 - Neovim: `<leader>xo` = OS 既定アプリで開く（HTML→ブラウザ、PDF→Edge 等）/ `<leader>xe` = エクスプローラで cwd 開く / `<leader>fh` = neo-tree を ~（ホーム）ルートで開く（LazyVim 既定の help 検索を上書き）
 
 CopyMode key_table は明示定義: 矢印キーを優位 + hjkl 併設。`PageUp/Down/Home/End` も同様の理由で追加。`n`/`N` で検索マッチ間ジャンプ（検索開始は `Ctrl+Shift+F` のみ）。**意図しない検索バー誤発火を防ぐため `/` `?` は `act.Nop` で無効化**（検索パターンのリセットは検索バー内 `Ctrl+U`）。
@@ -66,13 +68,14 @@ LazyVim Extras 有効化済: `lang.sql`, `lang.python`, `lang.markdown`（lang.l
 - **IME × Vim キー**: 日本語 IME ON 中は `h`/`j`/`k`/`l` が IME に奪われ、CopyMode・Normal モードで動かない。矢印キーは IME 透過。詳細 `docs/troubleshooting.md` 第 1 項。
 - **WezTerm reload とイベントハンドラ残骸**: 旧 Claude Code addon 等の `wezterm.on()` が config reload では消えない。完全再起動が必要。詳細 `docs/troubleshooting.md` 第 2 項。
 - **`Search:` バー誤発火**: `act.CopyMode("ClearPattern")` を Multiple action 内で呼ぶと副作用で search overlay が出る。**ClearPattern は使わない**。
-- **CopyMode key_table 上書きの罠**: `config.key_tables.copy_mode = {...}` は WezTerm デフォルトを完全置換（fall through しない）。必要なキーは全て自前で定義する。
+- **CopyMode key_table 上書きの罠**: `config.key_tables.copy_mode = {...}` は WezTerm デフォルトを完全置換（fall through しない）。必要なキーは全て自前で定義する。逆に **`config.mouse_bindings` は既定とマージ**される（消したい既定バインドは明示上書きが必要）。
+- **GPU レンダラー**: `front_end = "WebGpu"` + `HighPerformance` は 2026-07-03 に試して**不採用**（Optimus/NVIDIA 環境で入力ラグ・透過破損の上流報告多数、かつ凍結 2 種= #12/#13 はどちらも GPU 非起因）。既定 OpenGL のまま運用。Optimus のアダプタ固定は Windows 設定 > グラフィックス で行う。詳細 `docs/troubleshooting.md` #14。
 
 ## カスタムプラグイン構成
 
 `nvim/lua/plugins/` 配下:
 - `colorscheme.lua` — tokyonight `transparent = true` + 全主要 highlight 群を `bg = NONE` に上書きする ColorScheme autocmd
-- `markdown.lua` — render-markdown.nvim を素朴化（heading/code/quote 背景塗りを全停止）、conceallevel=0、**markdownlint-cli2 の lint を無効化**（フォーマットは継続）
+- `markdown.lua` — render-markdown.nvim を**完全無効化**（`enabled = false`）+ **markdownlint-cli2 の lint を無効化**（conform のフォーマットは継続）。conceallevel=0 と markdown 背景剥がしは `colorscheme.lua` の単一 `LazyVim/LazyVim` init に集約済（同名 spec の init last-wins 問題 → troubleshooting #11）
 - `ui-clean.lua` — vim-illuminate を背景塗りなしの細い underline のみに
 
 ## レガシー資産
@@ -100,7 +103,7 @@ LazyVim Extras 有効化済: `lang.sql`, `lang.python`, `lang.markdown`（lang.l
 - `docs/backlog.md` — 未完タスク・仕様書の集約台帳（`hi` の GO ゲートで回収。残タスクが出たら troubleshooting/memory と同時に 1 行追加）
 - `claude/` — Claude Code statusLine 一式: `statusline.ps1`(正本) + `statusline-spec.md`(設計仕様: 色/アイコン/数値セマンティクス/eff/reset/編集行数/データソース) + `CHANGELOG.md` + `README.md`。`%USERPROFILE%\.claude\statusline.ps1` へ反映
 - `powershell/profile.ps1` — PowerShell プロファイル正本（`repo`/`dotfiles`/`v`/`vrepo`/`kanro`/`remote`/`usage` 関数）。`$PROFILE` から **dot-source**（pwsh7・5.1 両対応＝UTF-8 BOM）。管理者不要
-- `docs/usage-log.md` — 使用量の従量換算ログ（**ローカル限定・gitignore**。`usage` 関数で再生成。repo 公開のため非追跡）
+- `docs/usage-log.md` — 使用量の従量換算ログ（**ローカル限定・gitignore**。`usage` 関数の出力を**手動でスナップショット追記**する方式＝関数はファイルに書かない。repo 公開のため非追跡）
 - `docs/cheatsheet.html` — 印刷用 1 枚（md が正本。PDF は陳腐化のため廃止・`*.pdf` は gitignore）
 - `docs/legacy-nvim/` — 旧 lazy.nvim 設定の参照保全
 

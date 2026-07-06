@@ -44,7 +44,7 @@ WezTerm + LazyVim + PowerShell の **このリポジトリのセットアップ�
 
 ## 🪟 WezTerm: ペイン・タブ・ウィンドウ
 
-**現在の設定は WezTerm デフォルト**（`wezterm.lua` の「キーバインド」コメントブロック直下、コメントアウトされた `config.keys`/`config.key_tables`/`config.leader` の 4 行でカスタム解除済）。
+**基本のペイン/タブ操作は WezTerm デフォルト**。ただし独自バインドを追加定義済: `Ctrl+Shift+X/I/N/S/E/O`（`config.keys`）・コピーモード key_table 全置換・`config.mouse_bindings`（Ctrl+Click でパスを開く / クリック誤爆防止）。旧 tmux 風レガシーは `wezterm.lua` 内で 4 行コメントアウトのまま退避。
 
 ### ペイン操作 ★★★
 
@@ -81,9 +81,17 @@ WezTerm + LazyVim + PowerShell の **このリポジトリのセットアップ�
 | `Ctrl+Shift+V` | 貼り付け |
 | `Ctrl+Shift+F` | スクロールバック検索 |
 | **`Ctrl+Shift+X`** | **コピーモード起動**（次表参照） |
-| `Ctrl+Shift+Space` | コピーモード起動（同上、別キー） |
+| `Ctrl+Shift+Space` | QuickSelect（画面上のパス等にラベル表示 → タイプで選択。WezTerm デフォルト） |
 | `Ctrl+Shift+PageUp/Down` | スクロール（タブ移動と被るので注意） |
 | `Ctrl+Shift+K` | スクロールバックをクリア |
+
+### マウス・パスを開く ★★（2026-07-02 カスタム）
+
+| 操作 | 動作 | 補足 |
+|---|---|---|
+| **`Ctrl+Shift+O`** | **選択中のパスを nvim で開く** | 無選択なら QuickSelect 数字ラベル → 選んで開く（主役キー・IME 無関係） |
+| **`Ctrl+Click`** | リンク/パス（`nvimopen:`）を開く | 意図的操作でだけ nvim 起動 |
+| プレーンクリック / `Shift+Click` | **選択のみ**（リンクは開かない） | 既定の click-opens-link を無効化＝誤爆防止（B2） |
 
 ### コピーモード内のキー ★★（2026-05-22 カスタム設定済）
 
@@ -402,6 +410,17 @@ Vim 未経験者が **最初に詰む最大ポイント**。
 | `Ctrl+L` | 画面クリア |
 | `↑` / `↓` | 履歴 |
 | `Ctrl+C` | 実行中止 |
+
+### このリポジトリ独自コマンド（正本: `powershell/profile.ps1`）
+
+| コマンド | 動作 |
+|---|---|
+| `repo` / `dotfiles` | dotfiles リポジトリへ cd |
+| `v` | cwd を nvim で開く |
+| `vrepo` | dotfiles を nvim で開く |
+| `kanro` | kanro_db へ psql 接続（pgpass 無人認証） |
+| `remote [name]` | Claude Code を Remote Control 有効で起動（`--remote-control`） |
+| `usage [daily\|session]` | 使用量の従量換算表示（USD+円。既定は月別） |
 
 ---
 

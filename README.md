@@ -25,6 +25,7 @@ Windows 11 上の Neovim + LazyVim + WezTerm 環境を、シンボリックリ�
 setup-neovim-wezterm/
 ├── README.md                  # 本ファイル
 ├── .gitignore
+├── .claude/                   # Claude Code ハーネス設定（settings.json + hooks/）
 ├── nvim/                      # %LOCALAPPDATA%\nvim へリンク
 │   ├── init.lua               # LazyVim スターター由来
 │   ├── lua/
@@ -36,14 +37,19 @@ setup-neovim-wezterm/
 ├── wezterm/                   # %USERPROFILE%\.config\wezterm へリンク
 │   └── wezterm.lua
 ├── powershell/
-│   └── profile.ps1            # $PROFILE 用
-├── claude/                    # %USERPROFILE%\.claude へリンク
-│   └── statusline.ps1         # Claude Code statusLine スクリプト
+│   └── profile.ps1            # $PROFILE 用（dot-source）
+├── claude/                    # Claude Code statusLine 一式
+│   ├── statusline.ps1         # 正本（%USERPROFILE%\.claude\statusline.ps1 へ反映）
+│   ├── statusline-spec.md     # 設計仕様
+│   ├── CHANGELOG.md
+│   └── README.md
 └── docs/
     ├── initial-prompt.md      # 初回依頼内容
     ├── nvim-manual.md         # Neovim/LazyVim 実用ガイド（VSCode 対応表つき）
     ├── keybinds.md            # 全キーバインド一覧（網羅版）
     ├── cheatsheet-1page.md    # 毎日使う最小キー 1 枚（常時表示/印刷用）
+    ├── cheatsheet.html        # 印刷用 1 枚（md が正本）
+    ├── backlog.md             # 未完タスクの単一台帳（GO ゲート回収）
     ├── lang-workflows.md      # 言語別実戦フロー（SQL/Python/Markdown/Lua）
     ├── vim-mental-model.md    # 「動詞+名詞」文法など思考モデル（初心者向け）
     ├── practice-drills.md     # Phase 別の具体練習メニュー
@@ -64,7 +70,7 @@ setup-neovim-wezterm/
 
 ## セットアップ手順（概要）
 
-詳細は `docs/setup.md` に記録する。
+手順の正本は本 README の Phase 別セクション（トラブル時の経緯は `docs/troubleshooting.md`）。
 
 ### Phase 1: 環境準備（完了済み）
 

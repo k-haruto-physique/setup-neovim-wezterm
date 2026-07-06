@@ -413,7 +413,8 @@ nvim --headless probe.md -c 'lua vim.defer_fn(function() print(vim.wo.conceallev
 
 ### 症状
 
-- WezTerm の**特定ペインだけ**キー入力が効かなくなる（他ペインは生きている）。
+- WezTerm で**フォーカス中のペインのキー入力が効かなくなる**（別ウィンドウは無事）。
+- **stuck はウィンドウ単位**: 同一ウィンドウ内なら複数ペインが「同時に死んだ」ように見える（2026-07-06 に 2 ペイン同時凍結 → 両方修飾タップで復活、を実測。1 個の stuck で説明がつく）。**別ウィンドウ同士で同時発生**した場合のみ別要因（compositor/GPU 停滞等）を疑う。次回発生時は「同一ウィンドウか別ウィンドウか」を 1 行記録すること。
 - しばらくすると**勝手に復活**する（何をして直ったか本人も不明なことが多い）。
 - ペイン/プロセスは全て生存（`wezterm cli list` で全ペイン正常・`is_zoomed:false`・key_table 暴発もなし＝コピーモードでもない）。
 
@@ -440,6 +441,8 @@ WezTerm × Windows の**積年の既知問題**。`20260117` 系（最新）で�
 ### ステータス
 
 - 2026-07-02: 4 ペイン（全 claude セッション）運用中に 1 ペインの入力不能が発生 → **Ctrl/Shift/Alt/Win タップ（切り分け手順①）で復活し、修飾キー stuck と確定**。`wezterm cli list` で全ペイン生存を確認済。設定バグではなく OS レベルの入力状態 stuck。
+- 2026-07-06: **2 ペイン同時凍結** → 片方は即タップで復活、もう片方もフォーカスし直して再タップで復活（フォーカスした状態でタップするのが肝）。同時多発は「stuck がウィンドウ単位」の性質と整合。
+- 2026-07-06 上流裏取り（監査）: 最新 nightly（2026-06-27）まで追っても key-up 取りこぼしの修正・緩和フラグは**存在しない**（関連 wezterm/wezterm#4621 も open のまま）＝**アップグレードでは直らない**。運用回避（タップ）継続が正解。
 
 ### 教訓
 
@@ -500,7 +503,41 @@ wezterm cli get-text --pane-id <N>
 
 - 2026-07-03: 4 ペイン運用中、アイドルの Claude ペイン（Instagram-project-v2）が入力不能＋末尾自動スクロール。修飾キータップで直らず。`get-text` で "Esc to cancel" オーバーレイの wedge と特定。**遠隔修復（send-text / zoom-pane）は不発かつ mux CLI をデッドロックさせたため打ち切り**。復旧はユーザーの直接操作（クリック→Esc→Ctrl+C→最終 `claude --continue`）に一本化。頻発するとの申告。backlog **W3** に登録。
 
+### 上流の正体（2026-07-06 監査で裏取り）
+
+anthropics/claude-code に**同型バグ報告が多数**あり、これは **Claude Code 本体（Node/Ink TUI）の不具合クラス**: #20572（spinner 静止・入力不能・Esc 無効、イベントループのデッドロック疑い）、#25286（全キー無視）、#22970（Windows で起動直後から入力層フリーズ）、#23211（**Windows Terminal でも発生＝ターミナル非依存。v2.1.30 の regression が版更新で修正された実例**）。複数 OS・複数ターミナルで再現しており **wezterm 固有ではない**。
+
+→ 対策は 2 つだけ: **(1) claude 本体をこまめに更新する**（版依存が実証済）。**(2) wezterm 側の設定変更（GPU レンダラー含む）で直そうとしない**（効果ゼロ。#14 参照）。W3 発生時は `claude --version` をこのステータス欄に併記して版依存を特定する。
+
 ### 教訓
 
 - **#12 と #13 の分岐点は「修飾キータップで直るか」**。直れば #12（OS の修飾 stuck）、直らず `get-text` にオーバーレイが見えたら #13（Claude TUI の描画 wedge）。
 - **入力不能ペインを Claude（アシスタント）に遠隔で直させようとしない**。send-text は Claude TUI に届かず、pane 操作系は mux を wedge させるリスク。人間の直接操作が最短・最安全。
+
+---
+
+## 14. GPU レンダラー（WebGpu）は試して不採用 → 既定 OpenGL のまま
+
+### 経緯
+
+- 2026-07-03: 凍結問題の対策候補として `config.front_end = "WebGpu"` + `config.webgpu_power_preference = "HighPerformance"` を wezterm.lua に追加（Optimus 構成: Intel iGPU + RTX 3050 で省電力側 GPU が選ばれる可能性への対処）。**未コミットのまま 3 日稼働**。
+- 2026-07-06: 全体監査の stability 次元で上流裏取り → **不採用と決定し削除**。
+
+### 不採用の根拠
+
+1. **凍結 2 種はどちらも GPU 非起因**: #12（修飾 stuck）は GPU 変更**前**の 07-02 に初発、#13 は Claude Code 本体のバグクラス。つまり WebGpu 化は何も直さない。
+2. **WebGpu は同型環境で故障報告が複数**（いずれも open）:
+   - wezterm/wezterm#4278: Win11 + Optimus（iGPU+RTX）で WebGpu のみ間欠入力ラグ → **OpenGL で完治**
+   - #4502: Win11 + NVIDIA で **WebGpu だと `window_background_opacity` が壊れる**（本環境の透過 0.95 直撃）
+   - #7611: **本機と同一ビルド**（20260117）で G-SYNC 誤発動 → TUI 中マウス激重（`max_fps` 指定でも無効）
+3. wezterm 本家も WebGpu を既定化した直後に **OpenGL へ差し戻した**経緯あり（公式 front_end doc: "The default for front_end is again OpenGL"）。
+
+### 対処
+
+- **Optimus のアダプタ固定が必要なら Windows 設定 > グラフィックス で `wezterm-gui.exe` を「高パフォーマンス」指定**（config 変更不要でアダプタ選択の目的を達成できる）。→ backlog **B7**
+- wezterm 更新判断: 最新 nightly に **IME 半角/全角トグル × ペイン分割のクラッシュ修正（#7529）**があり本ユーザーの操作パターンに直接関係するが、W2/W3 は直らないため**据え置き**。IME トグル起因のクラッシュを 1 度でも観測したら GitHub releases から直接更新（winget の nightly はハッシュ不一致報告 #7623/#7713 あり）。
+
+### 教訓
+
+- 「調子が悪い → GPU/レンダラーをいじる」は本環境では**筋が悪い**。凍結の正体は #12（OS 入力状態）と #13（Claude 本体）で確定しており、レンダラー変更はどちらにも効かず新しい故障モード（入力ラグ・透過破損）だけ持ち込む。
+- 挙動に効く設定変更は**その日のうちにコミット + backlog 記録**（symlink 運用では未コミットでも live に効いてしまい、`git checkout` 一発で黙って巻き戻るドリフト状態になる）。

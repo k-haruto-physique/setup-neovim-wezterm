@@ -3,7 +3,7 @@
 セッション開始（`hi`）時に**必ず読む**未完タスク・仕様書の単一台帳。
 troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約点。**完了したら CLOSED へ落とし、起点ファイル（#番号 / memory）にも反映**する。
 
-最終更新: 2026-07-03（**W3 追加**＝Claude TUI 描画 wedge 型のペイン入力不能。#12 修飾 stuck とは別種・遠隔修復不可を確定。**OPEN は 0 件**）
+最終更新: 2026-07-06（8 次元監査を実施。WebGpu 不採用（#14）・docs ドリフト一括是正・LICENSE 追加＋公開化。**OPEN は 1 件（B7）**）
 
 ---
 
@@ -11,9 +11,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | # | タスク | 状態 | 次の一手 | 起点 |
 |---|---|---|---|---|
-*(OPEN なし)*
-
-> **OPEN は 0 件**。旧「監査残 30 件」は 2026-06-18 の再監査で superseded（下記 CLOSED）。B5 は 2026-06-18、B2・B6 は 2026-07-02 に決着（CLOSED）。
+| B7 | **wezterm-gui.exe の GPU を「高パフォーマンス」固定**（Optimus 対策の正規手段。WebGpu 化の代替） | ユーザーの手動 GUI 操作待ち（Claude は GUI 不可） | Windows 設定 > システム > ディスプレイ > グラフィックス → `C:\Program Files\WezTerm\wezterm-gui.exe` を追加 → 「高パフォーマンス」を選択 | troubleshooting #14 |
 
 ---
 
@@ -31,6 +29,9 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | 日付 | タスク | 確定根拠 |
 |---|---|---|
+| 2026-07-06 | **WebGpu GPU ブロック（07-03 追加・未コミット）を不採用・削除** | 8 次元監査の stability 次元で上流裏取り: 凍結 2 種（#12/#13）はどちらも GPU 非起因＋WebGpu は同型環境（Optimus/NVIDIA）で入力ラグ #4278・透過破損 #4502・G-SYNC 誤発動 #7611 の報告。代替は B7（Windows 設定でアダプタ固定）。詳細 troubleshooting **#14** |
+| 2026-07-06 | **リポジトリ公開化 + LICENSE 追加** | 監査 critic 指摘（docs は「公開」前提・実態 PRIVATE の矛盾）→ ユーザーが公開を選択。MIT LICENSE を root に追加し `gh repo edit --visibility public` 実施。secrets スキャンはゼロ確認済 |
+| 2026-07-06 | **監査 findings 一括是正（確定 19 件中 auto 適用分）** | `hi` フック現行化（backlog 欠落・OPEN 報告指示なし）/ MEMORY.md の幻残タスク 3 行 / usage の NO_COLOR セッション漏れ / Shift+Click 誤爆経路封鎖 / keybinds.md（デフォルト宣言の虚偽・Ctrl+Shift+Space 誤記・open-path とPS 関数の未掲載）/ README（setup.md 壊れ参照・構成図陳腐化）/ CLAUDE.md（markdown.lua 説明・usage-log 説明）/ #12 をウィンドウ単位表現に補正 / nvim/.gitignore に spell/ 追加 |
 | 2026-07-02 | B2 open-path-in-nvim GUI 実機確認 | GUI 実機で **Ctrl+Shift+O が nvim で開くのを確認**（本命・IME 無関係）。Ctrl+Click は当初無反応（プレーンクリックが既定 `CompleteSelectionOrOpenLinkAtMouseCursor` で開く＝誤爆源）→ `mouse_bindings` を明示追加し **Ctrl+Click=OpenLink / プレーンクリック=選択のみ / Ctrl+Down=Nop**（WezTerm 公式レシピ）。再確認で Ctrl+Click 開く・プレーンクリック開かずを確定 |
 | 2026-07-02 | B6 Remote Control 採否 | ユーザーが (b) を選択。`powershell/profile.ps1` に手動起動の **`remote` 関数**を追加（公式フラグ `--remote-control [name]` を `claude --help` で裏取り）。全セッション自動 ON はせず、必要時のみ手動起動する方針で決着 |
 | 2026-06-18 | MCP /doctor の 3 件 timeout（#10） | 当日初回コールドで postgres 644 / playwright 635 / notion 392ms。MCP ログ実測で sub-second 確認 |
@@ -48,7 +49,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 |---|---|
 | `docs/initial-prompt.md` | 原依頼・Phase 構成・意思決定背景（仕様の正本） |
 | `memory/project_audit_2026_05_29.md` | 全体監査 35 件の一覧（B5 の供給源） |
-| `docs/troubleshooting.md` | 既知地雷 #1〜#11（残タスクの起点が点在） |
+| `docs/troubleshooting.md` | 既知地雷 #1〜（随時追記。上限番号は書かない＝陳腐化防止） |
 | `docs/keybinds.md` / `docs/nvim-manual.md` | キー・操作仕様 |
 
 ---
