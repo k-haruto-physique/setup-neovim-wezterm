@@ -29,7 +29,7 @@ Windows 11 上の Neovim + LazyVim + WezTerm 環境を symlink で dotfiles 管�
   - `setup-neovim-wezterm/nvim/...`
   - `setup-neovim-wezterm/wezterm/wezterm.lua`
   - `setup-neovim-wezterm/claude/statusline.ps1`（Claude Code statusLine。`%USERPROFILE%\.claude\statusline.ps1` へ symlink。**仕様・履歴は同じ `claude/` に集約**: `statusline-spec.md`・`CHANGELOG.md`・`README.md`。2026-06-18 に旧独立リポ `Repositories/statusline` を合体・退役）
-  - `setup-neovim-wezterm/powershell/profile.ps1`（PowerShell プロファイル正本。symlink でなく `$PROFILE` からの **dot-source** で反映＝管理者不要。2026-06-18 新設。repo 移動 `repo`/`dotfiles`・nvim `v`/`vrepo`・DB `kanro`・Remote Control 手動起動 `remote`（`claude --remote-control [name]`）・使用量の従量＋円換算 `usage`（ccusage + frankfurter FX）を定義）
+  - `setup-neovim-wezterm/powershell/profile.ps1`（PowerShell プロファイル正本。symlink でなく `$PROFILE` からの **dot-source** で反映＝管理者不要。2026-06-18 新設。repo 移動 `repo`/`dotfiles`・nvim `v`/`vrepo`・DB `kanro`・**Claude Code 対話起動を既定で Remote Control 化する `claude` ラッパー**（`--remote-control --remote-control-session-name-prefix <yyyyMMdd>` を自動付与・非対話/サブコマンドは素通し・退避路 `claudeplain`）・名前付き起動 `remote`（`20260716-<名前>`）・使用量の従量＋円換算 `usage`（ccusage + frankfurter FX）を定義）
 - 実体側 (`%LOCALAPPDATA%\nvim` 等) 経由で Edit ツールを叩くと **`Refusing to write through symlink` エラー**が出る。リポジトリ側パスへ切り替えること。
 - symlink 構成は管理者権限 PowerShell で作成済。再構築が必要なら `docs/troubleshooting.md` 参照。
 
@@ -102,7 +102,7 @@ LazyVim Extras 有効化済: `lang.sql`, `lang.python`, `lang.markdown`（lang.l
 - `docs/troubleshooting.md` — 遭遇問題と対処の永久記録（新規問題は追記必須）
 - `docs/backlog.md` — 未完タスク・仕様書の集約台帳（`hi` の GO ゲートで回収。残タスクが出たら troubleshooting/memory と同時に 1 行追加）
 - `claude/` — Claude Code statusLine 一式: `statusline.ps1`(正本) + `statusline-spec.md`(設計仕様: 色/アイコン/数値セマンティクス/eff/reset/編集行数/データソース) + `CHANGELOG.md` + `README.md`。`%USERPROFILE%\.claude\statusline.ps1` へ反映
-- `powershell/profile.ps1` — PowerShell プロファイル正本（`repo`/`dotfiles`/`v`/`vrepo`/`kanro`/`remote`/`usage` 関数）。`$PROFILE` から **dot-source**（pwsh7・5.1 両対応＝UTF-8 BOM）。管理者不要
+- `powershell/profile.ps1` — PowerShell プロファイル正本（`repo`/`dotfiles`/`v`/`vrepo`/`kanro`/`claude`/`claudeplain`/`remote`/`usage` 関数）。`$PROFILE` から **dot-source**（pwsh7・5.1 両対応＝UTF-8 BOM）。管理者不要
 - `docs/usage-log.md` — 使用量の従量換算ログ（**ローカル限定・gitignore**。`usage` 関数の出力を**手動でスナップショット追記**する方式＝関数はファイルに書かない。repo 公開のため非追跡）
 - `docs/cheatsheet.html` — 印刷用 1 枚（md が正本。PDF は陳腐化のため廃止・`*.pdf` は gitignore）
 - `docs/legacy-nvim/` — 旧 lazy.nvim 設定の参照保全

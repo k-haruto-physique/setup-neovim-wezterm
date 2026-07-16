@@ -120,4 +120,5 @@ setup-neovim-wezterm/
 - ターミナル: WezTerm
 - シェル: PowerShell（cmd.exe は使用しない）
 - パッケージ管理: winget
-- Claude Code: ネイティブ版 2.1.147
+- Claude Code: ネイティブ版 2.1.211（`C:\Users\81809\.local\bin\claude.exe`・自動更新有効）
+  - **対話起動は既定で Remote Control**（`powershell/profile.ps1` の `claude` ラッパーが `--remote-control --remote-control-session-name-prefix <yyyyMMdd>` を自動付与＝セッション名は `20260716-…`）。素で起動したい時は `claudeplain`

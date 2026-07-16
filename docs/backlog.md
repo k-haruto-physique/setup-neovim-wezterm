@@ -29,6 +29,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | 日付 | タスク | 確定根拠 |
 |---|---|---|
+| 2026-07-16 | **B6 方針変更: Remote Control を既定 ON（全セッション）＋セッション名を当日 8 桁日付に** | ユーザー判断「どれを起動しても remote-control になるように」＝2026-07-02 の B6 決着（手動のみ）を**撤回**。`powershell/profile.ps1` に `claude` ラッパーを追加し、対話起動時のみ `--remote-control --remote-control-session-name-prefix <yyyyMMdd>` を自動付与（例 `20260716-graceful-unicorn`）。**実機 `claude --help`（2.1.211）でフラグを裏取り**。`-p/--print`・`mcp` 等サブコマンド・`--remote-control` 指定済みは素通し（対話専用フラグのため）。退避路に `claudeplain`。`remote <名前>` は `20260716-<名前>` へ。**注意: Remote Control はローカル PC が動き続ける前提＝Windows 更新の再起動ではセッションは終わる**（消失対策は push の徹底。復帰は `--continue`・2.1.200+）。settings.json の該当キー名は公式非公開のため `/config` でなく検証済みフラグで実装 |
 | 2026-07-06 | **WebGpu GPU ブロック（07-03 追加・未コミット）を不採用・削除** | 8 次元監査の stability 次元で上流裏取り: 凍結 2 種（#12/#13）はどちらも GPU 非起因＋WebGpu は同型環境（Optimus/NVIDIA）で入力ラグ #4278・透過破損 #4502・G-SYNC 誤発動 #7611 の報告。代替は B7（Windows 設定でアダプタ固定）。詳細 troubleshooting **#14** |
 | 2026-07-06 | **リポジトリ公開化 + LICENSE 追加** | 監査 critic 指摘（docs は「公開」前提・実態 PRIVATE の矛盾）→ ユーザーが公開を選択。MIT LICENSE を root に追加し `gh repo edit --visibility public` 実施。secrets スキャンはゼロ確認済 |
 | 2026-07-06 | **監査 findings 一括是正（確定 19 件中 auto 適用分）** | `hi` フック現行化（backlog 欠落・OPEN 報告指示なし）/ MEMORY.md の幻残タスク 3 行 / usage の NO_COLOR セッション漏れ / Shift+Click 誤爆経路封鎖 / keybinds.md（デフォルト宣言の虚偽・Ctrl+Shift+Space 誤記・open-path とPS 関数の未掲載）/ README（setup.md 壊れ参照・構成図陳腐化）/ CLAUDE.md（markdown.lua 説明・usage-log 説明）/ #12 をウィンドウ単位表現に補正 / nvim/.gitignore に spell/ 追加 |
