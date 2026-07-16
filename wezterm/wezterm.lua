@@ -12,6 +12,17 @@ config.font_size = 12.0
 config.use_ime = true
 
 ----------------------------------------------------
+-- 既定シェル
+----------------------------------------------------
+-- 2026-07-16: default_prog 未指定だと WezTerm は Windows 既定の **cmd.exe** を起動する。
+-- そのため `powershell/profile.ps1`（repo/v/vrepo/kanro/remote/usage）が一度も読まれず、
+-- 「PowerShell 主体・cmd.exe は使用しない」方針（docs/initial-prompt.md）と実態が乖離していた。
+-- 実プロセスツリーで確認: wezterm-gui → cmd.exe → claude（pwsh は皆無）。pwsh 7 を明示する。
+-- -NoLogo は起動バナーの抑止のみ。profile.ps1 は $PROFILE からの dot-source で読まれる
+-- （-NoProfile を付けると独自コマンドが全滅するので付けないこと）。
+config.default_prog = { "pwsh.exe", "-NoLogo" }
+
+----------------------------------------------------
 -- 背景の透過・ぼかし（Windows用）
 ----------------------------------------------------
 -- 透過率（0〜1、0に近いほど透過）

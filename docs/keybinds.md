@@ -419,9 +419,7 @@ Vim 未経験者が **最初に詰む最大ポイント**。
 | `v` | cwd を nvim で開く |
 | `vrepo` | dotfiles を nvim で開く |
 | `kanro` | kanro_db へ psql 接続（pgpass 無人認証） |
-| `claude` | Claude Code を起動（**既定で Remote Control**・セッション名は当日日付始まり `20260716-…`）。`-p`/`--print`/`mcp` 等の非対話・サブコマンドは素通し |
-| `claudeplain` | Remote Control を付けずに素の Claude Code を起動（未ログイン・障害時の退避路） |
-| `remote [name]` | 名前付きで Remote Control 起動（`remote fix-bug` → `20260716-fix-bug`） |
+| `remote [name]` | 名前付きで Remote Control 起動（`remote fix-bug` → `20260716-fix-bug`）。**素の `claude` も既定で Remote Control になる**（`settings.json` の `remoteControlAtStartup: true`）。この関数は「アプリ/web 側で名前を見て識別したい」時だけ使う（既定の接頭辞は hostname） |
 | `usage [daily\|session]` | 使用量の従量換算表示（USD+円。既定は月別） |
 
 ---

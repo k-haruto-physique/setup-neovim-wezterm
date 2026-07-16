@@ -17,55 +17,20 @@ function vrepo { repo; nvim . }    # dotfiles を nvim で開く
 # --- DB（kanro_db / pgpass 無人接続）---
 function kanro { psql -U postgres -d kanro_db }
 
-# --- Claude Code: 既定で Remote Control 起動 ＋ セッション名を当日の 8 桁日付プレフィックスに ---
-# 方針変更 2026-07-16: B6 は「全セッション自動 ON はせず必要時のみ手動」で決着していたが、
-#   「どれを起動しても remote にしたい」との判断で既定 ON へ変更（docs/backlog.md 参照）。
-# 使うのは実機 `claude --help`（2.1.211）で裏取りしたフラグのみ:
-#   --remote-control [name]                   対話セッションを Remote Control で開始
-#   --remote-control-session-name-prefix <p>  自動採番名の接頭辞（既定 hostname → 当日日付へ）
-#   → 例: 20260716-graceful-unicorn
-# 注意 1: --remote-control は「対話セッション」専用。-p/--print・mcp 等のサブコマンドは素通しする。
-# 注意 2: --remote-control の直後にフラグを置く（直後に文字列を置くと [name] として食われるため）。
-# 退避路: 未ログイン・障害・素で起動したい時は claudeplain（ラッパーを通さない素の claude）。
-function Get-ClaudeExe {
-    if (-not $script:ClaudeExe) {
-        $script:ClaudeExe = (Get-Command claude -CommandType Application -ErrorAction SilentlyContinue).Source
-    }
-    $script:ClaudeExe
-}
-
-function claudeplain {
-    $exe = Get-ClaudeExe
-    if ($exe) { & $exe @args } else { Write-Error 'claude 本体が見つかりません（where.exe claude で確認）' }
-}
-
-function claude {
-    $exe = Get-ClaudeExe
-    if (-not $exe) { Write-Error 'claude 本体が見つかりません（where.exe claude で確認）'; return }
-    $passthru = @('-p', '--print', '--version', '-v', '--help', '-h')
-    $subcmds = @('mcp', 'config', 'doctor', 'update', 'install', 'migrate-installer', 'setup-token', 'plugin')
-    $skip = $false
-    if ($args.Count -gt 0) {
-        if ($subcmds -contains [string]$args[0]) { $skip = $true }
-        foreach ($a in $args) {
-            $s = [string]$a
-            if ($passthru -contains $s -or $s -like '--remote-control*') { $skip = $true; break }
-        }
-    }
-    if ($skip) { & $exe @args; return }
-    & $exe --remote-control --remote-control-session-name-prefix (Get-Date -Format 'yyyyMMdd') @args
-}
-
 # --- 名前付きで Remote Control 起動（アプリ/web 側で識別しやすい）---
-#   remote           → 20260716-<自動採番>
+# 自動接続そのものはここではなく `~/.claude/settings.json` の
+#   "remoteControlAtStartup": true
+# が担当する（2026-07-16 に確定）。設定は起動経路に依存せず全対話セッションに効くため、
+# 「既定で Remote Control 化する claude ラッパー」は撤去した（正本を 2 箇所に割らない）。
+# この関数は「アプリ/web 側で名前を見て識別したい」時だけ使う:
+#   remote           → 20260716-<自動採番>（当日 8 桁日付プレフィックス。既定は hostname）
 #   remote fix-bug   → 20260716-fix-bug
+# 注意: --remote-control の直後にフラグを置く（直後に文字列を置くと [name] として食われる）。
 function remote {
     param([string]$Name)
-    $exe = Get-ClaudeExe
-    if (-not $exe) { Write-Error 'claude 本体が見つかりません'; return }
     $p = Get-Date -Format 'yyyyMMdd'
-    if ($Name) { & $exe --remote-control "$p-$Name" }
-    else { & $exe --remote-control --remote-control-session-name-prefix $p }
+    if ($Name) { claude --remote-control "$p-$Name" }
+    else { claude --remote-control --remote-control-session-name-prefix $p }
 }
 
 # --- Claude Code 使用量を「API 従量課金だった場合」の額で表示（USD + 円換算）---

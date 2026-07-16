@@ -29,13 +29,16 @@ Windows 11 上の Neovim + LazyVim + WezTerm 環境を symlink で dotfiles 管�
   - `setup-neovim-wezterm/nvim/...`
   - `setup-neovim-wezterm/wezterm/wezterm.lua`
   - `setup-neovim-wezterm/claude/statusline.ps1`（Claude Code statusLine。`%USERPROFILE%\.claude\statusline.ps1` へ symlink。**仕様・履歴は同じ `claude/` に集約**: `statusline-spec.md`・`CHANGELOG.md`・`README.md`。2026-06-18 に旧独立リポ `Repositories/statusline` を合体・退役）
-  - `setup-neovim-wezterm/powershell/profile.ps1`（PowerShell プロファイル正本。symlink でなく `$PROFILE` からの **dot-source** で反映＝管理者不要。2026-06-18 新設。repo 移動 `repo`/`dotfiles`・nvim `v`/`vrepo`・DB `kanro`・**Claude Code 対話起動を既定で Remote Control 化する `claude` ラッパー**（`--remote-control --remote-control-session-name-prefix <yyyyMMdd>` を自動付与・非対話/サブコマンドは素通し・退避路 `claudeplain`）・名前付き起動 `remote`（`20260716-<名前>`）・使用量の従量＋円換算 `usage`（ccusage + frankfurter FX）を定義）
+  - `setup-neovim-wezterm/powershell/profile.ps1`（PowerShell プロファイル正本。symlink でなく `$PROFILE` からの **dot-source** で反映＝管理者不要。2026-06-18 新設。repo 移動 `repo`/`dotfiles`・nvim `v`/`vrepo`・DB `kanro`・名前付き Remote Control 起動 `remote`（`20260716-<名前>`）・使用量の従量＋円換算 `usage`（ccusage + frankfurter FX）を定義）
+    - **前提**: `wezterm.lua` の `config.default_prog = { "pwsh.exe", "-NoLogo" }`。これが無いと WezTerm は cmd.exe を起動し、profile.ps1 は**一切読まれない**（2026-07-16 に発覚・全関数が死んでいた。troubleshooting **#15**）。`-NoProfile` は付けないこと。
 - 実体側 (`%LOCALAPPDATA%\nvim` 等) 経由で Edit ツールを叩くと **`Refusing to write through symlink` エラー**が出る。リポジトリ側パスへ切り替えること。
 - symlink 構成は管理者権限 PowerShell で作成済。再構築が必要なら `docs/troubleshooting.md` 参照。
 
 ## リロード挙動
 
-- **WezTerm**: `config.automatically_reload_config = true`。ファイル保存で即座に再読込。ただし `wezterm.on(...)` 登録イベントハンドラは reload で**解除されない**ため、addon 系の挙動変更は WezTerm の完全再起動（プロセス kill）が必要なケースがある。
+- **WezTerm**: `config.automatically_reload_config = true`。色・キー等は保存で再読込。ただし完全再起動（プロセス kill）が要るものが 2 種:
+  - `wezterm.on(...)` 登録イベントハンドラは reload で**解除されない**（addon 系の挙動変更）
+  - **`default_prog` の変更は稼働中インスタンスに乗らない**（2026-07-16 実測。symlink 経由の config をウォッチャが拾えていない疑い）。反映検証は既存ウィンドウを壊さずに `wezterm --config-file <repo>\wezterm\wezterm.lua start --always-new-process` で行う（#15）
 - **Neovim**: `:Lazy reload <plugin>` か `:qa` → `nvim` 再起動が確実。
 
 ## WezTerm の透過率（現状: 静的 0.95 統一 / nvim 検出は廃止済）
@@ -102,7 +105,8 @@ LazyVim Extras 有効化済: `lang.sql`, `lang.python`, `lang.markdown`（lang.l
 - `docs/troubleshooting.md` — 遭遇問題と対処の永久記録（新規問題は追記必須）
 - `docs/backlog.md` — 未完タスク・仕様書の集約台帳（`hi` の GO ゲートで回収。残タスクが出たら troubleshooting/memory と同時に 1 行追加）
 - `claude/` — Claude Code statusLine 一式: `statusline.ps1`(正本) + `statusline-spec.md`(設計仕様: 色/アイコン/数値セマンティクス/eff/reset/編集行数/データソース) + `CHANGELOG.md` + `README.md`。`%USERPROFILE%\.claude\statusline.ps1` へ反映
-- `powershell/profile.ps1` — PowerShell プロファイル正本（`repo`/`dotfiles`/`v`/`vrepo`/`kanro`/`claude`/`claudeplain`/`remote`/`usage` 関数）。`$PROFILE` から **dot-source**（pwsh7・5.1 両対応＝UTF-8 BOM）。管理者不要
+- `powershell/profile.ps1` — PowerShell プロファイル正本（`repo`/`dotfiles`/`v`/`vrepo`/`kanro`/`remote`/`usage` 関数）。`$PROFILE` から **dot-source**（pwsh7・5.1 両対応＝UTF-8 BOM）。管理者不要。**WezTerm の `default_prog` が pwsh であることが前提**（#15）
+- **Claude Code の Remote Control 自動接続** — 正本は `~/.claude/settings.json` の `"remoteControlAtStartup": true`（＝毎回 `--remote-control` 相当。起動経路に非依存）。**シェル層のラッパーでやらない**（2026-07-16 決着。troubleshooting **#16**）
 - `docs/usage-log.md` — 使用量の従量換算ログ（**ローカル限定・gitignore**。`usage` 関数の出力を**手動でスナップショット追記**する方式＝関数はファイルに書かない。repo 公開のため非追跡）
 - `docs/cheatsheet.html` — 印刷用 1 枚（md が正本。PDF は陳腐化のため廃止・`*.pdf` は gitignore）
 - `docs/legacy-nvim/` — 旧 lazy.nvim 設定の参照保全

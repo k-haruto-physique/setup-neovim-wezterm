@@ -541,3 +541,76 @@ anthropics/claude-code に**同型バグ報告が多数**あり、これは **Cl
 
 - 「調子が悪い → GPU/レンダラーをいじる」は本環境では**筋が悪い**。凍結の正体は #12（OS 入力状態）と #13（Claude 本体）で確定しており、レンダラー変更はどちらにも効かず新しい故障モード（入力ラグ・透過破損）だけ持ち込む。
 - 挙動に効く設定変更は**その日のうちにコミット + backlog 記録**（symlink 運用では未コミットでも live に効いてしまい、`git checkout` 一発で黙って巻き戻るドリフト状態になる）。
+
+---
+
+## 15. `powershell/profile.ps1` が一度も読まれていなかった → WezTerm の既定シェルが cmd.exe
+
+### 症状
+
+2026-07-16、「対話起動を既定で Remote Control 化する」ために `profile.ps1` に `claude` ラッパーを実装（`3d9475b`）したのに、**起動しても Remote Control にならない**。
+
+### 原因（実プロセスで確定）
+
+`wezterm.lua` に `default_prog` が無く、WezTerm は **Windows 既定の cmd.exe** を起動していた。プロセスツリー実測:
+
+```
+wezterm-gui.exe (4656)
+ └─ cmd.exe ×6          ← WezTerm の既定シェル
+     └─ claude.exe ×5   ← 稼働中の全 Claude セッション
+```
+
+pwsh は 1 つも走っていない（statusline の `-NoProfile` 実行を除く）。つまり `$PROFILE` → `profile.ps1` の dot-source が**発火する機会そのものが無く**、`claude` ラッパーだけでなく `repo`/`v`/`vrepo`/`kanro`/`remote`/`usage` の**全関数が最初から死んでいた**（2026-06-18 の B5 新設以来）。README/CLAUDE.md の「シェル: PowerShell（cmd.exe は使用しない）」とも矛盾していた。
+
+**教訓**: 「シェル関数を書いた」は「シェルがそれを読む」を意味しない。プロファイル方式の実装は**プロセスツリーで親シェルを実測**してから信じる（`Get-CimInstance Win32_Process`）。
+
+### 対処
+
+1. `wezterm.lua` に `config.default_prog = { "pwsh.exe", "-NoLogo" }` を明示（`-NoProfile` は付けない＝付けると独自コマンドが全滅）。
+2. Remote Control の自動接続は**シェル層でやらない**。`~/.claude/settings.json` の `"remoteControlAtStartup": true` が正解（下記 #16）。ラッパーは撤去した。
+
+### 副次的な地雷: 実行中インスタンスには反映されない
+
+`automatically_reload_config = true` でも、**`default_prog` の変更は稼働中の WezTerm に反映されなかった**（実測: 編集 1 分後も `wezterm cli spawn` は cmd.exe を起動）。config は symlink 経由（`~/.config/wezterm/wezterm.lua` → repo）で、ウォッチャは repo 側の書き込みを拾えていない疑いが濃い。
+
+検証は**独立プロセス**で行える（既存ウィンドウを壊さない）:
+
+```powershell
+wezterm --config-file <repo>\wezterm\wezterm.lua start --always-new-process
+# → 子プロセスが pwsh.exe なら OK。実測で cmd.exe → pwsh.exe を確認
+```
+
+→ **反映には WezTerm の完全再起動が必要**。
+
+---
+
+## 16. Remote Control を全セッションで自動接続にする → `remoteControlAtStartup`（シェル層でやらない）
+
+### 結論
+
+`~/.claude/settings.json` に **`"remoteControlAtStartup": true`** を入れる。これだけで、起動経路（cmd / pwsh / WezTerm の `Ctrl+Shift+N` 直 spawn / 別ランチャ）に**一切依存せず**全対話セッションが Remote Control になる。
+
+### 根拠（claude.exe 2.1.211 の実体から確認）
+
+公式 docs には「`/config` に *Enable Remote Control for all sessions* トグルがある」とあるが**キー名は非公開**。バイナリから特定した:
+
+```js
+// zod スキーマ（settings）
+remoteControlAtStartup: A.boolean().optional()
+  .describe("Start Remote Control bridge automatically each session")
+
+// 読み取り: settings.json が優先・レガシー config にフォールバック
+function HAo(){ return zL()?.settings.remoteControlAtStartup ?? Et().remoteControlAtStartup }
+
+// 起動時の判定（At = --remote-control フラグ / U0e() = 上記設定）
+Bg = !(ra()||Boolean(Re)) && !ut(process.env.CLAUDE_CODE_REMOTE) && (At || U0e())
+```
+
+→ 設定 `true` は **`--remote-control` を毎回付けたのと等価**。同じ family の `inputNeededNotifEnabled`・`agentPushNotifEnabled` が既に settings.json で機能していることとも整合。
+
+### 注意
+
+- **既存セッションには遡及しない**（次の起動から）。
+- セッション名の接頭辞は既定 **hostname**。当日日付にしたい時だけ `remote` 関数（`20260716-fix-bug`）を使う。設定側で日付にはできない（`env` は静的なため）。
+- 無効化キーは別物: `disableRemoteControl` / `CLAUDE_CODE_DISABLE_REMOTE_CONTROL=1`。
+- `claude config get/list` は**サブコマンドとして既に存在しない**（引数がプロンプトとして解釈され、普通にセッションが走って課金される）。設定確認は `/config` かファイル直読で。

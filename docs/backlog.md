@@ -3,7 +3,7 @@
 セッション開始（`hi`）時に**必ず読む**未完タスク・仕様書の単一台帳。
 troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約点。**完了したら CLOSED へ落とし、起点ファイル（#番号 / memory）にも反映**する。
 
-最終更新: 2026-07-06（8 次元監査を実施。WebGpu 不採用（#14）・docs ドリフト一括是正・LICENSE 追加＋公開化。**OPEN は 1 件（B7）**）
+最終更新: 2026-07-16（B6 再決着＝Remote Control 自動接続を `settings.json` の `remoteControlAtStartup` に一本化。副産物で **profile.ps1 が cmd.exe 環境で一度も読まれていなかった**ことが発覚し `default_prog = pwsh` を明示（#15/#16）。**OPEN は 2 件（B8・B7＝どちらもユーザーの手動操作待ち）**）
 
 ---
 
@@ -11,6 +11,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | # | タスク | 状態 | 次の一手 | 起点 |
 |---|---|---|---|---|
+| B8 | **WezTerm を完全再起動して `default_prog = pwsh` を実機反映** | 設定・検証は完了。稼働中インスタンスに乗らないため再起動待ち | 全 WezTerm ウィンドウを閉じる（claude セッションは事前に push/`--continue` 前提）→ 再起動 → 新規タブが pwsh・`repo`/`v`/`usage` が通る・新規 `claude` が Remote Control で立つことを確認 | troubleshooting #15 |
 | B7 | **wezterm-gui.exe の GPU を「高パフォーマンス」固定**（Optimus 対策の正規手段。WebGpu 化の代替） | ユーザーの手動 GUI 操作待ち（Claude は GUI 不可） | Windows 設定 > システム > ディスプレイ > グラフィックス → `C:\Program Files\WezTerm\wezterm-gui.exe` を追加 → 「高パフォーマンス」を選択 | troubleshooting #14 |
 
 ---
@@ -29,7 +30,8 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | 日付 | タスク | 確定根拠 |
 |---|---|---|
-| 2026-07-16 | **B6 方針変更: Remote Control を既定 ON（全セッション）＋セッション名を当日 8 桁日付に** | ユーザー判断「どれを起動しても remote-control になるように」＝2026-07-02 の B6 決着（手動のみ）を**撤回**。`powershell/profile.ps1` に `claude` ラッパーを追加し、対話起動時のみ `--remote-control --remote-control-session-name-prefix <yyyyMMdd>` を自動付与（例 `20260716-graceful-unicorn`）。**実機 `claude --help`（2.1.211）でフラグを裏取り**。`-p/--print`・`mcp` 等サブコマンド・`--remote-control` 指定済みは素通し（対話専用フラグのため）。退避路に `claudeplain`。`remote <名前>` は `20260716-<名前>` へ。**注意: Remote Control はローカル PC が動き続ける前提＝Windows 更新の再起動ではセッションは終わる**（消失対策は push の徹底。復帰は `--continue`・2.1.200+）。settings.json の該当キー名は公式非公開のため `/config` でなく検証済みフラグで実装 |
+| 2026-07-16 | **B6 再決着: Remote Control 自動接続を `settings.json` に一本化＋WezTerm 既定シェルを pwsh 化** | 同日朝の実装（下行 `3d9475b` の `claude` ラッパー）は **一度も発火していなかった**。原因: `wezterm.lua` に `default_prog` が無く既定シェルが **cmd.exe**（プロセスツリー実測: wezterm-gui → cmd.exe ×6 → claude ×5・pwsh 皆無）→ `$PROFILE` の dot-source 機会が無く、**B5(06-18) 以来 `repo`/`v`/`vrepo`/`kanro`/`remote`/`usage` も全部死んでいた**（README の「cmd.exe は使用しない」宣言とも矛盾）。**是正 3 点**: ① `wezterm.lua` に `config.default_prog = { "pwsh.exe", "-NoLogo" }`（`-NoProfile` 厳禁）② `~/.claude/settings.json` に `"remoteControlAtStartup": true` ③ `claude`/`claudeplain` ラッパーを撤去（正本を 2 箇所に割らない・`remote` は名前付き起動用に存続）。**② の裏取り**: 公式 docs はトグル存在のみでキー名非公開 → claude.exe 2.1.211 の実体から zod スキーマ `remoteControlAtStartup: "Start Remote Control bridge automatically each session"` と起動判定 `Bg = !(…) && !CLAUDE_CODE_REMOTE && (At \|\| U0e())`（`At`=フラグ / `U0e()`=設定）を確認＝**毎回 `--remote-control` と等価・起動経路に非依存**。**検証**: 独立プロセス起動の子が cmd.exe → **pwsh.exe** に変化／dot-source 後の関数に `claude` 無し・`claude` は exe に解決。**残**: 稼働中 WezTerm には乗らない＝完全再起動待ち（**B8**）。詳細 troubleshooting **#15 / #16** |
+| 2026-07-16 | ~~B6 方針変更: Remote Control を既定 ON（全セッション）＋セッション名を当日 8 桁日付に~~（**同日中に上行で supersede**。実装自体が cmd.exe 環境で不発だったうえ、ネイティブ設定キーが存在したためシェル層の実装ごと撤去） | ユーザー判断「どれを起動しても remote-control になるように」＝2026-07-02 の B6 決着（手動のみ）を**撤回**。`powershell/profile.ps1` に `claude` ラッパーを追加し、対話起動時のみ `--remote-control --remote-control-session-name-prefix <yyyyMMdd>` を自動付与（例 `20260716-graceful-unicorn`）。**実機 `claude --help`（2.1.211）でフラグを裏取り**。`-p/--print`・`mcp` 等サブコマンド・`--remote-control` 指定済みは素通し（対話専用フラグのため）。退避路に `claudeplain`。`remote <名前>` は `20260716-<名前>` へ。**注意: Remote Control はローカル PC が動き続ける前提＝Windows 更新の再起動ではセッションは終わる**（消失対策は push の徹底。復帰は `--continue`・2.1.200+）。settings.json の該当キー名は公式非公開のため `/config` でなく検証済みフラグで実装 |
 | 2026-07-06 | **WebGpu GPU ブロック（07-03 追加・未コミット）を不採用・削除** | 8 次元監査の stability 次元で上流裏取り: 凍結 2 種（#12/#13）はどちらも GPU 非起因＋WebGpu は同型環境（Optimus/NVIDIA）で入力ラグ #4278・透過破損 #4502・G-SYNC 誤発動 #7611 の報告。代替は B7（Windows 設定でアダプタ固定）。詳細 troubleshooting **#14** |
 | 2026-07-06 | **リポジトリ公開化 + LICENSE 追加** | 監査 critic 指摘（docs は「公開」前提・実態 PRIVATE の矛盾）→ ユーザーが公開を選択。MIT LICENSE を root に追加し `gh repo edit --visibility public` 実施。secrets スキャンはゼロ確認済 |
 | 2026-07-06 | **監査 findings 一括是正（確定 19 件中 auto 適用分）** | `hi` フック現行化（backlog 欠落・OPEN 報告指示なし）/ MEMORY.md の幻残タスク 3 行 / usage の NO_COLOR セッション漏れ / Shift+Click 誤爆経路封鎖 / keybinds.md（デフォルト宣言の虚偽・Ctrl+Shift+Space 誤記・open-path とPS 関数の未掲載）/ README（setup.md 壊れ参照・構成図陳腐化）/ CLAUDE.md（markdown.lua 説明・usage-log 説明）/ #12 をウィンドウ単位表現に補正 / nvim/.gitignore に spell/ 追加 |

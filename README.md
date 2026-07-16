@@ -118,7 +118,7 @@ setup-neovim-wezterm/
 
 - OS: Windows 11 (build 26200)
 - ターミナル: WezTerm
-- シェル: PowerShell（cmd.exe は使用しない）
+- シェル: PowerShell（cmd.exe は使用しない）— `wezterm.lua` の `default_prog = { "pwsh.exe", "-NoLogo" }` で明示。**未指定だと WezTerm は cmd.exe を起動し `powershell/profile.ps1` が読まれない**（2026-07-16 是正・troubleshooting #15）
 - パッケージ管理: winget
 - Claude Code: ネイティブ版 2.1.211（`C:\Users\81809\.local\bin\claude.exe`・自動更新有効）
-  - **対話起動は既定で Remote Control**（`powershell/profile.ps1` の `claude` ラッパーが `--remote-control --remote-control-session-name-prefix <yyyyMMdd>` を自動付与＝セッション名は `20260716-…`）。素で起動したい時は `claudeplain`
+  - **全対話セッションが既定で Remote Control**。正本は `~/.claude/settings.json` の `"remoteControlAtStartup": true`（毎回 `--remote-control` を付けるのと等価・起動経路に非依存）。素で起動したい時だけ設定を切るか `disableRemoteControl`。セッション名に当日日付を付けたい時は `remote [name]` → `20260716-…`（troubleshooting #16）
