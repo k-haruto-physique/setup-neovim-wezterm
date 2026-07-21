@@ -2,6 +2,21 @@
 
 > 旧独立リポ `Repositories/statusline` から 2026-06-18 に本リポへ合体。以降は `claude/statusline.ps1` が正本。
 
+## 2026-07-21 — Fable 5（premium モデル）週間制限セグメントを前方互換で追加
+
+### 背景
+- 「Fable 5 の週間制限を statusline に出したい」という要望。だが **Claude Code 2.1.216 の statusLine payload は `rate_limits` に `five_hour` / `seven_day` の 2 つしか載せない**（claude.exe の rate_limits ビルダー `I={...x.five_hour&&…,...x.seven_day&&…}` を直接確認）。
+- 「Fable 5 limit」の値は claude 内部には存在する（レスポンスヘッダ `anthropic-ratelimit-unified-7d_oi-*` → メモリ `Fkt`）。内部ラベル表 `$kt` に `seven_day_overage_included:"Fable 5 limit"`（兄弟 `seven_day_opus:"Opus limit"` / `seven_day_sonnet:"Sonnet limit"`）が実在。だが statusLine 層で間引かれ、payload にもディスク（`cachedUsageUtilization` は現在 `.claude.json` に不在）にも出てこない。
+
+### 変更
+- `rate_limits.seven_day_overage_included`（無ければ `seven_day_opus` → `seven_day_sonnet`）を**優先順で 1 つ**読むセグメントを追加。アイコン `◒`、ラベル `F5`/`Op`/`So`。色・reset 表記は 5h/7d と同一（used% ステージ + ↺）。
+- **前方互換設計**: 今日は payload にフィールドが無いので**非表示**（何も壊さない）。将来 Claude Code が premium-weekly キーを payload に載せた瞬間、**追加作業ゼロで自動点灯**する。内部ラベル表が既にある以上、追加は時間の問題という読み。
+
+### 検証
+- payload に premium キー無し → F5 非表示・5h/7d 正常（現行実ダンプで確認）。
+- `seven_day_overage_included` 有り → `◒ F5:63% ↺6d23h` 出現。`seven_day_opus` のみ → `◒ Op:88%` 出現（fallback・88% 赤ステージ）。
+- 正本編集後、実体 `~/.claude/statusline.ps1` へコピーしハッシュ一致を確認（W1 解消）。
+
 ## 2026-06-15 — 空行/フォールバック表示のバグ修正（stdin読み取り）
 
 ### 症状

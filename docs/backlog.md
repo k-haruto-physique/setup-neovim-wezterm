@@ -3,7 +3,7 @@
 セッション開始（`hi`）時に**必ず読む**未完タスク・仕様書の単一台帳。
 troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約点。**完了したら CLOSED へ落とし、起点ファイル（#番号 / memory）にも反映**する。
 
-最終更新: 2026-07-16（B6 再決着＝Remote Control 自動接続を `settings.json` の `remoteControlAtStartup` に一本化。副産物で **profile.ps1 が cmd.exe 環境で一度も読まれていなかった**ことが発覚し `default_prog = pwsh` を明示（#15/#16）。**OPEN は 2 件（B8・B7＝どちらもユーザーの手動操作待ち）**）
+最終更新: 2026-07-21（statusline に Fable5 週間制限セグメント ◒ を前方互換で追加＝payload 搭載待ちで休眠・**W4** 登録。OPEN 件数は不変）。前回 2026-07-16（B6 再決着＝Remote Control 自動接続を `settings.json` の `remoteControlAtStartup` に一本化。副産物で **profile.ps1 が cmd.exe 環境で一度も読まれていなかった**ことが発覚し `default_prog = pwsh` を明示（#15/#16））。**OPEN は 2 件（B8・B7＝どちらもユーザーの手動操作待ち）**
 
 ---
 
@@ -23,6 +23,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 | W1 | **statusline symlink 切れ** | `~/.claude/statusline.ps1` は実体ファイルだが repo 正本と**ハッシュ完全一致（2026-06-18 確認）**。表示も中身も正しく、再起動不要 | **次に repo 側 `claude/statusline.ps1` を編集した時**だけ。編集が live に伝播しないので、その時に手動コピー or 管理者で再リンク。それまで放置可 |
 | W2 | **ペイン入力不能（修飾キー stuck）** | 2026-07-02 発生・原因確定（修飾キーの key-up 取りこぼし）。**コードでは直せない**（WezTerm×Windows 積年の既知問題・設定フラグ無し）。運用回避で足りる | 固まったら **Ctrl/Shift/Alt/Win を 1 回タップ**で復活。予防は「修飾キー押したまま Alt+Tab しない」。詳細 troubleshooting #12 |
 | W3 | **ペイン入力不能（Claude TUI 描画 wedge）** | 2026-07-03 発生・W2 とは別種（修飾キータップで直らない）。特定 Claude ペインが "Esc to cancel" オーバーレイで wedge。**遠隔修復不可を実証**（send-text は Claude TUI に届かず・zoom-pane は mux CLI をデッドロックさせた）。頻発申告あり | 復旧は**ユーザー直接操作**: クリック→`Esc`×1-2→`Ctrl+C`→最終手段 `claude --continue`（会話復元）。`get-text` にオーバーレイが見えたら W3 確定。詳細 troubleshooting #13 |
+| W4 | **statusline ◒ F5（Fable5 週間制限）セグメントが休眠中** | 2026-07-21 前方互換で実装済。だが Claude Code 2.1.216 の statusLine payload は `rate_limits` に `five_hour`/`seven_day` しか載せず（claude.exe 実体で確定）、Fable5 週間制限（内部 `seven_day_overage_included`）は転送されない＝**現在は非表示**。今すぐ出すには自前ポーラー要（不採用） | Claude Code 更新で payload に premium-weekly キーが載れば**自動点灯**（作業ゼロ）。更新後に `◒ F5:xx%` が出るか目視。載らないまま欲しくなったら usage ポーラーを再検討。詳細 `claude/statusline-spec.md`「前方互換」 |
 
 ---
 

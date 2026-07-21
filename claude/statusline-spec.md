@@ -14,11 +14,11 @@ WezTerm 側 statusline addon は 2026-05-21 に廃止済み（表示は Claude C
 Claude Code 入力欄の真上に 2 段表示。
 
 ```
-◆ Opus 4.8 │ ◇ eff:high │ ◈ ctx:58%/1M │ ◐ 5h:20% ↺3d3h ◑ 7d:75% │ +12 -3
+◆ Opus 4.8 │ ◇ eff:high │ ◈ ctx:58%/1M │ ◐ 5h:20% ↺3d3h ◑ 7d:75% ◒ F5:63% ↺6d23h │ +12 -3
 ▸ ~/Documents/Repositories/setup-neovim-wezterm  ⎇ master !?
 ```
 
-- **1 段目**: ランタイム情報(モデル / effort レベル / コンテキスト使用率 / 5h・7d レート使用率+reset 残時間 / 編集行数 +追加 -削除)
+- **1 段目**: ランタイム情報(モデル / effort レベル / コンテキスト使用率 / 5h・7d・Fable5 週間レート使用率+reset 残時間 / 編集行数 +追加 -削除)
 - **2 段目**: 開発コンテキスト(現在地 / git ブランチ + status)
 
 ### カラーパレット (Catppuccin Frappe)
@@ -47,13 +47,14 @@ Mocha の公式落ち着き版。長時間視認しても疲れにくい muted �
 | ctx | ◈ | U+25C8 |
 | 5h | ◐ | U+25D0 |
 | 7d | ◑ | U+25D1 |
+| Fable5 / premium 週間 | ◒ | U+25D2 CIRCLE WITH LOWER HALF BLACK |
 | reset 残時間 | ↺ | U+21BA ANTICLOCKWISE OPEN CIRCLE ARROW |
 | dir | ▸ | U+25B8 |
 | branch | ⎇ | U+2387 ALTERNATIVE KEY SYMBOL |
 
 ### 数値セマンティクス
 
-ctx / 5h / 7d はすべて **使用率(USED %)** 表示で統一(大きいほど危険)。ステージカラーも used に基づく判定:
+ctx / 5h / 7d / Fable5 週間はすべて **使用率(USED %)** 表示で統一(大きいほど危険)。ステージカラーも used に基づく判定:
 
 - `< 50%` 緑(safe)
 - `50-80%` 黄(warn)
@@ -120,10 +121,24 @@ Claude Code は Windows + Git Bash インストール環境では statusLine コ
 | Git ブランチ / dirty / ahead-behind | `git rev-parse` / `git status --porcelain` / `git rev-list` |
 | Context 使用率 | `data.context_window.used_percentage` + `context_window_size` |
 | 5h / 7d レート使用率 + reset 残時間 | `data.rate_limits.{five_hour,seven_day}.used_percentage` / `.resets_at` |
+| Fable5 / premium 週間制限（◒）| `data.rate_limits.{seven_day_overage_included,seven_day_opus,seven_day_sonnet}`（優先順で最初の 1 つ）。**2.1.216 では payload に未搭載＝現在は非表示**。下記「前方互換」参照 |
 | 編集行数 (+追加 / -削除) | `data.cost.total_lines_added` / `data.cost.total_lines_removed`（>0 のみ表示） |
 | Vim mode | `data.vim.mode` |
 
 レート情報は Claude.ai Pro/Max 加入者のみ初回 API 応答後に含まれる。それまでは `rate_limits` フィールド自体が無いのでセグメントは非表示になる(コード側でガード済み)。
+
+### Fable5 週間制限の前方互換（◒ セグメント・2026-07-21 追加）
+
+**現状**: Claude Code 2.1.216 の statusLine payload の `rate_limits` は `five_hour` / `seven_day` の 2 つ**しか**載らない（claude.exe のビルダー `I={...x.five_hour&&…,...x.seven_day&&…}` を直接確認）。「Fable 5 の週間制限」は payload には**来ない**。
+
+だが値自体は claude 内部に存在する:
+- 出所はレスポンスヘッダ `anthropic-ratelimit-unified-7d_oi-*`（`hyu()` がメモリ `Fkt` にパース）。
+- claude の内部ラベル表 `$kt` に **`seven_day_overage_included:"Fable 5 limit"`**（兄弟 `seven_day_opus:"Opus limit"` / `seven_day_sonnet:"Sonnet limit"`）が実在。`/usage` や警告文（"try /model opus · more runway"）はこれを使う。
+- ディスク永続の `cachedUsageUtilization`（`.claude.json`）も候補だが、**現在不在**かつスキーマ別系統（`overage_included` を持たない）＝読めない。
+
+**設計**: statusline.ps1 は `seven_day_overage_included`（無ければ `seven_day_opus` → `seven_day_sonnet`）を優先順で読む。**今日は payload に無いので何も描画しない（前方互換の休眠状態）**。将来 Claude Code が premium-weekly キーを payload に載せた瞬間、追加作業ゼロで `◒ F5:xx%` が自動点灯する。内部ラベル表が既にある以上、payload 搭載は時間の問題という判断。
+
+**もし「今すぐ数値を出す」なら**: usage エンドポイントを叩く自前ポーラー（scheduled task → キャッシュ JSON → statusline が読む）が唯一の手だが、未公開 OAuth 経路・トークン取扱い・claude 更新での破綻リスクを抱えるため 2026-07-21 時点では**採らない**（低保守方針）。将来 payload 搭載が来なければ再検討。
 
 ## セッション変遷ログ (2026-05-19 〜 2026-05-21)
 

@@ -1,6 +1,6 @@
 # Claude Code statusline script
 # Prints a 2-line status string for Claude Code's UI (no time/clock field):
-#   line 1: ◆ model │ ◇ eff │ ◈ ctx │ ◐ 5h ↺reset ◑ 7d ↺reset │ +/- lines  [vim]
+#   line 1: ◆ model │ ◇ eff │ ◈ ctx │ ◐ 5h ↺reset ◑ 7d ↺reset ◒ F5 ↺reset │ +/- lines  [vim]
 #   line 2: ▸ dir   ⎇ branch status
 # Reads JSON from stdin (UTF-8). Also writes a legacy statusline_input.json dump
 # (no live reader since the WezTerm display layer was retired — see statusline-spec.md).
@@ -250,6 +250,31 @@ try {
             $r = Format-ResetIn $sevenDay.resets_at
             $resetIn = if ($r -ne "") { "${DIM}↺${r}" } else { "" }
             $parts5h += ("${DIM}◑ 7d:${c}${u}% ${resetIn}").TrimEnd() + $RESET
+        }
+        # --- Premium-model weekly limit (Fable 5 / Opus / Sonnet) — forward-compatible ---
+        # NOT emitted by the statusLine payload as of Claude Code 2.1.216 (only five_hour /
+        # seven_day are; verified against the claude.exe rate_limits builder). The value DOES
+        # exist inside Claude from the `anthropic-ratelimit-unified-7d_oi-*` response headers
+        # and is labeled "Fable 5 limit" internally (key seven_day_overage_included; siblings
+        # seven_day_opus="Opus limit" / seven_day_sonnet="Sonnet limit"). This block reads it
+        # defensively: dormant today (field absent → nothing renders), it lights up the moment
+        # a future Claude Code version starts including a premium-weekly key in the payload.
+        # First present key wins (priority order). See statusline-spec.md.
+        $premiumKeys = @(
+            @{ key = "seven_day_overage_included"; label = "F5" },  # current plan = "Fable 5 limit"
+            @{ key = "seven_day_opus";             label = "Op" },
+            @{ key = "seven_day_sonnet";           label = "So" }
+        )
+        foreach ($pk in $premiumKeys) {
+            $node = $data.rate_limits.($pk.key)
+            if ($null -ne $node -and $null -ne $node.used_percentage) {
+                $u = [math]::Round($node.used_percentage)
+                $c = Get-StageColor $u
+                $r = Format-ResetIn $node.resets_at
+                $resetIn = if ($r -ne "") { "${DIM}↺${r}" } else { "" }
+                $parts5h += ("${DIM}◒ $($pk.label):${c}${u}% ${resetIn}").TrimEnd() + $RESET
+                break
+            }
         }
         if ($parts5h.Count -gt 0) {
             $rateLimitStr = $parts5h -join " "
