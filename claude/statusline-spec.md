@@ -9,17 +9,40 @@ Claude Code statusLine（`claude/statusline.ps1`）の設計仕様。
 
 WezTerm 側 statusline addon は 2026-05-21 に廃止済み（表示は Claude Code 内蔵 statusLine）。
 
-## 現在の表示仕様(2026-05-21 時点)
+## 現在の表示仕様(2026-08-20 時点 — 4 段縦積み)
 
-Claude Code 入力欄の真上に 2 段表示。
+Claude Code 入力欄の真上に最大 4 段表示。
 
 ```
-◆ Opus 4.8 │ ◇ eff:high │ ◈ ctx:58%/1M │ ◐ 5h:20% ↺3d3h ◑ 7d:75% ◒ F5:63% ↺6d23h │ +12 -3
-▸ ~/Documents/Repositories/setup-neovim-wezterm  ⎇ master !?
+◆ Opus 5 (1M context) │ ◇ eff:high │ +12 -3
+◈ ctx:58%/1M │ ◐ 5h:20% ↺3h29m ◑ 7d:75% ↺3d2h ◒ F5:63% ↺6d23h
+▸ ~/Documents/Repositories/setup-neovim-wezterm
+⎇ master !?
 ```
 
-- **1 段目**: ランタイム情報(モデル / effort レベル / コンテキスト使用率 / 5h・7d・Fable5 週間レート使用率+reset 残時間 / 編集行数 +追加 -削除)
-- **2 段目**: 開発コンテキスト(現在地 / git ブランチ + status)
+| 段 | 内容 | 意味 |
+|---|---|---|
+| 1 | モデル │ effort │ 編集行数（+ vim モード） | 「今の設定と成果」系 |
+| 2 | ctx │ 使用制限（5h / 7d / premium 週間） | 「残量メーター」系を一行に集約 |
+| 3 | 現在地（dir） | 開発コンテキスト |
+| 4 | git ブランチ + status | 開発コンテキスト |
+
+> **なぜ縦積みか**（2026-08-20 に 2 段 → 4 段）: WezTerm を細かくペイン分割する運用だと、旧 1 段目（model〜ctx〜制限〜編集行数を横一列）は **80 列前後あり、ペイン幅で右端が切れて使用制限が見えなくなる**。statusLine payload には端末幅が含まれないため動的折り返しは不可能。よって**意味単位で固定段割り**した。
+>
+> **空行は出さない**: 中身の無い段（ctx 未取得 / rate_limits 不在 / git 非管理下）は行ごと落とすので、実際の行数は payload 次第で 4 行以下。セグメント連結は `Join-Segments`（空を除外して ` │ ` 結合）に一本化してあるので、先頭末尾に孤立したセパレータは出ない。
+
+### effort セグメントと ultracode 検出
+
+`data.effort.level` は **low / medium / high / xhigh / max** の 5 値のみ。**ultracode は payload に出てこない**（claude.exe 2.1.236 の payload ビルダー `...FD(_)&&{effort:{level:NK(_,m)}}` を直接確認。内部のエイリアス表 `{ultracode:"xhigh"}` で **xhigh に展開されてから** payload に載るため、素の xhigh と区別できない）。
+
+そこで `Test-Ultracode` で 2 経路から補う:
+
+1. **`~/.claude/settings.json` の `ultracode` キー** — `--settings` / Remote Control の `apply_flag_settings` 経由の指定はここに出る。確実・安価。
+2. **transcript 末尾 256KB の system-reminder** — `/effort ultracode` は**セッション限定で設定ファイルに残らない**ため、会話ログ側の足跡（`Ultracode is on:` / `Ultracode is still on` / `Ultracode is off`）を見る。最後の 1 件が現在状態。
+
+**誤検出対策**（重要）: 走査するのは **`"isMeta":true` の行だけ**。ツール出力やアシスタント発話に同じ文字列が出ても拾わない（ultracode を話題にした実 transcript で非検出を確認済）。また走査は **`xhigh` の時だけ**実行する（他レベルではファイルを 1 バイトも読まない）。
+
+検出されたら `◇ eff:ultra`（**赤**）。見つからなければ従来通り `◇ eff:xhigh` に落ちるだけで、**嘘の表示は出ない**設計。
 
 ### カラーパレット (Catppuccin Frappe)
 
@@ -147,7 +170,7 @@ Claude Code は Windows + Git Bash インストール環境では statusLine コ
 3. **2026-05-21**:
    - Windows + Git Bash の backslash escape 問題を発見 → settings.json の path を `/` 区切りに修正 → 内蔵 statusLine が表示可能に
    - WezTerm 側 addon を削除(set_right_status のクリア用退避ハンドラだけ残置)
-   - 1 行 → 2 行レイアウト化(画面幅切れ対策)
+   - 1 行 → 2 行レイアウト化(画面幅切れ対策) — 2026-08-20 にさらに 5 行化(ペイン分割対策)
    - 5h/7d を残量 → 使用率に変更
    - ctx を残量 → 使用率に変更(すべて「大きいほど危険」で統一)
    - 時刻表示削除

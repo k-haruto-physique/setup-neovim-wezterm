@@ -1,7 +1,11 @@
 # Claude Code statusline script
-# Prints a 2-line status string for Claude Code's UI (no time/clock field):
-#   line 1: ◆ model │ ◇ eff │ ◈ ctx │ ◐ 5h ↺reset ◑ 7d ↺reset ◒ F5 ↺reset │ +/- lines  [vim]
-#   line 2: ▸ dir   ⎇ branch status
+# Prints a 4-line status string for Claude Code's UI (no time/clock field):
+#   line 1: ◆ model │ ◇ eff │ +/- lines  [vim]
+#   line 2: ◈ ctx │ ◐ 5h ↺reset  ◑ 7d ↺reset  ◒ F5 ↺reset
+#   line 3: ▸ dir
+#   line 4: ⎇ branch status
+# Stacked vertically (was 2 lines until 2026-08-20) so heavily split WezTerm panes
+# never cut off the right-hand segments. Rows with no content are dropped entirely.
 # Reads JSON from stdin (UTF-8). Also writes a legacy statusline_input.json dump
 # (no live reader since the WezTerm display layer was retired — see statusline-spec.md).
 
@@ -176,6 +180,55 @@ try {
 } catch {}
 if ([string]::IsNullOrWhiteSpace($modelName)) { $modelName = "Claude" }
 
+# --- 3a. ultracode 判定（statusLine payload には載らないので自前で探る）---
+# claude.exe 2.1.236 の payload ビルダーを直接確認した結果、effort は
+# `effort:{level:...}` の 1 キーだけで、値は low/medium/high/xhigh/max のいずれ。
+# **ultracode は内部で xhigh に展開される**（エイリアス表 {ultracode:"xhigh"}）ため、
+# payload だけでは「素の xhigh」と区別できない。よって 2 経路で補う:
+#   (1) settings.json の `ultracode` キー（--settings / apply_flag_settings 経由の指定）
+#   (2) transcript 末尾の system-reminder（`/effort ultracode` はセッション限定で
+#       設定ファイルに残らないため、会話ログ側の足跡を見る）
+# 誤検出防止: 走査対象は **`"isMeta":true` の行のみ**（ツール出力や
+# アシスタント発話に同じ文字列が出ても拾わない）。見つからなければ false
+# → 従来通り `xhigh` 表示に落ちるだけで、嘘の表示は出ない。
+function Test-Ultracode($payload) {
+    # (1) settings.json
+    try {
+        $sp = Join-Path $env:USERPROFILE ".claude\settings.json"
+        if (Test-Path $sp) {
+            $sj = Get-Content -Path $sp -Raw -ErrorAction Stop | ConvertFrom-Json
+            if ($sj.ultracode -eq $true) { return $true }
+        }
+    } catch {}
+
+    # (2) transcript 末尾 256KB だけを読む（全文読みは重いし不要）
+    try {
+        $tp = $payload.transcript_path
+        if ([string]::IsNullOrWhiteSpace($tp) -or -not (Test-Path $tp)) { return $false }
+        $text = ""
+        # claude 本体が書き込み中でも確実に開けるよう ReadWrite 共有で開く
+        $fs = [System.IO.File]::Open($tp, [System.IO.FileMode]::Open,
+                                     [System.IO.FileAccess]::Read,
+                                     [System.IO.FileShare]::ReadWrite)
+        try {
+            $tail = 262144
+            if ($fs.Length -gt $tail) { [void]$fs.Seek(-$tail, [System.IO.SeekOrigin]::End) }
+            $sr = New-Object System.IO.StreamReader($fs, [System.Text.Encoding]::UTF8)
+            $text = $sr.ReadToEnd()
+        } finally { $fs.Dispose() }
+
+        $state = $false
+        $found = $false
+        foreach ($line in ($text -split "`n")) {
+            if ($line -notmatch '"isMeta"\s*:\s*true') { continue }
+            if ($line -match 'Ultracode is (on:|still on)') { $state = $true;  $found = $true }
+            elseif ($line -match 'Ultracode is off')        { $state = $false; $found = $true }
+        }
+        if ($found) { return $state }
+    } catch {}
+    return $false
+}
+
 # --- 3b. Reasoning effort level (absent if the model doesn't support effort) ---
 # data.effort.level: low / medium / high / xhigh / max — reflects live /effort changes.
 # Colored by "compute intensity" using the same green→yellow→red ramp as ctx.
@@ -190,6 +243,12 @@ try {
             "xhigh"  { $ec = $ORANGE }
             "max"    { $ec = $RED }
             default  { $ec = $DIM }
+        }
+        # ultracode は payload 上 "xhigh" としてしか見えないので、
+        # xhigh の時だけ追加判定を走らせる（他のレベルではファイルを一切読まない）。
+        if ($lvl -eq "xhigh" -and (Test-Ultracode $data)) {
+            $lvl = "ultra"
+            $ec  = $RED
         }
         $effortStr = "${DIM}◇ eff:${ec}${lvl}${RESET}"
     }
@@ -303,22 +362,36 @@ try {
     }
 } catch {}
 
-# --- Assemble (2-line layout, colored text only) ---
-# Line 1: model │ eff │ ctx │ 5h │ 7d │ +/-lines  [vim]
-# Line 2: [ dir ][  branch status ]
+# --- Assemble (4-line layout, colored text only) ---
+# WezTerm を細かくペイン分割しても右端が切れないよう、1 行を短く保つ縦積み構成:
+#   1: ◆ model │ ◇ eff │ +/- lines   (ランタイムの「今の設定」系)
+#   2: ◈ ctx │ ◐ 5h ◑ 7d ◒ F5        (残量メーター系を一行に集約)
+#   3: ▸ dir
+#   4: ⎇ branch status
+# 中身が空の行は出力しない（無駄な空行でペインの縦幅を食わない）ので、
+# 実際の行数はペイロード次第で 4 行以下になる。dir / branch は従来通り無着色。
 $sep = "${DIM} │ ${RESET}"
 
-$line1 = "${PURPLE}◆ ${modelName}${RESET}"
-if ($effortStr -ne "")    { $line1 += "${sep}${effortStr}" }
-if ($ctxStr -ne "")       { $line1 += "${sep}${ctxStr}" }
-if ($rateLimitStr -ne "") { $line1 += "${sep}${rateLimitStr}" }
-if ($linesStr -ne "")     { $line1 += "${sep}${linesStr}" }
-$line1 += $vimStr
-
-$line2 = "▸ $dirStr"
-if ($gitBranch -ne "") {
-    $line2 += "  ⎇ $gitBranch$gitStatus"
+# 空でないセグメントだけを " │ " で繋ぐ（先頭・末尾の孤立したセパレータを作らない）
+function Join-Segments([string[]]$segments) {
+    $kept = @($segments | Where-Object { -not [string]::IsNullOrEmpty($_) })
+    if ($kept.Count -eq 0) { return "" }
+    return ($kept -join $sep)
 }
 
-Write-Output ($line1 + $RESET)
-Write-Output ($line2 + $RESET)
+$rows = New-Object System.Collections.Generic.List[string]
+
+# 1) model │ effort │ 編集行数（+ vim モードは末尾に直付け）
+$rows.Add((Join-Segments @("${PURPLE}◆ ${modelName}${RESET}", $effortStr, $linesStr)) + $vimStr + $RESET)
+
+# 2) ctx │ 使用制限（5h / 7d / premium 週間）
+$row = Join-Segments @($ctxStr, $rateLimitStr)
+if ($row -ne "") { $rows.Add($row + $RESET) }
+
+# 3) directory
+$rows.Add("▸ $dirStr" + $RESET)
+
+# 4) git branch + status
+if ($gitBranch -ne "") { $rows.Add("⎇ $gitBranch$gitStatus" + $RESET) }
+
+foreach ($row in $rows) { Write-Output $row }

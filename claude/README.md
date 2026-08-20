@@ -16,7 +16,7 @@ Claude Code 入力欄の真上に出る 2 段ステータスラインの**正本
 ```
 Claude Code が JSON を stdin に流す
   → statusline.ps1 がパース
-  → 2 行を stdout に出力
+  → 最大 4 行を stdout に出力（縦積み・空行は落とす）
   → Claude Code が入力欄の上に描画
 ```
 

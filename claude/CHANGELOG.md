@@ -2,6 +2,24 @@
 
 > 旧独立リポ `Repositories/statusline` から 2026-06-18 に本リポへ合体。以降は `claude/statusline.ps1` が正本。
 
+## 2026-08-20 — 2 段 → 4 段の縦積み化 + ultracode 検出
+
+### 背景
+- WezTerm を細かくペイン分割して使う運用で、旧 1 段目（`◆ model │ ◇ eff │ ◈ ctx │ ◐ 5h ◑ 7d ◒ F5 │ +/-lines` の横一列）が **約 80 列あり、ペイン幅で右端が切れて使用制限が読めない**。
+- statusLine payload に端末幅のフィールドが無いため、**幅に応じた動的折り返しは原理的に不可** → 意味単位の固定段割りに切り替える。
+
+### 変更
+- 出力を **最大 4 段**に縦積み化: (1) model │ eff │ 編集行数（+ vim）/ (2) ctx │ 使用制限（5h・7d・F5）/ (3) dir / (4) branch。「設定系」と「残量メーター系」で行を分けた。
+- 組み立てを `$line1`/`$line2` の直書きから **`Join-Segments` + `$rows` リスト**に変更。空セグメントは連結から除外され、**中身の無い段は行ごと落とす**（無駄な空行を出さない）。
+- **ultracode 検出を新設**（`Test-Ultracode`）。payload の `effort.level` は low/medium/high/xhigh/max のみで、**ultracode は内部エイリアス表 `{ultracode:"xhigh"}` で xhigh に展開されてから載る**ため payload 単体では区別不可（claude.exe 2.1.236 の payload ビルダーを直接確認）。よって (1) `settings.json` の `ultracode` キー、(2) transcript 末尾 256KB の `"isMeta":true` 行に残る system-reminder（`Ultracode is on:` / `still on` / `off`）の 2 経路で判定し、`◇ eff:ultra`（赤）を出す。
+- セグメントの中身（アイコン・色・数値セマンティクス・dir/branch の無着色）は eff 以外**変えていない**。
+
+### 検証
+- 4 段出力を実ペイロードで目視確認（model│eff│行数 / ctx│5h・7d・F5 / dir / branch）。
+- ultracode 検出の 4 ケースマトリクス: `on` → **ultra** / `off` → xhigh / **ノイズ（同文字列がアシスタント発話にある）→ xhigh（誤検出無し）** / マーカー無し → xhigh。加えて **ultracode を話題にした実 transcript**（本セッション）でも非検出を確認。
+- `settings.json` 経路は `USERPROFILE` を差し替えたダミー HOME で検証（ユーザ実ファイルは未変更）。
+- 正本編集後、実体 `~/.claude/statusline.ps1` へコピーしハッシュ一致を確認。**symlink 再リンクは管理者権限が必要で今回も不可（W1 継続）**。
+
 ## 2026-07-21 — Fable 5（premium モデル）週間制限セグメントを前方互換で追加
 
 ### 背景
