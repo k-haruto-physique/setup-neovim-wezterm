@@ -33,16 +33,57 @@ Claude Code 入力欄の真上に最大 4 段表示。
 
 ### effort セグメントと ultracode 検出
 
-`data.effort.level` は **low / medium / high / xhigh / max** の 5 値のみ。**ultracode は payload に出てこない**（claude.exe 2.1.236 の payload ビルダー `...FD(_)&&{effort:{level:NK(_,m)}}` を直接確認。内部のエイリアス表 `{ultracode:"xhigh"}` で **xhigh に展開されてから** payload に載るため、素の xhigh と区別できない）。
+`data.effort.level` は **low / medium / high / xhigh / max** の 5 値のみ。**ultracode は payload にも環境変数にも出てこない**:
 
-そこで `Test-Ultracode` で 2 経路から補う:
+- payload ビルダーは `...FD(_)&&{effort:{level:NK(_,m)}}` の 1 キーだけ。内部のエイリアス表 `nNd={ultracode:"xhigh"}` で **xhigh に潰されてから** payload に載る。`ultracode` は再描画のウォッチ対象 `K00` にも入っていないので、トグルしても statusline の再描画すら走らない。
+- 子プロセスに注入される `CLAUDE_EFFORT` も同じ潰れた値（実測 `high`）。バイナリ 330MB 全体に `*ULTRACODE*` 形式の env は **0 件**。
 
-1. **`~/.claude/settings.json` の `ultracode` キー** — `--settings` / Remote Control の `apply_flag_settings` 経由の指定はここに出る。確実・安価。
-2. **transcript 末尾 256KB の system-reminder** — `/effort ultracode` は**セッション限定で設定ファイルに残らない**ため、会話ログ側の足跡（`Ultracode is on:` / `Ultracode is still on` / `Ultracode is off`）を見る。最後の 1 件が現在状態。
+**唯一の確実な足跡は transcript の attachment レコード**。claude は毎プロンプト送信時に真の述語 `Sse(model,effortValue,ultracode)` から次を書き出す:
 
-**誤検出対策**（重要）: 走査するのは **`"isMeta":true` の行だけ**。ツール出力やアシスタント発話に同じ文字列が出ても拾わない（ultracode を話題にした実 transcript で非検出を確認済）。また走査は **`xhigh` の時だけ**実行する（他レベルではファイルを 1 バイトも読まない）。
+```json
+{"attachment":{"type":"ultra_effort_enter","reminderType":"full"},"type":"attachment","timestamp":"…","sessionId":"…"}
+{"attachment":{"type":"ultra_effort_exit"},"type":"attachment","timestamp":"…","sessionId":"…"}
+```
 
-検出されたら `◇ eff:ultra`（**赤**）。見つからなければ従来通り `◇ eff:xhigh` に落ちるだけで、**嘘の表示は出ない**設計。
+**ファイル内で最後に現れた方が現在状態**（enter=ON / exit=OFF / 無し=OFF）。生成元 `QLS()` は「直近の ultra_effort_* を後ろ向きに探し、ON なのに enter でなければ enter/full を、既に enter なら周期的に enter/sparse を、OFF なのに enter のままなら exit を出す」。ユーザーの transcript 2808 本に **実レコード 258 件**（enter/full 119・enter/sparse 110・exit 29、68 ファイル、2.1.220+）。sidechain には出ず、`transcript_path` が指す本体ファイルにだけ出る。
+
+補助アンカーとして **`/effort` の実行結果**（`<local-command-stdout>` 行）も見る。`/effort xhigh` で ultracode が切れた瞬間は次のプロンプトまで exit が書かれないため、その窓を塞ぐ。**両アンカーを通してファイル内で最後に一致した行が勝つ。**
+
+#### 3 つの AND ゲート（1 つでも欠けたら素の effort 表示へ縮退）
+
+| # | ゲート | 何を防ぐか |
+|---|---|---|
+| 1 | payload の `effort.level` が `xhigh` | ultracode は必ず xhigh に展開される。他レベルなら**ファイルを 1 バイトも読まない**（コストゼロ） |
+| 2 | 一致行の `sessionId` == payload の `session_id` | 別セッションのレコードの混入 |
+| 3 | 一致行の `timestamp` >= このプロセスの `startedAt` | **`--continue` の再開穴**。transcript は再開で追記され続けるので、再起動前の enter を拾わない。`startedAt` は `~/.claude/sessions/$env:CLAUDE_PID.json` から取る（`CLAUDE_PID` は claude が子プロセスへ注入。実測 `CLAUDE_PID=38304` → `sessions/38304.json` に `sessionId`/`startedAt`） |
+
+**誤検出防止の要**: アンカーは**エスケープされていない生 JSON の部分文字列**（`"attachment":{"type":"ultra_effort_`）。ツール出力に同じ語が出ても JSON 内では `\"attachment\"` とエスケープされるので**構造的に一致しない**。
+
+#### 性能
+
+約 2.9ms/MB。典型的な 0.6MB の transcript で数 ms、本環境最大の 126MB でもフルスキャン 365ms。**40MB 超の異常サイズの時だけ末尾 32MB に限定**して ~120ms 以内に抑える。ウィンドウは常に EOF 側なので、見逃すのは古いレコードだけ＝**方向は安全側**（新しい exit を見逃して ON と誤報することは構造上起きない）。
+
+#### 検証（2026-08-20）
+
+- 合成 11 ケース全 PASS: enter→ultracode / exit→xhigh / 再開前の古い enter→xhigh / 別セッション→xhigh / `/effort xhigh` 直後→xhigh / `/effort ultracode` 直後→ultracode / エスケープ済みノイズ→xhigh / マーカー無し→xhigh / effort=high→high / `CLAUDE_PID` 無し→xhigh / pid ファイル不在→xhigh
+- **実 transcript 3 本**（claude が実際に書いたバイト列）でも PASS: enter 終端 2 本→ultracode / exit 終端 1 本→xhigh
+
+#### 残るリスク
+
+1. **1 ターンの遅れ**: enter/exit はプロンプト送信時に書かれる。model-picker の effort スライダーや Remote Control の `apply_flag_settings {ultracode:false}` で切った場合、次のプロンプトまで `ultracode` 表示が残る。`/effort` 経路は補助アンカーで塞いである。自己修復する。
+2. **陳腐化**: attachment レコードの形は claude 内部実装であり公開仕様ではない（2.1.220+ で観測）。将来変わっても**静かに xhigh へ縮退するだけ**で誤表示にはならない。次回監査で claude.exe 実体に対して再確認すること。
+
+#### 不採用にした経路
+
+| 経路 | 却下理由 |
+|---|---|
+| payload / `effort.level` | エイリアス表で xhigh に潰れてから載る。構造的に不可能 |
+| `CLAUDE_EFFORT` 環境変数 | 同じ潰れた値。`*ULTRACODE*` env は存在しない |
+| `~/.claude/sessions/<pid>.json` | effort/ultracode フィールドを持たない（`startedAt` の取得にだけ使用） |
+| `~/.claude/settings.json` の `ultracode` キー | 静的な**入力**であって live state ではない。`/effort xhigh`・model-picker・Remote Control はキーに触れずに OFF にできる＝**嘘をつきうる**ので却下（2026-08-20 に一旦実装したが撤去） |
+| `~/.claude/history.jsonl` | 打鍵コマンドを記録するだけで結果ではない。引数無しの `/effort` が 194 件中 192 件＝カバー率 ~1%、拒否された時も記録される |
+| system-reminder のテキスト（`Ultracode is on:`） | **transcript に永続化されない**（API リクエスト組み立て時にだけ差し込まれる）。2808 本に 0 件 |
+| Claude 本体の TUI インジケータ | プロセス内 React ストア。ディスクに出ない。（余談: **セッション名を付けるとこのインジケータは丸ごと消える** — `$5 ? … : …` の else 側にしか存在せず、復活させる設定は無い。statusline 側で持つ必要があるのはこのため） |
 
 ### カラーパレット (Catppuccin Frappe)
 

@@ -2,6 +2,25 @@
 
 > 旧独立リポ `Repositories/statusline` から 2026-06-18 に本リポへ合体。以降は `claude/statusline.ps1` が正本。
 
+## 2026-08-20 (2) — ultracode 検出を transcript の attachment レコードに置き換え
+
+### 背景
+- 同日 (1) で入れた検出（settings.json + system-reminder テキスト）が**実セッションで点かなかった**。ユーザー報告「セッション名を付けると入力欄の上の ultracode 表示が消えるので eff で視認したい／今は xhigh と同じ表示になる」。
+- 調査で判明: **system-reminder のテキストは transcript に永続化されない**（`Ay([vn({content:…,isMeta:!0})])` は API リクエスト組み立て時にだけ差し込む）。ユーザーの transcript 2808 本に 0 件＝(1) の経路は最初から死んでいた。
+- 同時に判明した本命: リマインダを生成する `QLS()` が出す**属性レコードの方は transcript に書かれる**。
+
+### 変更
+- `Test-Ultracode` を全面的に置き換え。**`{"attachment":{"type":"ultra_effort_enter"|"ultra_effort_exit"},"type":"attachment",…}` の最後の 1 件**を現在状態として読む（実レコード 258 件を 68 ファイルで確認、2.1.220+）。補助アンカーとして `/effort` の `<local-command-stdout>` 行も見る（`/effort xhigh` で切れた直後の窓を塞ぐ）。
+- **3 つの AND ゲート**を追加: ① `effort.level == "xhigh"`（他レベルではファイルを読まない）② 一致行の `sessionId` == payload の `session_id` ③ 一致行の `timestamp` >= このプロセスの `startedAt`（`~/.claude/sessions/$env:CLAUDE_PID.json` から取得。**`--continue` で追記され続ける transcript の再開穴を塞ぐ**）。
+- **`settings.json` の `ultracode` キー読みは撤去**。静的な入力であって live state ではなく、`/effort xhigh`・model-picker・Remote Control がキーに触れずに OFF にできる＝嘘をつきうるため。
+- 表示は `◇ eff:ultracode`（赤）。(1) の `ultra` から視認性優先で改名。
+- 走査は約 2.9ms/MB。典型 0.6MB で数 ms、40MB 超の異常サイズのみ末尾 32MB に限定して ~120ms 以内。
+
+### 検証
+- 合成 11 ケース全 PASS（enter / exit / 再開前の古い enter / 別セッション / `/effort xhigh` 直後 / `/effort ultracode` 直後 / エスケープ済みノイズ / マーカー無し / effort=high / `CLAUDE_PID` 無し / pid ファイル不在）。
+- **実 transcript 3 本**（claude が実際に書いたバイト列）でも PASS: enter 終端 2 本 → `ultracode` / exit 終端 1 本 → `xhigh`。
+- 本セッションの transcript には `"Ultracode is on:"` や `"ultracode": true` がツール出力として実在するが、**エスケープ済みのため一致せず** `xhigh` を返すことを確認（誤検出無し）。
+
 ## 2026-08-20 — 2 段 → 4 段の縦積み化 + ultracode 検出
 
 ### 背景

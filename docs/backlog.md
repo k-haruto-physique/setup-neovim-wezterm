@@ -3,7 +3,7 @@
 セッション開始（`hi`）時に**必ず読む**未完タスク・仕様書の単一台帳。
 troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約点。**完了したら CLOSED へ落とし、起点ファイル（#番号 / memory）にも反映**する。
 
-最終更新: 2026-08-20（statusline を **2 段 → 4 段の縦積み**に再設計＝ペイン分割時の右端切れ対策 + **ultracode 検出**を新設（payload 非搭載のため settings.json / transcript の 2 経路で補完）＝**W5** 登録。併せて `wezterm.lua` をリファクタ（定数集約・`config` シャドウ解消・重複パターン一本化。keymap 差分ゼロを機械検証）。**OPEN は 2 件（B8・B7＝どちらもユーザーの手動操作待ち）で不変**）。前回 2026-07-21（statusline に Fable5 週間制限セグメント ◒ を前方互換で追加＝payload 搭載待ちで休眠・**W4** 登録）
+最終更新: 2026-08-20（statusline を **2 段 → 4 段の縦積み**に再設計＝ペイン分割時の右端切れ対策 + **ultracode 検出**を実装（payload にも env にも無く、**transcript の attachment レコード**が唯一の確実な足跡。3 ゲートで嘘を出さない設計・実データ検証済）＝**W5** 更新。併せて `wezterm.lua` をリファクタ（定数集約・`config` シャドウ解消・重複パターン一本化。keymap 差分ゼロを機械検証）。**OPEN は 2 件（B8・B7＝どちらもユーザーの手動操作待ち）で不変**）。前回 2026-07-21（statusline に Fable5 週間制限セグメント ◒ を前方互換で追加＝payload 搭載待ちで休眠・**W4** 登録）
 
 ---
 
@@ -24,7 +24,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 | W2 | **ペイン入力不能（修飾キー stuck）** | 2026-07-02 発生・原因確定（修飾キーの key-up 取りこぼし）。**コードでは直せない**（WezTerm×Windows 積年の既知問題・設定フラグ無し）。運用回避で足りる | 固まったら **Ctrl/Shift/Alt/Win を 1 回タップ**で復活。予防は「修飾キー押したまま Alt+Tab しない」。詳細 troubleshooting #12 |
 | W3 | **ペイン入力不能（Claude TUI 描画 wedge）** | 2026-07-03 発生・W2 とは別種（修飾キータップで直らない）。特定 Claude ペインが "Esc to cancel" オーバーレイで wedge。**遠隔修復不可を実証**（send-text は Claude TUI に届かず・zoom-pane は mux CLI をデッドロックさせた）。頻発申告あり | 復旧は**ユーザー直接操作**: クリック→`Esc`×1-2→`Ctrl+C`→最終手段 `claude --continue`（会話復元）。`get-text` にオーバーレイが見えたら W3 確定。詳細 troubleshooting #13 |
 | W4 | **statusline ◒ F5（Fable5 週間制限）セグメントが休眠中** | 2026-07-21 前方互換で実装済。だが Claude Code 2.1.216 の statusLine payload は `rate_limits` に `five_hour`/`seven_day` しか載せず（claude.exe 実体で確定）、Fable5 週間制限（内部 `seven_day_overage_included`）は転送されない＝**現在は非表示**。今すぐ出すには自前ポーラー要（不採用） | Claude Code 更新で payload に premium-weekly キーが載れば**自動点灯**（作業ゼロ）。更新後に `◒ F5:xx%` が出るか目視。載らないまま欲しくなったら usage ポーラーを再検討。詳細 `claude/statusline-spec.md`「前方互換」 |
-| W5 | **statusline の ultracode 検出（transcript 経路）が実セッション未検証** | payload に ultracode が無い（claude.exe 2.1.236 のビルダーで確定。内部で xhigh に展開されてから載る）ため、`settings.json` の `ultracode` キーと **transcript 末尾の `"isMeta":true` 行に残る system-reminder** （`Ultracode is on:` / `still on` / `off`）で補っている。合成 transcript の 4 ケース＋実 transcript の誤検出無しは確認済だが、**実際に ultracode を ON にしたセッションでリマインダが jsonl に永続化されるかは未確認**。外れても `xhigh` 表示に落ちるだけで嘘は出ないので実害なし | 次に `/effort ultracode` を使った時に `◇ eff:ultra`（赤）が出るか目視。出なければ transcript 非永続と確定 → settings.json 経路のみに縮退させるか、検出自体を撤去。詳細 `claude/statusline-spec.md`「effort セグメントと ultracode 検出」 |
+| W5 | **statusline の ultracode 検出が claude 内部実装に依存** | 2026-08-20 に **transcript の `ultra_effort_enter`/`ultra_effort_exit` attachment レコード**方式へ置換し、合成 11 ケース + **実 transcript 3 本**で検証済（当初の system-reminder テキスト方式は**永続化されない**ことが判明＝死んでいた。settings.json 方式は嘘をつきうるので撤去）。残るのは (a) attachment レコードが内部実装で将来変わりうる (b) model-picker / Remote Control で OFF にした時だけ次のプロンプトまで表示が 1 ターン遅れる、の 2 点。どちらも**失敗方向は xhigh への縮退**で誤表示にはならない | 次回の全体監査で claude.exe 実体に対し `"attachment":{"type":"ultra_effort_` が生きているか再確認。消えていたら検出を撤去。詳細 `claude/statusline-spec.md`「effort セグメントと ultracode 検出」 |
 
 ---
 

@@ -1,6 +1,6 @@
 # Claude Code statusline script
 # Prints a 4-line status string for Claude Code's UI (no time/clock field):
-#   line 1: ◆ model │ ◇ eff │ +/- lines  [vim]
+#   line 1: ◆ model │ ◇ eff (ultracode 検出あり) │ +/- lines  [vim]
 #   line 2: ◈ ctx │ ◐ 5h ↺reset  ◑ 7d ↺reset  ◒ F5 ↺reset
 #   line 3: ▸ dir
 #   line 4: ⎇ branch status
@@ -180,52 +180,110 @@ try {
 } catch {}
 if ([string]::IsNullOrWhiteSpace($modelName)) { $modelName = "Claude" }
 
-# --- 3a. ultracode 判定（statusLine payload には載らないので自前で探る）---
-# claude.exe 2.1.236 の payload ビルダーを直接確認した結果、effort は
-# `effort:{level:...}` の 1 キーだけで、値は low/medium/high/xhigh/max のいずれ。
-# **ultracode は内部で xhigh に展開される**（エイリアス表 {ultracode:"xhigh"}）ため、
-# payload だけでは「素の xhigh」と区別できない。よって 2 経路で補う:
-#   (1) settings.json の `ultracode` キー（--settings / apply_flag_settings 経由の指定）
-#   (2) transcript 末尾の system-reminder（`/effort ultracode` はセッション限定で
-#       設定ファイルに残らないため、会話ログ側の足跡を見る）
-# 誤検出防止: 走査対象は **`"isMeta":true` の行のみ**（ツール出力や
-# アシスタント発話に同じ文字列が出ても拾わない）。見つからなければ false
-# → 従来通り `xhigh` 表示に落ちるだけで、嘘の表示は出ない。
+# --- 3a. ultracode 判定（statusLine payload には載らないので transcript から読む）---
+# claude.exe 2.1.236 の payload ビルダーを直接確認した結果:
+#   ...FD(_)&&{effort:{level:NK(_,m)}}   / 値は low|medium|high|xhigh|max のみ
+# ultracode は内部エイリアス表 {ultracode:"xhigh"} で **xhigh に潰されてから** payload に載る。
+# 環境変数 CLAUDE_EFFORT も同じ潰れた値（実測 "high"）で、*ULTRACODE* 系の env は binary に皆無。
+# ＝ payload / env からの判定は構造的に不可能。
+#
+# 唯一の確実な足跡は **transcript の attachment レコード**:
+#   {"attachment":{"type":"ultra_effort_enter","reminderType":"full"},"type":"attachment",...}
+#   {"attachment":{"type":"ultra_effort_exit"},"type":"attachment",...}
+# claude 本体が毎プロンプト送信時に真の述語 Sse(model,effort,ultracode) から書き出す。
+# **ファイル内で最後に現れた方が現在状態**（enter=ON / exit=OFF / 無し=OFF）。
+# ユーザーの transcript 2808 本に実レコード 258 件を確認（2.1.220+）。sidechain には出ない。
+#
+# 補助アンカー: /effort の実行結果（<local-command-stdout>）。`/effort xhigh` で ultracode が
+# 切れた瞬間は次のプロンプトまで exit レコードが書かれないので、その窓を塞ぐ。
+#
+# 誤検出防止（重要）: アンカーは **エスケープされていない生 JSON の部分文字列**。ツール出力に
+# 同じ語が出ても JSON 内では \"attachment\" とエスケープされるので絶対に一致しない
+# （本セッションの transcript には "Ultracode is on:" 等が実在するが off と正しく出る）。
+#
+# 3 つの AND ゲート。1 つでも欠けたら素の effort 表示に落とす（**嘘は絶対に出さない**）:
+#   1. payload の effort.level が "xhigh"
+#   2. 一致行の sessionId が payload の session_id と同じ
+#   3. 一致行の timestamp が **このプロセスの startedAt 以降**
+#      （transcript は --continue で追記され続けるため、再起動前の enter を拾わない）
+#      startedAt は ~/.claude/sessions/$env:CLAUDE_PID.json から取る（CLAUDE_PID は
+#      claude が子プロセスへ注入する。実測 CLAUDE_PID=38304 → sessions/38304.json）
+#
+# 注意（陳腐化リスク）: attachment レコードの形は claude 内部実装であり公開仕様ではない。
+# 将来変わっても **静かに xhigh 表示へ縮退するだけ**で誤表示にはならない。次回監査時に
+# claude.exe 実体で再確認すること。詳細は statusline-spec.md。
 function Test-Ultracode($payload) {
-    # (1) settings.json
+    # --- gate 1: xhigh 以外なら ultracode ではありえない（＝ファイルを 1 バイトも読まない）---
     try {
-        $sp = Join-Path $env:USERPROFILE ".claude\settings.json"
-        if (Test-Path $sp) {
-            $sj = Get-Content -Path $sp -Raw -ErrorAction Stop | ConvertFrom-Json
-            if ($sj.ultracode -eq $true) { return $true }
+        if ($payload.effort.level -ne "xhigh") { return $false }
+    } catch { return $false }
+
+    $tp  = $payload.transcript_path
+    $sid = $payload.session_id
+    if ([string]::IsNullOrWhiteSpace($tp) -or [string]::IsNullOrWhiteSpace($sid)) { return $false }
+    if (-not (Test-Path -LiteralPath $tp)) { return $false }
+
+    # --- gate 3 の材料: このプロセスの起動時刻（取れなければ判定しない）---
+    $startedAt = 0
+    try {
+        if (-not [string]::IsNullOrWhiteSpace($env:CLAUDE_PID)) {
+            $sf = Join-Path $env:USERPROFILE ".claude\sessions\$($env:CLAUDE_PID).json"
+            if (Test-Path -LiteralPath $sf) {
+                $sj = Get-Content -LiteralPath $sf -Raw -ErrorAction Stop | ConvertFrom-Json
+                if ($sj.sessionId -eq $sid) { $startedAt = [double]$sj.startedAt }
+            }
         }
     } catch {}
+    if ($startedAt -le 0) { return $false }
 
-    # (2) transcript 末尾 256KB だけを読む（全文読みは重いし不要）
+    # --- 1 パス走査して「最後に一致した行」を残す ---
+    # 実測: 約 2.9ms/MB（典型的な 0.6MB なら 数 ms、本環境最大の 126MB フルスキャンで 365ms）。
+    # 末尾ウィンドウ読みは古い enter を取り逃す（=xhigh に縮退）ので原則フルスキャン。
+    # 40MB 超の異常サイズの時だけ末尾 32MB に切って ~120ms 以内に押さえる。
+    # 方向は安全側: ウィンドウは常に EOF 側なので、見逃すのは古いレコードだけ。
+    # （新しい exit を見逃して ON と誤報することは構造上起きない）
+    $last = $null
     try {
-        $tp = $payload.transcript_path
-        if ([string]::IsNullOrWhiteSpace($tp) -or -not (Test-Path $tp)) { return $false }
-        $text = ""
-        # claude 本体が書き込み中でも確実に開けるよう ReadWrite 共有で開く
+        $fi   = Get-Item -LiteralPath $tp -ErrorAction Stop
+        $skip = 0
+        if ($fi.Length -gt 40MB) { $skip = $fi.Length - 32MB }
+        # claude が追記中でも開けるよう ReadWrite 共有
         $fs = [System.IO.File]::Open($tp, [System.IO.FileMode]::Open,
                                      [System.IO.FileAccess]::Read,
                                      [System.IO.FileShare]::ReadWrite)
         try {
-            $tail = 262144
-            if ($fs.Length -gt $tail) { [void]$fs.Seek(-$tail, [System.IO.SeekOrigin]::End) }
+            if ($skip -gt 0) { [void]$fs.Seek($skip, [System.IO.SeekOrigin]::Begin) }
             $sr = New-Object System.IO.StreamReader($fs, [System.Text.Encoding]::UTF8)
-            $text = $sr.ReadToEnd()
+            if ($skip -gt 0) { [void]$sr.ReadLine() }   # 途中から読んだ 1 行目は捨てる
+            while ($null -ne ($line = $sr.ReadLine())) {
+                if ($line.Contains('"attachment":{"type":"ultra_effort_') -or
+                    $line.Contains('"content":"<local-command-stdout>Set effort level to ') -or
+                    $line.Contains('"content":"<local-command-stdout>Effort level set to auto') -or
+                    $line.Contains('"content":"<local-command-stdout>Cleared effort from settings') -or
+                    $line.Contains('"content":"<local-command-stdout>Current effort level: ')) {
+                    $last = $line
+                }
+            }
         } finally { $fs.Dispose() }
+    } catch { return $false }
+    if ($null -eq $last) { return $false }
 
-        $state = $false
-        $found = $false
-        foreach ($line in ($text -split "`n")) {
-            if ($line -notmatch '"isMeta"\s*:\s*true') { continue }
-            if ($line -match 'Ultracode is (on:|still on)') { $state = $true;  $found = $true }
-            elseif ($line -match 'Ultracode is off')        { $state = $false; $found = $true }
-        }
-        if ($found) { return $state }
-    } catch {}
+    # --- gate 2 / gate 3 の検証 ---
+    if ($last -notmatch '"sessionId":"([^"]+)"') { return $false }
+    if ($Matches[1] -ne $sid) { return $false }
+    if ($last -notmatch '"timestamp":"([^"]+)"') { return $false }
+    try { $ts = [DateTimeOffset]::Parse($Matches[1]).ToUnixTimeMilliseconds() } catch { return $false }
+    if ($ts -lt $startedAt) { return $false }
+
+    # --- 判定 ---
+    if ($last -match '"attachment":\{"type":"ultra_effort_(enter|exit)"') {
+        return ($Matches[1] -eq "enter")
+    }
+    if ($last -match '"content":"<local-command-stdout>([^<"]*)') {
+        $msg = $Matches[1]
+        return ($msg.StartsWith("Set effort level to ultracode") -or
+                $msg.StartsWith("Current effort level: ultracode"))
+    }
     return $false
 }
 
@@ -247,7 +305,7 @@ try {
         # ultracode は payload 上 "xhigh" としてしか見えないので、
         # xhigh の時だけ追加判定を走らせる（他のレベルではファイルを一切読まない）。
         if ($lvl -eq "xhigh" -and (Test-Ultracode $data)) {
-            $lvl = "ultra"
+            $lvl = "ultracode"
             $ec  = $RED
         }
         $effortStr = "${DIM}◇ eff:${ec}${lvl}${RESET}"
