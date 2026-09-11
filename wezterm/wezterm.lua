@@ -182,6 +182,29 @@ config.keys = {
 	{ key = "x", mods = "CTRL|SHIFT", action = act.ActivateCopyMode },
 	-- 2026-05-22: nvim を別ウィンドウで起動（上モニターへドラッグ用）
 	{ key = "I", mods = "CTRL|SHIFT", action = act.SpawnCommandInNewWindow({ args = { "nvim", "." } }) },
+	-- Ctrl+Shift+Y → Codex の4段ステータス表示を別ウィンドウで起動。
+	-- アクティブペインの cwd を引き継ぐので、Codex と同じリポジトリを監視する。
+	{
+		key = "Y",
+		mods = "CTRL|SHIFT",
+		action = wezterm.action_callback(function(window, pane)
+			local spawn = {
+				args = {
+					"pwsh.exe",
+					"-NoLogo",
+					"-NoProfile",
+					"-File",
+					"C:/Users/81809/Documents/Repositories/setup-neovim-wezterm/Codex/statusline.ps1",
+					"-Watch",
+				},
+			}
+			local cwd_uri = pane:get_current_working_dir()
+			if cwd_uri then
+				spawn.cwd = cwd_uri.file_path or tostring(cwd_uri)
+			end
+			window:perform_action(act.SpawnCommandInNewWindow(spawn), pane)
+		end),
+	},
 	-- Ctrl+Shift+N → 新規ウィンドウで claude（下モニターで複数 claude 用）
 	{ key = "N", mods = "CTRL|SHIFT", action = act.SpawnCommandInNewWindow({ args = { "claude" } }) },
 	-- 2026-05-29: ペイン入れ替え（分割の向きは変えられないが中身の位置交換は可能）

@@ -1,0 +1,3 @@
+[tui]
+status_line = ["model-with-reasoning", "context-remaining", "current-dir", "git-branch"]
+status_line_use_colors = true
