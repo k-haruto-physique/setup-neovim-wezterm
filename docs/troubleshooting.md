@@ -615,3 +615,30 @@ Bg = !(ra()||Boolean(Re)) && !ut(process.env.CLAUDE_CODE_REMOTE) && (At || U0e()
 - セッション名の接頭辞は既定 **hostname**。当日日付にしたい時だけ `remote` 関数（`20260716-fix-bug`）を使う。設定側で日付にはできない（`env` は静的なため）。
 - 無効化キーは別物: `disableRemoteControl` / `CLAUDE_CODE_DISABLE_REMOTE_CONTROL=1`。
 - `claude config get/list` は**サブコマンドとして既に存在しない**（引数がプロンプトとして解釈され、普通にセッションが走って課金される）。設定確認は `/config` かファイル直読で。
+
+---
+
+## 17. Codex Remote Control のWindows自動起動
+
+### 症状
+
+Codex CLI 0.154.0 でログオン時の自動起動を設定すると、公式コマンドが次の理由で終了する。
+
+- `codex remote-control`: `socket directory is not private to the current user`
+- `codex remote-control start`: `host Job Object prevents daemon detachment` または daemon 停止時のアクセス拒否
+
+### 原因
+
+前景コマンドは `C:\tmp\codex-rc-*` を通常の一時ディレクトリとして先に作った後、Windows側で「保護済み・現ユーザーだけ・継承可能ACEが1個」という厳密なDACLを要求する。作成済みディレクトリは継承ACLになるため検証を通らない。管理デーモン方式は親プロセスの Job Object から子を分離できることが前提で、Codexセッションやタスクスケジューラからは失敗する。
+
+### 対処
+
+`Codex/register-remote-control-task.ps1` でユーザーのログオンタスクを登録し、タスクから次を foreground 常駐させる。
+
+```powershell
+codex app-server --remote-control --listen ws://127.0.0.1:14567
+```
+
+待受は localhost 限定。タスク状態が `Running`、`http://127.0.0.1:14567/readyz` が HTTP 200 なら起動完了。ログは `~/.codex/logs/remote-control.log`。
+
+2026-09-11 実機確認: タスクは `Running`、`127.0.0.1:14567` は `Listen`、`/readyz` は HTTP 200。自動承認は別設定で、`~/.codex/config.toml` の `approval_policy = "on-request"` と `approvals_reviewer = "auto_review"` を使用する。

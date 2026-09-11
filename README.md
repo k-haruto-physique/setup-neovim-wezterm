@@ -45,6 +45,9 @@ setup-neovim-wezterm/
 │   └── README.md
 ├── Codex/                     # Codex TUI status line 設定
 │   ├── statusline.toml         # [tui].status_line の正本スニペット
+│   ├── runtime.toml            # 自動承認の正本スニペット
+│   ├── remote-control.ps1      # ログオン時の Remote Control 常駐タスク
+│   ├── register-remote-control-task.ps1 # 自動起動タスクの登録
 │   └── README.md
 └── docs/
     ├── initial-prompt.md      # 初回依頼内容
@@ -68,6 +71,7 @@ setup-neovim-wezterm/
 | `setup-neovim-wezterm\wezterm\wezterm.lua` | `%USERPROFILE%\.config\wezterm\wezterm.lua` | `mklink` |
 | `setup-neovim-wezterm\claude\statusline.ps1` | `%USERPROFILE%\.claude\statusline.ps1` | `mklink` |
 | `setup-neovim-wezterm\Codex\statusline.toml` | `%USERPROFILE%\.codex\config.toml` の `[tui]` | 手動マージ |
+| `setup-neovim-wezterm\Codex\runtime.toml` | `%USERPROFILE%\.codex\config.toml` のトップレベル | 手動マージ |
 | `setup-neovim-wezterm\powershell\profile.ps1` | `$PROFILE`（dot-source） | `. <path>`（管理者不要） |
 
 シンボリックリンク作成は **PowerShell 管理者権限** が必要（`powershell\profile.ps1` のみ symlink でなく `$PROFILE` からの dot-source 方式で管理者不要）。

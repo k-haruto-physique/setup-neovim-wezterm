@@ -3,7 +3,7 @@
 セッション開始（`hi`）時に**必ず読む**未完タスク・仕様書の単一台帳。
 troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約点。**完了したら CLOSED へ落とし、起点ファイル（#番号 / memory）にも反映**する。
 
-最終更新: 2026-08-20（statusline を **2 段 → 4 段の縦積み**に再設計＝ペイン分割時の右端切れ対策 + **ultracode 検出**を実装（payload にも env にも無く、**transcript の attachment レコード**が唯一の確実な足跡。3 ゲートで嘘を出さない設計・実データ検証済）＝**W5** 更新。併せて `wezterm.lua` をリファクタ（定数集約・`config` シャドウ解消・重複パターン一本化。keymap 差分ゼロを機械検証）。**OPEN は 2 件（B8・B7＝どちらもユーザーの手動操作待ち）で不変**）。前回 2026-07-21（statusline に Fable5 週間制限セグメント ◒ を前方互換で追加＝payload 搭載待ちで休眠・**W4** 登録）
+最終更新: 2026-09-11（Codex の自動承認を auto-review に設定し、Remote Control を Windows ログオンタスクで自動起動。タスク `Running`・localhost 待受・`/readyz` HTTP 200 を実機確認。**OPEN は 2 件（B8・B7＝どちらもユーザーの手動操作待ち）で不変**）。前回 2026-08-20（statusline を **2 段 → 4 段の縦積み**に再設計＝ペイン分割時の右端切れ対策 + **ultracode 検出**を実装＝**W5** 更新）
 
 ---
 
@@ -32,6 +32,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | 日付 | タスク | 確定根拠 |
 |---|---|---|
+| 2026-09-11 | **Codex 自動承認 + Remote Control 自動起動** | `~/.codex/config.toml` に `approval_policy = "on-request"` + `approvals_reviewer = "auto_review"`。Windows ログオンタスク `Codex Remote Control` から localhost 限定 app-server を常駐起動し、タスク `Running`・`127.0.0.1:14567` Listen・`/readyz` HTTP 200 を確認。公式ラッパー2種のWindows失敗は troubleshooting **#17** に記録 |
 | 2026-07-16 | **B6 再決着: Remote Control 自動接続を `settings.json` に一本化＋WezTerm 既定シェルを pwsh 化** | 同日朝の実装（下行 `3d9475b` の `claude` ラッパー）は **一度も発火していなかった**。原因: `wezterm.lua` に `default_prog` が無く既定シェルが **cmd.exe**（プロセスツリー実測: wezterm-gui → cmd.exe ×6 → claude ×5・pwsh 皆無）→ `$PROFILE` の dot-source 機会が無く、**B5(06-18) 以来 `repo`/`v`/`vrepo`/`kanro`/`remote`/`usage` も全部死んでいた**（README の「cmd.exe は使用しない」宣言とも矛盾）。**是正 3 点**: ① `wezterm.lua` に `config.default_prog = { "pwsh.exe", "-NoLogo" }`（`-NoProfile` 厳禁）② `~/.claude/settings.json` に `"remoteControlAtStartup": true` ③ `claude`/`claudeplain` ラッパーを撤去（正本を 2 箇所に割らない・`remote` は名前付き起動用に存続）。**② の裏取り**: 公式 docs はトグル存在のみでキー名非公開 → claude.exe 2.1.211 の実体から zod スキーマ `remoteControlAtStartup: "Start Remote Control bridge automatically each session"` と起動判定 `Bg = !(…) && !CLAUDE_CODE_REMOTE && (At \|\| U0e())`（`At`=フラグ / `U0e()`=設定）を確認＝**毎回 `--remote-control` と等価・起動経路に非依存**。**検証**: 独立プロセス起動の子が cmd.exe → **pwsh.exe** に変化／dot-source 後の関数に `claude` 無し・`claude` は exe に解決。**残**: 稼働中 WezTerm には乗らない＝完全再起動待ち（**B8**）。詳細 troubleshooting **#15 / #16** |
 | 2026-07-16 | ~~B6 方針変更: Remote Control を既定 ON（全セッション）＋セッション名を当日 8 桁日付に~~（**同日中に上行で supersede**。実装自体が cmd.exe 環境で不発だったうえ、ネイティブ設定キーが存在したためシェル層の実装ごと撤去） | ユーザー判断「どれを起動しても remote-control になるように」＝2026-07-02 の B6 決着（手動のみ）を**撤回**。`powershell/profile.ps1` に `claude` ラッパーを追加し、対話起動時のみ `--remote-control --remote-control-session-name-prefix <yyyyMMdd>` を自動付与（例 `20260716-graceful-unicorn`）。**実機 `claude --help`（2.1.211）でフラグを裏取り**。`-p/--print`・`mcp` 等サブコマンド・`--remote-control` 指定済みは素通し（対話専用フラグのため）。退避路に `claudeplain`。`remote <名前>` は `20260716-<名前>` へ。**注意: Remote Control はローカル PC が動き続ける前提＝Windows 更新の再起動ではセッションは終わる**（消失対策は push の徹底。復帰は `--continue`・2.1.200+）。settings.json の該当キー名は公式非公開のため `/config` でなく検証済みフラグで実装 |
 | 2026-07-06 | **WebGpu GPU ブロック（07-03 追加・未コミット）を不採用・削除** | 8 次元監査の stability 次元で上流裏取り: 凍結 2 種（#12/#13）はどちらも GPU 非起因＋WebGpu は同型環境（Optimus/NVIDIA）で入力ラグ #4278・透過破損 #4502・G-SYNC 誤発動 #7611 の報告。代替は B7（Windows 設定でアダプタ固定）。詳細 troubleshooting **#14** |

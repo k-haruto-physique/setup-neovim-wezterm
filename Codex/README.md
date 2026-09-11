@@ -21,6 +21,26 @@ pwsh -NoProfile -File C:/Users/81809/Documents/Repositories/setup-neovim-wezterm
 
 この監視表示は Codex の rollout JSONL を読み、最後に記録された token count と rate limit を表示する。Codex 本体の入力欄へ埋め込むものではない。
 
+## 自動承認と Remote Control
+
+`runtime.toml` の設定により、承認が必要な操作は Codex の auto-review subagent が審査する。`approval_policy = "never"` は承認要求を自動却下する設定なので使用しない。
+
+Remote Control は `config.toml` に自動起動キーがないため、Windows のタスク `Codex Remote Control` がログオン時に `remote-control.ps1` を非表示で起動する。
+
+```powershell
+pwsh -NoProfile -File .\Codex\register-remote-control-task.ps1
+```
+
+登録後は `remote-control.ps1` がループバック限定の app-server を foreground で常駐させる。現行 Windows 版では `remote-control` の一時ソケットACL検証と `remote-control start` の daemon 分離がタスク起動と両立しないため、内部の実体コマンド `codex app-server --remote-control --listen ws://127.0.0.1:14567` を使用する。
+
+稼働確認:
+
+```powershell
+Get-ScheduledTask -TaskName 'Codex Remote Control'
+Invoke-WebRequest http://127.0.0.1:14567/readyz
+Get-Content ~/.codex/logs/remote-control.log -Tail 30
+```
+
 公式仕様:
 
 - <https://developers.openai.com/codex/config-file/config-reference>
