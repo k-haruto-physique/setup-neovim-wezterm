@@ -1,5 +1,10 @@
 # 変更履歴
 
+## 2026-09-14 — 内蔵表示への移行
+
+- モデル＋effort・context残量・セッション名を内蔵フッターへ移行。`/rename` で命名。
+- 自作側のcontext計算結果の表示を廃止。制限/cwd/Gitの3行・4セルへ縮小。
+
 ## 2026-09-14
 
 - 再開後に別タブへ残った旧セッション固定の表示を、現在のCodex下端へ作り直して復旧。タブ閉じるボタンと、タブ/ペインの明示終了キーを追加。
@@ -28,3 +33,10 @@
 - 表示ペインでの既定分割キーをownerへ転送。ユーザーのシェルを保持。
 - composer.toggle_shortcuts=[]を設定し、次回起動からshortcuts案内と `?` overlayを無効化。
 - 配置の回帰を追加、GUIなし9件成功。
+
+
+## 2026-09-14 CLI Remote Control起動の統一
+
+- start-codex.ps1とremote-client.ps1を追加。対話CLIは共通Remote Controlサーバーへ接続し、実接続状態を確認する。
+- PowerShell codex関数とCtrl+Shift+Nを同経路に統一。ログオンタスクにStartWhenAvailableを追加。
+- デスクトップとの409競合を特定し、ユーザーのCLI中心方針で解消。PTY起動と回帰8件を検証。

@@ -685,3 +685,30 @@ codex app-server --remote-control --listen ws://127.0.0.1:14567
 同日の配置修正: Codex本体を分割すると旧表示が元のタブ最下段へ残り、表示ペインを選んで分割すると5行のシェルが出来ていた。ownerと表示の幾何情報を照合し、違う場合は既存表示だけをowner直下5セルへ移動する監視を追加。既定の分割キーは表示からownerへ対象を戻す。現状の2つのCodex表示を各owner直下に置き直し、ユーザーが開いたシェルは保持した。GUIを増やさず、配置検証を加えた回帰9件成功。
 
 `? for shortcuts` はCodexの内蔵操作案内。status_lineを空にしても残る。composer.toggle_shortcutsを空配列にすると当該案内と `?` ヘルプoverlayが無効になる。設定正本statusline.tomlとinstallerへ追加しユーザー設定へ反映。既存CLIは次回起動時に反映するため、進行中のセッションを終了しない。
+
+
+## 20. 自作contextとCodex内蔵の残量が一致しない（2026-09-14）
+
+自作はrolloutのlast_token_usage.total_tokens/model_context_windowを使用率として表示していたが、Codex内蔵context残量とは計算・更新の扱いが一致しない。ユーザー判断でモデル＋effort・context-remaining・thread-nameを内蔵フッターへ移行した。名前は `/rename <名前>`。自作は制限/cwd/Gitの3行、下端4セル。installerとstatusline.tomlへ記録しユーザー設定にも反映。既存CLIの内蔵フッターは次回起動、または `/statusline` から項目を選択して反映する。既存の自作監視プロセスも次回起動で新しいスクリプトを読む。実機反映確認はB9へ集約する。
+
+
+## 21. スキル説明短縮警告・コピーモードの強調不足（2026-09-14）
+
+`Skill descriptions were shortened to fit the skills context budget` はスキルの読込失敗ではなく、説明文の総量超過。アイコン参照修復では解消しない。ユーザー設定のclaude-cowork業務プラグイン14個（apollo/bio-research/brand-voice/common-room/cowork-plugin-management/customer-support/finance/human-resources/legal/marketing/operations/product-management/sales/slack-by-salesforce）を無効化し、開発・データ・デザイン・検索・文書・ブラウザ系を維持した。削除はしていない。`codex debug prompt-input hi` の新しいプロンプトで短縮警告・予算超過警告が無いことを確認。既存CLIの表示は次回起動で確認する。
+
+コピーモードの選択色を黄背景/黒文字に明示し、マウス併用時のactive/inactive highlightも指定した。Shift+VとSpaceの選択バインドを追加。copy_mode中はLua側のCodex表示自動追加を止め、設定が同じ場合はset_config_overridesを呼ばない。黄色カーソルはSteadyBlockにする。CopyModeへ入るだけでは選択は始まらない。行コピーはIME OFF → Ctrl+Shift+X → Shift+V → 矢印 → Enter。Luaロードとshow-keysは成功。実機での強調・安定性はB11で確認する。既存の別プロセスによる表示配置修復と旧イベントハンドラはこの変更だけでは停止しない。
+
+## 22. Codex Remote Controlタスクとデスクトップが競合（2026-09-14）
+
+タスクはReady、14567の待受無し。起動し直すとHTTP /readyzは200だったが、RPC `remoteControl/status/read` はerrored。logs_2.sqliteのremote_controlログでHTTP 409 `Remote app server already online` を確認。デスクトップ（ChatGPT.exe子のapp-server）が同じinstallation/server登録でConnectedとなっており、タスク側が競合した。現在のWezTerm CLIは別PIDのローカルサーバーで動作しているため、デスクトップの接続成功だけではこのCLI会話の自動接続を証明できない。
+
+今回起動した競合タスクだけを停止し、稼働中デスクトップ/CLIは維持した。HTTP 200は常駐サーバーの起動確認に限り、Remote Control接続完了の根拠にはしない。今後CLIを常駐サーバーへ`--remote ws://127.0.0.1:14567`で接続するか、デスクトップ側を残すかの選択をユーザーへ提示。B10で回収する。前回#17の「Remote Control接続済み」の扱いはこの確認で訂正する。
+
+
+#22 更新（同日、CLI中心の方針で解決）: ユーザーがデスクトップのRemote ControlをOFFにし、常駐側RPC connectedを確認。CLI起動をstart-codex.ps1へ一本化し、PowerShell codex関数とCtrl+Shift+Nから共通サーバーへ--remote接続する。cwdを明示し、resume/fork/agentsも同経路。管理コマンド/exec/help/versionは素通し。未起動時はタスク開始、RPC connectedを確認してから対話起動。タスクをStartWhenAvailable付きで再登録しRunning/connectedを確認。PTYで新しいthread UUIDとモデル/effort/cwd/YOLOを確認、プロンプト送信無し。B10 CLOSED。既存CLIはローカルサーバーのままなので次回起動または共有サーバーへresumeで反映。
+
+## 23. DiXiM USBソフトの「引数が正しくありません」（2026-09-14）
+
+ユーザー画像のウィンドウはdixim-security-endpoint-usb。実プロセスはTemp/DiXiM Security Endpoint for USB@E/dixim-security-endpoint-usb.exe -nocopy、DigiOnの署名Valid、版1.0.0.61。接続中のBUFFALO RUF3-KEV、E: UTILITIES/OPEN_KEV.exe/DiXiMSecurityEndpointと一致する。USB付属のウイルスチェックソフトが発生元で、Codex/WezTermのエラーダイアログではない。
+
+同ソフトのログではD:/E:のDBT_DEVICEREMOVECOMPLETEの直後にBackupDir() failedが反復し、bootDriveLetter:E drive not foundも記録されている。USBの取り外し/再認識時に保存先を失う状態が候補。ただし画像の引数エラーを直接記録した行は見つからず、同じ根本原因とは確定できない。まず安全な取り外し後にPC本体のUSBポートへ差し直して切り分ける。継続する場合はこの版・画像・USBログをBUFFALOサポートへ提示。認証/隔離データやTemp一式を削除する処置、ウイルスチェックの無効化は実施していない。製品仕様: https://www.buffalo.jp/press/detail/20250108-01.html

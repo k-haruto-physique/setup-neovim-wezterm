@@ -54,7 +54,7 @@ try {
         }
     }
     if ($hookState.Count -ne 2) { throw 'Expected exactly the two status lifecycle hooks' }
-    Invoke-StatusRpc 'config/batchWrite' @{ edits = @(@{ keyPath = 'hooks.state'; value = $hookState; mergeStrategy = 'upsert' }, @{ keyPath = 'tui.terminal_title'; value = @('app-name', 'session-id', 'model-with-reasoning'); mergeStrategy = 'replace' }, @{ keyPath = 'tui.keymap.composer.toggle_shortcuts'; value = @(); mergeStrategy = 'replace' }, @{ keyPath = 'tui.status_line'; value = @(); mergeStrategy = 'replace' }); reloadUserConfig = $true } 3 | Out-Null
+    Invoke-StatusRpc 'config/batchWrite' @{ edits = @(@{ keyPath = 'hooks.state'; value = $hookState; mergeStrategy = 'upsert' }, @{ keyPath = 'tui.terminal_title'; value = @('app-name', 'session-id', 'model-with-reasoning'); mergeStrategy = 'replace' }, @{ keyPath = 'tui.keymap.composer.toggle_shortcuts'; value = @(); mergeStrategy = 'replace' }, @{ keyPath = 'tui.status_line'; value = @('model-with-reasoning', 'context-remaining', 'thread-name'); mergeStrategy = 'replace' }); reloadUserConfig = $true } 3 | Out-Null
     $verified = Invoke-StatusRpc 'hooks/list' @{ cwds = @((Get-Location).Path) } 4
     $verified.data[0].hooks | Where-Object { $hookState.ContainsKey($_.key) } | Select-Object eventName, trustStatus, enabled
 } finally {

@@ -416,6 +416,7 @@ Vim 未経験者が **最初に詰む最大ポイント**。
 
 | コマンド | 動作 |
 |---|---|
+| `codex` / `codex resume --last` | CLIを共有Remote Controlサーバーへ自動接続して起動/再開（新しいPowerShellから有効。デスクトップ側Remote ControlはOFF） |
 | `repo` / `dotfiles` | dotfiles リポジトリへ cd |
 | `v` | cwd を nvim で開く |
 | `vrepo` | dotfiles を nvim で開く |

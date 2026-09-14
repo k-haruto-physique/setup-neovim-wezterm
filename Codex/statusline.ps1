@@ -1,6 +1,6 @@
 ﻿# Codex statusline monitor for a dedicated WezTerm pane.
 # Codex does not expose Claude's statusLine.command callback, so this renderer
-# reads the active Codex rollout JSONL and renders the same four information rows.
+# reads the active Codex rollout JSONL and renders rate limits, directory, and Git in three rows.
 [CmdletBinding()]
 param(
     [string]$Path = (Get-Location).Path,
@@ -96,7 +96,7 @@ function Test-StatusPlacement($OwnerPane, $StatusPane) {
         $OwnerPane.left_col -eq $StatusPane.left_col -and
         $OwnerPane.size.cols -eq $StatusPane.size.cols -and
         $StatusPane.top_row -eq ($OwnerPane.top_row + $OwnerPane.size.rows + 1) -and
-        $StatusPane.size.rows -eq 5)
+        $StatusPane.size.rows -eq 4)
 }
 
 function Find-Rollout([string]$Cwd) {
@@ -217,25 +217,11 @@ function Render-Status {
 
     $primaryReset = Format-Reset $primaryReset
     $secondaryReset = Format-Reset $secondaryReset
-    $effortColor = switch ($effort) {
-        'low' { $Dim }
-        'medium' { $Green }
-        'high' { $Yellow }
-        'xhigh' { $Peach }
-        'max' { $Red }
-        default { $Dim }
-    }
-    $line1 = Join-Segments @("$Mauve◆ $model$Reset", $(if ($effort) { "$Dim◇ eff:$effortColor$effort$Reset" }))
-    if ($used -ne $null -and $window) {
-        $pct = [Math]::Round(([double]$used / [double]$window) * 100)
-        $ctxColor = Get-StageColor $pct
-        $sizeLabel = Format-WindowSize $window
-        $line2 = Join-Segments @(
-            "$Teal◈ ctx:$ctxColor${pct}%$Dim$sizeLabel$Reset",
-            $(if ($primary -ne $null) { "$Dim◐ 5h:$(Get-StageColor $primary)$primary% $Dim$primaryReset$Reset" }),
-            $(if ($secondary -ne $null) { "$Dim◑ 7d:$(Get-StageColor $secondary)$secondary% $Dim$secondaryReset$Reset" })
-        )
-    } else { $line2 = "$Teal◈ ctx:$Dim unavailable$Reset" }
+    $line2 = Join-Segments @(
+        $(if ($primary -ne $null) { "$Dim◐ 5h:$(Get-StageColor $primary)$primary% $Dim$primaryReset$Reset" }),
+        $(if ($secondary -ne $null) { "$Dim◑ 7d:$(Get-StageColor $secondary)$secondary% $Dim$secondaryReset$Reset" })
+    )
+    if (-not $line2) { $line2 = "$Dim◐ limits: unavailable$Reset" }
     $line3 = "$Blue▸ $(Format-Directory $Cwd)$Reset"
     $branch = git -C $Cwd --no-optional-locks rev-parse --abbrev-ref HEAD 2>$null
     $symbols = ''
@@ -257,7 +243,7 @@ function Render-Status {
     }
     $git = if ($branch) { "$branch$(if ($symbols) { " $symbols" })" } else { 'not a git repository' }
     $line4 = "$Green⎇ $git$Reset"
-    $renderedLines = @($line1, $line2, $line3, $line4)
+    $renderedLines = @($line2, $line3, $line4)
     if (-not $Watch) {
         [Console]::WriteLine($renderedLines -join "`n")
         return
@@ -296,7 +282,7 @@ try {
                 if ($selfPane -and $mainPane.size.rows -gt 6 -and -not $zoomed -and -not (Test-StatusPlacement $mainPane $selfPane)) {
                     # Move this existing renderer; never move or restart a user's shell.
                     $client = @(& wezterm cli list-clients --format json | ConvertFrom-Json) | Where-Object { $null -ne $_.focused_pane_id } | Select-Object -First 1
-                    & wezterm cli split-pane --pane-id $binding.ownerPaneId --bottom --cells 5 --move-pane-id $selfPane.pane_id | Out-Null
+                    & wezterm cli split-pane --pane-id $binding.ownerPaneId --bottom --cells 4 --move-pane-id $selfPane.pane_id | Out-Null
                     if ($LASTEXITCODE -eq 0 -and $client) {
                         $focus = if ($client.focused_pane_id -eq $selfPane.pane_id) { $binding.ownerPaneId } else { $client.focused_pane_id }
                         & wezterm cli activate-pane --pane-id $focus | Out-Null

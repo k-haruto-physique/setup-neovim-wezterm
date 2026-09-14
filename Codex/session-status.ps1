@@ -58,7 +58,7 @@ try {
     [IO.File]::WriteAllText($temp, ($binding | ConvertTo-Json -Depth 5))
     [IO.File]::Move($temp, $bindingPath, $true)
     if ($null -eq $statusPane) {
-        $statusPane = & wezterm cli split-pane --pane-id $ownerPane --bottom --cells 5 --cwd $event.cwd -- pwsh.exe -NoLogo -NoProfile -File (Join-Path $PSScriptRoot 'statusline.ps1') -Watch -BindingPath $bindingPath
+        $statusPane = & wezterm cli split-pane --pane-id $ownerPane --bottom --cells 4 --cwd $event.cwd -- pwsh.exe -NoLogo -NoProfile -File (Join-Path $PSScriptRoot 'statusline.ps1') -Watch -BindingPath $bindingPath
         if ($LASTEXITCODE -ne 0 -or "$statusPane" -notmatch '^\d+$') { throw 'Could not create status pane' }
         # Do not activate a remote or inactive session.
     }

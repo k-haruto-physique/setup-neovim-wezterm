@@ -102,6 +102,12 @@ config.show_close_tab_button_in_tabs = true
 -- タブバーを透過（Acrylic の効果を活かす）
 config.colors = {
 	tab_bar = TAB_BAR_COLORS,
+	selection_bg = "#FFD54F",
+	selection_fg = "#111111",
+	copy_mode_active_highlight_bg = { Color = "#FFD54F" },
+	copy_mode_active_highlight_fg = { Color = "#111111" },
+	copy_mode_inactive_highlight_bg = { Color = "#8D7535" },
+	copy_mode_inactive_highlight_fg = { Color = "#FFFFFF" },
 }
 
 -- タブの形をカスタマイズ
@@ -196,7 +202,7 @@ local function ensure_codex_status(window)
 					local pid = codex_process(pane:get_foreground_process_info())
 					if pid and not existing[tostring(pid) .. ":" .. owner] then
 						requests[owner] = now
-						pane:split({ direction = "Bottom", size = 5, cwd = pane_cwd(pane), args = {
+						pane:split({ direction = "Bottom", size = 4, cwd = pane_cwd(pane), args = {
 							"pwsh.exe", "-NoLogo", "-NoProfile", "-File",
 							CODEX_SESSION_STATUS_SCRIPT:gsub("session%-status%.ps1$", "statusline.ps1"),
 							"-Watch", "-OwnerPaneId", owner, "-OwnerProcessId", tostring(pid),
@@ -293,7 +299,8 @@ config.keys = {
 		mods = "CTRL|SHIFT",
 		action = wezterm.action_callback(function(_window, pane)
 			local cwd = pane_cwd(pane)
-			wezterm.mux.spawn_window({ args = { "codex" }, cwd = cwd })
+			wezterm.mux.spawn_window({ args = { "pwsh.exe", "-NoLogo", "-NoProfile", "-File",
+				CODEX_SESSION_STATUS_SCRIPT:gsub("session%-status%.ps1$", "start-codex.ps1") }, cwd = cwd })
 		end),
 	},
 	-- 2026-05-29: ペイン入れ替え（分割の向きは変えられないが中身の位置交換は可能）
@@ -383,6 +390,8 @@ config.key_tables = {
 		-- 選択モード
 		{ key = "v", mods = "NONE", action = act.CopyMode({ SetSelectionMode = "Cell" }) },
 		{ key = "V", mods = "NONE", action = act.CopyMode({ SetSelectionMode = "Line" }) },
+		{ key = "V", mods = "SHIFT", action = act.CopyMode({ SetSelectionMode = "Line" }) },
+		{ key = "Space", mods = "NONE", action = act.CopyMode({ SetSelectionMode = "Cell" }) },
 		{ key = "v", mods = "CTRL", action = act.CopyMode({ SetSelectionMode = "Block" }) },
 		-- コピーして抜ける
 		{ key = "y", mods = "NONE", action = copy_and_close() },
@@ -462,7 +471,9 @@ end)
 -- UI 要素を追加しない、リサイズもしない、透過変化もしない。
 -- set_right_status / set_left_status は旧 addon 残骸対策で空文字を上書き。
 wezterm.on("update-status", function(window, _pane)
-	ensure_codex_status(window)
+	local copying = window:active_key_table() == "copy_mode"
+	-- CopyMode must keep the viewport and focus intact while selecting text.
+	if not copying then ensure_codex_status(window) end
 	window:set_right_status("")
 	window:set_left_status("")
 
@@ -474,16 +485,25 @@ wezterm.on("update-status", function(window, _pane)
 
 	-- コピーモード等のキーテーブルアクティブ時: カーソル黄色化。
 	-- colors は丸ごと置換なので tab_bar も一緒に渡す（渡さないと透過が外れる）。
-	if window:active_key_table() then
+	if copying then
+		overrides.default_cursor_style = "SteadyBlock"
 		overrides.colors = {
 			cursor_bg = COPY_MODE_CURSOR_COLORS.cursor_bg,
 			cursor_fg = COPY_MODE_CURSOR_COLORS.cursor_fg,
 			cursor_border = COPY_MODE_CURSOR_COLORS.cursor_border,
 			tab_bar = TAB_BAR_COLORS,
+			selection_bg = config.colors.selection_bg,
+			selection_fg = config.colors.selection_fg,
+			copy_mode_active_highlight_bg = config.colors.copy_mode_active_highlight_bg,
+			copy_mode_active_highlight_fg = config.colors.copy_mode_active_highlight_fg,
+			copy_mode_inactive_highlight_bg = config.colors.copy_mode_inactive_highlight_bg,
+			copy_mode_inactive_highlight_fg = config.colors.copy_mode_inactive_highlight_fg,
 		}
 	end
 
-	window:set_config_overrides(overrides)
+	if wezterm.json_encode(window:get_config_overrides()) ~= wezterm.json_encode(overrides) then
+		window:set_config_overrides(overrides)
+	end
 end)
 
 -- nvimopen: スキームを横取りして nvim を起動（それ以外の http 等は既定動作に任せる）

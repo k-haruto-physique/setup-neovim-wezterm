@@ -17,6 +17,11 @@ function vrepo { repo; nvim . }    # dotfiles を nvim で開く
 # --- DB（kanro_db / pgpass 無人接続）---
 function kanro { psql -U postgres -d kanro_db }
 
+# Codex CLI: interactive sessions share the Remote Control backend.
+function codex {
+    & 'C:\Users\81809\Documents\Repositories\setup-neovim-wezterm\Codex\start-codex.ps1' @args
+}
+
 # --- 名前付きで Remote Control 起動（アプリ/web 側で識別しやすい）---
 # 自動接続そのものはここではなく `~/.claude/settings.json` の
 #   "remoteControlAtStartup": true

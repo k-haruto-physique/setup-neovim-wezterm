@@ -25,7 +25,7 @@ class SessionStatusTests(unittest.TestCase):
         events = [
             {"type": "session_meta", "payload": {"id": session, "cwd": cwd or str(self.root)}},
             {"type": "turn_context", "payload": {"model": model, "effort": "high", "cwd": cwd or str(self.root)}},
-            {"type": "event_msg", "payload": {"type": "token_count", "info": {"last_token_usage": {"total_tokens": tokens}, "total_token_usage": {"total_tokens": cumulative}, "model_context_window": 10000}}},
+            {"type": "event_msg", "payload": {"type": "token_count", "info": {"last_token_usage": {"total_tokens": tokens}, "total_token_usage": {"total_tokens": cumulative}, "model_context_window": 10000}, "rate_limits": {"primary": {"used_percent": tokens / 100}, "secondary": {"used_percent": 12}}}},
         ]
         path = self.root / "sessions" / f"rollout-test-{session}.jsonl"
         path.write_text("\n".join(json.dumps(e, separators=(",", ":")) for e in events), encoding="utf-8")
@@ -39,11 +39,11 @@ class SessionStatusTests(unittest.TestCase):
         self.rollout(A, "model-A", 1000)
         self.rollout(B, "model-B", 8000)
         a, b = self.render(A), self.render(B)
-        self.assertIn("model-A", a)
-        self.assertIn("ctx:10%", a)
+        self.assertIn("5h:10%", a)
+        self.assertNotIn("ctx:", a)
         self.assertNotIn("model-B", a)
-        self.assertIn("model-B", b)
-        self.assertIn("ctx:80%", b)
+        self.assertIn("5h:80%", b)
+        self.assertNotIn("eff:", b)
 
     def test_missing_session_never_falls_back(self):
         self.rollout(B, "wrong-model", 8000)
@@ -53,7 +53,7 @@ class SessionStatusTests(unittest.TestCase):
 
     def test_unique_truncated_title_resolves(self):
         self.rollout(A, "unique-model", 1000)
-        self.assertIn("unique-model", self.render(A[:29]))
+        self.assertIn("5h:10%", self.render(A[:29]))
 
     def test_prefix_collision_stays_unavailable(self):
         self.rollout(A, "wrong-one", 1000)
@@ -62,25 +62,15 @@ class SessionStatusTests(unittest.TestCase):
         self.assertIn("unavailable", text)
         self.assertNotIn("wrong-", text)
 
-    def test_zero_context_does_not_use_cumulative_usage(self):
+    def test_zero_rate_limit_is_valid(self):
         self.rollout(A, "zero-model", 0)
-        self.assertIn("ctx:0%", self.render(A))
+        self.assertIn("5h:0%", self.render(A))
 
     def test_transcript_cwd_is_session_specific(self):
         child = self.root / "session-directory"
         child.mkdir()
         self.rollout(A, "cwd-model", 1000, str(child))
         self.assertIn("session-directory", self.render(A))
-
-    def test_live_title_overrides_previous_turn_model(self):
-        self.rollout(A, "old-model", 1000)
-        quoted = str(SCRIPT).replace("'", "''")
-        cwd = str(self.root).replace("'", "''")
-        command = f". '{quoted}' -Path '{cwd}' -SessionId '{A}'; $State.LiveModel='new-model'; $State.LiveEffort='low'; Render-Status '{cwd}'"
-        result = subprocess.run(["pwsh", "-NoProfile", "-Command", command], env=self.env, capture_output=True, encoding="utf-8", timeout=15, check=True)
-        text = re.sub(r"\x1b\[[0-9;]*m", "", result.stdout).splitlines()[-4:]
-        self.assertIn("new-model", text[0])
-        self.assertIn("eff:low", text[0])
 
     def test_binding_switch_and_end_without_gui(self):
         self.rollout(A, "first-session", 1000)
@@ -103,16 +93,16 @@ class SessionStatusTests(unittest.TestCase):
                 def wait_for(value):
                     deadline = time.monotonic() + 12
                     while time.monotonic() < deadline:
-                        if value in output.read_text(encoding="utf-8"):
+                        if value in re.sub(r"\[[0-9;]*m", "", output.read_text(encoding="utf-8")):
                             return
                         if process.poll() is not None:
                             self.fail(process.stderr.read().decode("utf-8"))
                         time.sleep(0.1)
                     self.fail(f"Missing frame: {value}")
-                wait_for("first-session")
+                wait_for("5h:10%")
                 binding["sessionId"] = B
                 save()
-                wait_for("second-session")
+                wait_for("5h:80%")
                 binding["ended"] = True
                 save()
                 self.assertEqual(process.wait(timeout=5), 0)
@@ -127,7 +117,7 @@ class SessionStatusTests(unittest.TestCase):
         cwd = str(self.root).replace("'", "''")
         command = f""". '{script}' -Path '{cwd}' -SessionId '{A}';
         $owner = [pscustomobject]@{{tab_id=4;left_col=0;top_row=0;size=@{{rows=12;cols=190}}}};
-        $status = [pscustomobject]@{{tab_id=4;left_col=0;top_row=13;size=@{{rows=5;cols=190}}}};
+        $status = [pscustomobject]@{{tab_id=4;left_col=0;top_row=13;size=@{{rows=4;cols=190}}}};
         Test-StatusPlacement $owner $status;
         $status.top_row=39; Test-StatusPlacement $owner $status;
         $status.top_row=13; $status.size.cols=94; Test-StatusPlacement $owner $status;
