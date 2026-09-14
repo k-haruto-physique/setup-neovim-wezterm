@@ -110,6 +110,7 @@ LazyVim Extras 有効化済: `lang.sql`, `lang.python`, `lang.markdown`（lang.l
 - `docs/usage-log.md` — 使用量の従量換算ログ（**ローカル限定・gitignore**。`usage` 関数の出力を**手動でスナップショット追記**する方式＝関数はファイルに書かない。repo 公開のため非追跡）
 - `docs/cheatsheet.html` — 印刷用 1 枚（md が正本。PDF は陳腐化のため廃止・`*.pdf` は gitignore）
 - `docs/legacy-nvim/` — 旧 lazy.nvim 設定の参照保全
+- `AGENTS.md` — Codex 用の入口。本ファイルを正本として読ませ、Codex で違う点（statusline・config.toml・Remote Control のシム方式）だけを差分表で持つ。**運用ルールを変えたら本ファイル側を直す**
 
 > このドキュメント map が**全設定仕様の完全索引**。GO ゲート（`hi`）の auto-read は上記 1-8 の運用コアに絞り、それ以外（statusline-spec / profile / 各 docs）は本 map から必要時に参照する設計。
 
