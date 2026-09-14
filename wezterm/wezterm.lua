@@ -97,7 +97,7 @@ config.window_frame = {
 -- タブの追加ボタンを非表示
 config.show_new_tab_button_in_tab_bar = false
 -- タブの閉じるボタンを非表示（nightly版で有効化される）
-config.show_close_tab_button_in_tabs = false
+config.show_close_tab_button_in_tabs = true
 
 -- タブバーを透過（Acrylic の効果を活かす）
 config.colors = {
@@ -214,6 +214,9 @@ end
 -- config.leader = { key = "q", mods = "CTRL", timeout_milliseconds = 2000 }
 
 config.keys = {
+	-- タブ全体とペイン単体の終了を明示的に分ける。
+	{ key = "w", mods = "CTRL|SHIFT", action = act.CloseCurrentTab({ confirm = true }) },
+	{ key = "w", mods = "CTRL|SHIFT|ALT", action = act.CloseCurrentPane({ confirm = true }) },
 	-- 2026-05-22: copy_mode の入口を明示バインド（デフォルト table への依存をやめる保険）
 	{ key = "x", mods = "CTRL|SHIFT", action = act.ActivateCopyMode },
 	-- 2026-05-22: nvim を別ウィンドウで起動（上モニターへドラッグ用）
