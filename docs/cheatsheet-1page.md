@@ -117,7 +117,7 @@
 | `Ctrl+Shift+←→↑↓` | 隣のペインへ移動 |
 | `Ctrl+Shift+Z` | ペイン最大化トグル |
 | `Ctrl+Shift+I` | 新ウィンドウで `nvim`（上モニター用） |
-| `Ctrl+Shift+N` | 新ウィンドウで `claude`（下モニター用） |
+| `Ctrl+Shift+N` | 新ウィンドウで `Codex`＋下端4段ステータス（下モニター用） |
 | `Ctrl+Shift+X` | コピーモード（カーソル黄色化で判別・IME OFF 必須） |
 
 ---

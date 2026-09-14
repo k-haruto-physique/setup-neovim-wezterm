@@ -43,7 +43,10 @@ setup-neovim-wezterm/
 │   ├── statusline-spec.md     # 設計仕様
 │   ├── CHANGELOG.md
 │   └── README.md
-├── Codex/                     # Codex TUI status line 設定
+├── Codex/                     # Codex用の下端4段ステータスペイン
+│   ├── statusline.ps1          # 4段レンダラー
+│   ├── statusline-spec.md      # データ源・数値・色の仕様
+│   ├── CHANGELOG.md            # 変更履歴
 │   ├── statusline.toml         # [tui].status_line の正本スニペット
 │   ├── runtime.toml            # 自動承認の正本スニペット
 │   ├── remote-control.ps1      # ログオン時の Remote Control 常駐タスク

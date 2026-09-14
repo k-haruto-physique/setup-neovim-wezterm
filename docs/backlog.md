@@ -3,7 +3,7 @@
 セッション開始（`hi`）時に**必ず読む**未完タスク・仕様書の単一台帳。
 troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約点。**完了したら CLOSED へ落とし、起点ファイル（#番号 / memory）にも反映**する。
 
-最終更新: 2026-09-11（Codex の自動承認を auto-review に設定し、Remote Control を Windows ログオンタスクで自動起動。タスク `Running`・localhost 待受・`/readyz` HTTP 200 を実機確認。**OPEN は 2 件（B8・B7＝どちらもユーザーの手動操作待ち）で不変**）。前回 2026-08-20（statusline を **2 段 → 4 段の縦積み**に再設計＝ペイン分割時の右端切れ対策 + **ultracode 検出**を実装＝**W5** 更新）
+最終更新: 2026-09-14（Codex下端4段表示を実機反映し、全画面消去による点滅を修正。自動承認はnever + danger-full-accessへ変更。**OPEN は3件（B9・B8・B7）**。B9は次回Codex起動時の反映確認）。前回2026-09-11（Codexの自動承認とRemote Controlログオン起動を実機確認）
 
 ---
 
@@ -11,6 +11,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | # | タスク | 状態 | 次の一手 | 起点 |
 |---|---|---|---|---|
+| B9 | **Codex再起動後の内蔵フッター非表示と確認なし実行を確認** | 設定反映済み。現在のセッションには起動時設定が残る | セッション終了後にCodexを起動し、チャット直下の1行が消え、承認待ちが出ないことを確認 | troubleshooting #17・#18 |
 | B8 | **WezTerm を完全再起動して `default_prog = pwsh` を実機反映** | 設定・検証は完了。稼働中インスタンスに乗らないため再起動待ち | 全 WezTerm ウィンドウを閉じる（claude セッションは事前に push/`--continue` 前提）→ 再起動 → 新規タブが pwsh・`repo`/`v`/`usage` が通る・新規 `claude` が Remote Control で立つことを確認 | troubleshooting #15 |
 | B7 | **wezterm-gui.exe の GPU を「高パフォーマンス」固定**（Optimus 対策の正規手段。WebGpu 化の代替） | ユーザーの手動 GUI 操作待ち（Claude は GUI 不可） | Windows 設定 > システム > ディスプレイ > グラフィックス → `C:\Program Files\WezTerm\wezterm-gui.exe` を追加 → 「高パフォーマンス」を選択 | troubleshooting #14 |
 
@@ -20,6 +21,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | # | 項目 | なぜ今やらないか | いつ顕在化するか |
 |---|---|---|---|
+| W6 | **Codex下端表示の同一cwd並列セッション** | SessionId未指定時は同じcwdの最近更新されたログを選ぶ。現在の表示は対象UUIDへ固定済み | 同じリポジトリで並列起動した場合。必要なら `-SessionId` で固定する。仕様は `Codex/statusline-spec.md` |
 | W1 | **statusline symlink 切れ** | `~/.claude/statusline.ps1` は symlink ではなく実体ファイル。**2026-08-20 の 4 段化でも repo 正本 → 実体へ手動コピーし、ハッシュ一致を確認済**（表示は最新） | **repo 側 `claude/statusline.ps1` を編集するたび**に手動コピーが要る。symlink 再リンクは `New-Item -ItemType SymbolicLink` が **管理者権限を要求して失敗**（2026-08-20 実測）＝管理者 PowerShell を開ける時にだけ解消可能。それまでは編集後コピーで運用 |
 | W2 | **ペイン入力不能（修飾キー stuck）** | 2026-07-02 発生・原因確定（修飾キーの key-up 取りこぼし）。**コードでは直せない**（WezTerm×Windows 積年の既知問題・設定フラグ無し）。運用回避で足りる | 固まったら **Ctrl/Shift/Alt/Win を 1 回タップ**で復活。予防は「修飾キー押したまま Alt+Tab しない」。詳細 troubleshooting #12 |
 | W3 | **ペイン入力不能（Claude TUI 描画 wedge）** | 2026-07-03 発生・W2 とは別種（修飾キータップで直らない）。特定 Claude ペインが "Esc to cancel" オーバーレイで wedge。**遠隔修復不可を実証**（send-text は Claude TUI に届かず・zoom-pane は mux CLI をデッドロックさせた）。頻発申告あり | 復旧は**ユーザー直接操作**: クリック→`Esc`×1-2→`Ctrl+C`→最終手段 `claude --continue`（会話復元）。`get-text` にオーバーレイが見えたら W3 確定。詳細 troubleshooting #13 |
@@ -32,6 +34,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | 日付 | タスク | 確定根拠 |
 |---|---|---|
+| 2026-09-14 | **Codex 4段ステータスを同一WezTermウィンドウへ統合** | 内蔵 `[tui].status_line` は項目を横1行に並べる仕様のため `[]` で非表示化。WezTerm `pane:split` の5セル固定ペインでClaude同等の4段表示を常駐させる。詳細 troubleshooting **#18** |
 | 2026-09-11 | **Codex 自動承認 + Remote Control 自動起動** | `~/.codex/config.toml` に `approval_policy = "on-request"` + `approvals_reviewer = "auto_review"`。Windows ログオンタスク `Codex Remote Control` から localhost 限定 app-server を常駐起動し、タスク `Running`・`127.0.0.1:14567` Listen・`/readyz` HTTP 200 を確認。公式ラッパー2種のWindows失敗は troubleshooting **#17** に記録 |
 | 2026-07-16 | **B6 再決着: Remote Control 自動接続を `settings.json` に一本化＋WezTerm 既定シェルを pwsh 化** | 同日朝の実装（下行 `3d9475b` の `claude` ラッパー）は **一度も発火していなかった**。原因: `wezterm.lua` に `default_prog` が無く既定シェルが **cmd.exe**（プロセスツリー実測: wezterm-gui → cmd.exe ×6 → claude ×5・pwsh 皆無）→ `$PROFILE` の dot-source 機会が無く、**B5(06-18) 以来 `repo`/`v`/`vrepo`/`kanro`/`remote`/`usage` も全部死んでいた**（README の「cmd.exe は使用しない」宣言とも矛盾）。**是正 3 点**: ① `wezterm.lua` に `config.default_prog = { "pwsh.exe", "-NoLogo" }`（`-NoProfile` 厳禁）② `~/.claude/settings.json` に `"remoteControlAtStartup": true` ③ `claude`/`claudeplain` ラッパーを撤去（正本を 2 箇所に割らない・`remote` は名前付き起動用に存続）。**② の裏取り**: 公式 docs はトグル存在のみでキー名非公開 → claude.exe 2.1.211 の実体から zod スキーマ `remoteControlAtStartup: "Start Remote Control bridge automatically each session"` と起動判定 `Bg = !(…) && !CLAUDE_CODE_REMOTE && (At \|\| U0e())`（`At`=フラグ / `U0e()`=設定）を確認＝**毎回 `--remote-control` と等価・起動経路に非依存**。**検証**: 独立プロセス起動の子が cmd.exe → **pwsh.exe** に変化／dot-source 後の関数に `claude` 無し・`claude` は exe に解決。**残**: 稼働中 WezTerm には乗らない＝完全再起動待ち（**B8**）。詳細 troubleshooting **#15 / #16** |
 | 2026-07-16 | ~~B6 方針変更: Remote Control を既定 ON（全セッション）＋セッション名を当日 8 桁日付に~~（**同日中に上行で supersede**。実装自体が cmd.exe 環境で不発だったうえ、ネイティブ設定キーが存在したためシェル層の実装ごと撤去） | ユーザー判断「どれを起動しても remote-control になるように」＝2026-07-02 の B6 決着（手動のみ）を**撤回**。`powershell/profile.ps1` に `claude` ラッパーを追加し、対話起動時のみ `--remote-control --remote-control-session-name-prefix <yyyyMMdd>` を自動付与（例 `20260716-graceful-unicorn`）。**実機 `claude --help`（2.1.211）でフラグを裏取り**。`-p/--print`・`mcp` 等サブコマンド・`--remote-control` 指定済みは素通し（対話専用フラグのため）。退避路に `claudeplain`。`remote <名前>` は `20260716-<名前>` へ。**注意: Remote Control はローカル PC が動き続ける前提＝Windows 更新の再起動ではセッションは終わる**（消失対策は push の徹底。復帰は `--continue`・2.1.200+）。settings.json の該当キー名は公式非公開のため `/config` でなく検証済みフラグで実装 |

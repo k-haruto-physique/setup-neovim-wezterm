@@ -66,8 +66,8 @@ WezTerm + LazyVim + PowerShell の **このリポジトリのセットアップ�
 | キー | 動作 |
 |---|---|
 | **`Ctrl+Shift+I`** | **nvim を新規ウィンドウで起動**（上モニター用） |
-| **`Ctrl+Shift+Y`** | **Codex ステータス監視を新規ウィンドウで起動**（現在の cwd を引き継ぐ） |
-| **`Ctrl+Shift+N`** | **claude を新規ウィンドウで起動**（下モニターで複数 claude 用） |
+| **`Ctrl+Shift+Y`** | **現在のペイン下端へ Codex の4段ステータスを追加**（既存セッションへの後付け） |
+| **`Ctrl+Shift+N`** | **Codex＋下端4段ステータスを新規ウィンドウで起動**（下モニター用） |
 | `Ctrl+Shift+T` | 新規タブ（同一ウィンドウ内） |
 | `Ctrl+Shift+W` | タブ/ペイン閉じる |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | タブ前後切替 |

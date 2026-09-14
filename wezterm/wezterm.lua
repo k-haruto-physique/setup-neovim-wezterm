@@ -33,6 +33,11 @@ local COPY_MODE_CURSOR_COLORS = {
 local PATH_PATTERN =
 	[[(?:[A-Za-z]:)?[\w.\-/\\]+\.(?:md|markdown|lua|py|sql|txt|json|toml|ya?ml|tsx?|jsx?|sh|ps1|conf|ini|cfg|html?|css|rs|go)]]
 
+-- Codex 本体は custom/multiline status line を持たないため、下端の専用ペインで4段表示する。
+local CODEX_STATUSLINE_SCRIPT =
+	"C:/Users/81809/Documents/Repositories/setup-neovim-wezterm/Codex/statusline.ps1"
+local CODEX_STATUS_PANE_ROWS = 5
+
 ----------------------------------------------------
 -- フォント・基本
 ----------------------------------------------------
@@ -135,6 +140,42 @@ end)
 ----------------------------------------------------
 -- ヘルパー
 ----------------------------------------------------
+local function pane_cwd(pane)
+	local cwd_uri = pane:get_current_working_dir()
+	if not cwd_uri then
+		return nil
+	end
+	-- 新しめの WezTerm は Url オブジェクト（.file_path）、古いと文字列。
+	local cwd = cwd_uri.file_path or tostring(cwd_uri)
+	cwd = cwd:gsub("^file://[^/]*", ""):gsub("^/([A-Za-z]:)", "%1")
+	if cwd == "" then
+		return nil
+	end
+	return cwd
+end
+
+local function codex_status_args()
+	return {
+		"pwsh.exe",
+		"-NoLogo",
+		"-NoProfile",
+		"-File",
+		CODEX_STATUSLINE_SCRIPT,
+		"-Watch",
+	}
+end
+
+local function attach_codex_status(pane, cwd)
+	pane:split({
+		direction = "Bottom",
+		size = CODEX_STATUS_PANE_ROWS,
+		args = codex_status_args(),
+		cwd = cwd,
+	})
+	-- 入力先はステータスペインでなく Codex 本体へ戻す。
+	pane:activate()
+end
+
 -- 2026-06-05: ファイルパスを nvim（新規ウィンドウ）で開く共通関数。
 -- Ctrl+Click（hyperlink → open-uri）と Ctrl+Shift+O（選択 / QuickSelect）の
 -- 3 経路すべてがここに集約される。
@@ -145,14 +186,9 @@ local function open_path_in_nvim(window, pane, path)
 	path = path:gsub("^%s+", ""):gsub("%s+$", "")
 	local spawn = { args = { "nvim", path } }
 	-- ペイン cwd を nvim の作業ディレクトリへ（相対パス解決のため。OSC 7 必須）
-	local cwd_uri = pane:get_current_working_dir()
-	if cwd_uri then
-		-- 新しめの WezTerm は Url オブジェクト（.file_path）、古いと文字列
-		local cwd = cwd_uri.file_path or tostring(cwd_uri)
-		cwd = cwd:gsub("^file://[^/]*", ""):gsub("^/([A-Za-z]:)", "%1")
-		if cwd ~= "" then
-			spawn.cwd = cwd
-		end
+	local cwd = pane_cwd(pane)
+	if cwd then
+		spawn.cwd = cwd
 	end
 	window:perform_action(act.SpawnCommandInNewWindow(spawn), pane)
 end
@@ -182,31 +218,25 @@ config.keys = {
 	{ key = "x", mods = "CTRL|SHIFT", action = act.ActivateCopyMode },
 	-- 2026-05-22: nvim を別ウィンドウで起動（上モニターへドラッグ用）
 	{ key = "I", mods = "CTRL|SHIFT", action = act.SpawnCommandInNewWindow({ args = { "nvim", "." } }) },
-	-- Ctrl+Shift+Y → Codex の4段ステータス表示を別ウィンドウで起動。
-	-- アクティブペインの cwd を引き継ぐので、Codex と同じリポジトリを監視する。
+	-- Ctrl+Shift+Y → 現在のペイン下端へ Codex の4段ステータスを追加。
+	-- 稼働中の Codex セッションへ後付けする用途。
 	{
 		key = "Y",
 		mods = "CTRL|SHIFT",
-		action = wezterm.action_callback(function(window, pane)
-			local spawn = {
-				args = {
-					"pwsh.exe",
-					"-NoLogo",
-					"-NoProfile",
-					"-File",
-					"C:/Users/81809/Documents/Repositories/setup-neovim-wezterm/Codex/statusline.ps1",
-					"-Watch",
-				},
-			}
-			local cwd_uri = pane:get_current_working_dir()
-			if cwd_uri then
-				spawn.cwd = cwd_uri.file_path or tostring(cwd_uri)
-			end
-			window:perform_action(act.SpawnCommandInNewWindow(spawn), pane)
+		action = wezterm.action_callback(function(_window, pane)
+			attach_codex_status(pane, pane_cwd(pane))
 		end),
 	},
-	-- Ctrl+Shift+N → 新規ウィンドウで claude（下モニターで複数 claude 用）
-	{ key = "N", mods = "CTRL|SHIFT", action = act.SpawnCommandInNewWindow({ args = { "claude" } }) },
+	-- Ctrl+Shift+N → Codex 本体 + 下端5セルの4段ステータスを新規ウィンドウで起動。
+	{
+		key = "N",
+		mods = "CTRL|SHIFT",
+		action = wezterm.action_callback(function(_window, pane)
+			local cwd = pane_cwd(pane)
+			local _, codex_pane = wezterm.mux.spawn_window({ args = { "codex" }, cwd = cwd })
+			attach_codex_status(codex_pane, cwd)
+		end),
+	},
 	-- 2026-05-29: ペイン入れ替え（分割の向きは変えられないが中身の位置交換は可能）
 	-- Ctrl+Shift+S → アクティブペインと選択ペインをスワップ。各ペインにラベルが出るので
 	-- 表示された文字を打って相手を指定（3 ペイン以上でも狙って交換できる）。
@@ -363,6 +393,16 @@ table.insert(config.hyperlink_rules, {
 -- 注意: wezterm.on() の登録は config reload では**解除されない**（troubleshooting 第 2 項）。
 -- ハンドラを消した/変えた時は WezTerm の完全再起動が要る。
 ----------------------------------------------------
+
+-- `wezterm start --always-new-process -- codex` もキー起動と同じ4段構成にする。
+wezterm.on("gui-startup", function(command)
+	local _, pane = wezterm.mux.spawn_window(command or {})
+	local args = command and command.args or {}
+	local program = args[1] and args[1]:gsub("\\", "/"):match("([^/]+)$")
+	if program and (program:lower() == "codex" or program:lower() == "codex.exe") then
+		attach_codex_status(pane, command.cwd or pane_cwd(pane))
+	end
+end)
 
 -- ステータス: コピーモード突入時はカーソルを黄色化（カーソルそのものが標識になる）。
 -- UI 要素を追加しない、リサイズもしない、透過変化もしない。

@@ -1,29 +1,33 @@
-# Codex TUI status line
+# Codex 4段ステータス表示
 
-WezTerm 内で起動する Codex のフッター設定。正本は `statusline.toml`。
+Codex 本体と同じ WezTerm ウィンドウの下端に、5セル高の専用ペインとして常時表示する。
 
 表示順は次のとおり。
 
 1. モデル名 + reasoning effort
-2. コンテキスト残量
+2. コンテキスト使用率 + 5h/7d制限の使用率
 3. 現在のディレクトリ
 4. Git ブランチ
 
-Codex は Claude Code のような外部 status line スクリプトを呼ばず、`~/.codex/config.toml` の `[tui].status_line` を内蔵 TUI が描画する。したがって、Claude 版の4段表示・任意色・編集行数はそのまま移植できない。
+`Ctrl+Shift+N` で Codex 本体と4段ステータスを組にした新規ウィンドウを起動する。既に開いているCodexへは、そのペインを選んで `Ctrl+Shift+Y` を押すと下端へ後付けできる。
 
-`statusline.toml` の内容を `C:\Users\81809\.codex\config.toml` へマージし、新しい Codex セッションを起動すると反映される。`[tui.model_availability_nux]` が既にある場合は、その直前へ置く。
+`wezterm start --always-new-process -- codex` で起動する場合も同じ構成になる。
 
-Claude 版と同じ4段表示を専用ペインで確認したい場合は、次を実行する。
+Codex の内蔵ステータスは複数項目を指定しても横1行のため、`statusline.toml` の `status_line = []` で非表示にする。`statusline.ps1` が rollout JSONL を2秒間隔で読み、Claude版と同じモデル・effort・context・5h/7d制限・cwd・Git状態を4段で描画する。
+
+レンダラーだけを単独確認する場合:
 
 ```powershell
 pwsh -NoProfile -File C:/Users/81809/Documents/Repositories/setup-neovim-wezterm/Codex/statusline.ps1 -Watch
 ```
 
-この監視表示は Codex の rollout JSONL を読み、最後に記録された token count と rate limit を表示する。Codex 本体の入力欄へ埋め込むものではない。
+同じディレクトリで複数セッションを使う場合、`-SessionId <thread UUID>` で対象を固定できる。未指定時は、そのディレクトリの最近更新されたセッションを表示する。
+
+`statusline.toml` の内容は `C:\Users\81809\.codex\config.toml` の `[tui]` へ反映する。既存のCodexセッションでは内蔵1行が残る場合があるため、新規セッションで完全に切り替わる。
 
 ## 自動承認と Remote Control
 
-`runtime.toml` の設定により、承認が必要な操作は Codex の auto-review subagent が審査する。`approval_policy = "never"` は承認要求を自動却下する設定なので使用しない。
+`runtime.toml` は `approval_policy = "never"` と `sandbox_mode = "danger-full-access"` を指定し、確認を挟まず実行する。ユーザー設定 `~/.codex/config.toml` にも反映済み。`never` だけではサンドボックス外の操作が失敗するため、両方を組にする。既存セッションの権限は変わらず、次回起動時に反映される。
 
 Remote Control は `config.toml` に自動起動キーがないため、Windows のタスク `Codex Remote Control` がログオン時に `remote-control.ps1` を非表示で起動する。
 

@@ -589,7 +589,7 @@ wezterm --config-file <repo>\wezterm\wezterm.lua start --always-new-process
 
 ### 結論
 
-`~/.claude/settings.json` に **`"remoteControlAtStartup": true`** を入れる。これだけで、起動経路（cmd / pwsh / WezTerm の `Ctrl+Shift+N` 直 spawn / 別ランチャ）に**一切依存せず**全対話セッションが Remote Control になる。
+`~/.claude/settings.json` に **`"remoteControlAtStartup": true`** を入れる。これだけで、起動経路（cmd / pwsh / 別ランチャ）に**一切依存せず**全対話セッションが Remote Control になる。
 
 ### 根拠（claude.exe 2.1.211 の実体から確認）
 
@@ -642,3 +642,26 @@ codex app-server --remote-control --listen ws://127.0.0.1:14567
 待受は localhost 限定。タスク状態が `Running`、`http://127.0.0.1:14567/readyz` が HTTP 200 なら起動完了。ログは `~/.codex/logs/remote-control.log`。
 
 2026-09-11 実機確認: タスクは `Running`、`127.0.0.1:14567` は `Listen`、`/readyz` は HTTP 200。自動承認は別設定で、`~/.codex/config.toml` の `approval_policy = "on-request"` と `approvals_reviewer = "auto_review"` を使用する。
+
+2026-09-14 更新: ユーザーの再依頼により、自動承認は `approval_policy = "never"` + `sandbox_mode = "danger-full-access"` の確認なし実行へ変更。既存セッションは再起動まで以前の権限のまま。
+
+---
+
+## 18. Codex の status_line は項目を増やしても1行のまま
+
+### 症状と原因
+
+`[tui].status_line = ["model-with-reasoning", "context-remaining", "current-dir", "git-branch"]` を設定しても、4段ではなく4項目が横1行に並ぶ。Codexの設定値は「行」ではなく内蔵フッター内の「項目」の配列で、外部コマンドや複数行を描画する機能は現行版にない。
+
+### 対処
+
+内蔵フッターを `status_line = []` で非表示にし、WezTermの下端5セルを専用ペインとして分割する。
+
+- `Ctrl+Shift+N`: Codex本体と4段ステータスを組にして新規ウィンドウで起動
+- `Ctrl+Shift+Y`: 選択中の既存Codexペイン下端へ4段ステータスを後付け
+
+専用ペインでは `Codex/statusline.ps1 -Watch` がrollout JSONLを読み、Claude版と同じ4段構成を2秒間隔で更新する。Codex本体の入力フォーカスは上側へ戻し、下側は5セル固定なので通常操作を妨げない。
+
+2026-09-14 実機確認: 稼働中Codexの下端へ5行高のペインを追加し、モデル/effort、context/5h/7d、cwd、Gitの4行を読み取り確認。現在のセッションは `-SessionId` で固定した。未指定時は同じcwdの最近更新されたセッションを使うため、同じリポジトリの並列セッションでは表示対象が切り替わり得る。既存Codexの内蔵1行フッターは再起動まで残る場合がある。
+
+同日の点滅修正: 更新ごとに全画面消去してからログを読む処理で、一時的に空白になっていた。全画面消去を撤去し、情報取得後に変更された行だけを一括描画する方式へ変更。
