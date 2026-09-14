@@ -91,6 +91,14 @@ function Join-Segments([string[]]$Segments) {
     return (($Segments | Where-Object { $_ }) -join " $Dim│$Reset ")
 }
 
+function Test-StatusPlacement($OwnerPane, $StatusPane) {
+    return ($OwnerPane.tab_id -eq $StatusPane.tab_id -and
+        $OwnerPane.left_col -eq $StatusPane.left_col -and
+        $OwnerPane.size.cols -eq $StatusPane.size.cols -and
+        $StatusPane.top_row -eq ($OwnerPane.top_row + $OwnerPane.size.rows + 1) -and
+        $StatusPane.size.rows -eq 5)
+}
+
 function Find-Rollout([string]$Cwd) {
     $root = Join-Path $CodexRoot 'sessions'
     if ($SessionId) {
@@ -283,6 +291,17 @@ try {
             if ($LASTEXITCODE -eq 0) {
                 $mainPane = $panes | Where-Object pane_id -eq $binding.ownerPaneId | Select-Object -First 1
                 if (-not $mainPane) { break }
+                $selfPane = $panes | Where-Object pane_id -eq ([int]$env:WEZTERM_PANE) | Select-Object -First 1
+                $zoomed = $panes | Where-Object { $_.tab_id -eq $mainPane.tab_id -and $_.is_zoomed }
+                if ($selfPane -and $mainPane.size.rows -gt 6 -and -not $zoomed -and -not (Test-StatusPlacement $mainPane $selfPane)) {
+                    # Move this existing renderer; never move or restart a user's shell.
+                    $client = @(& wezterm cli list-clients --format json | ConvertFrom-Json) | Where-Object { $null -ne $_.focused_pane_id } | Select-Object -First 1
+                    & wezterm cli split-pane --pane-id $binding.ownerPaneId --bottom --cells 5 --move-pane-id $selfPane.pane_id | Out-Null
+                    if ($LASTEXITCODE -eq 0 -and $client) {
+                        $focus = if ($client.focused_pane_id -eq $selfPane.pane_id) { $binding.ownerPaneId } else { $client.focused_pane_id }
+                        & wezterm cli activate-pane --pane-id $focus | Out-Null
+                    }
+                }
                 # If startup hooks and title discovery raced, retain one renderer.
                 $matching = @($panes | Where-Object title -eq "Codex status:$($binding.ownerPid):$($binding.ownerPaneId)" | Sort-Object pane_id)
                 if ($env:WEZTERM_PANE -match '^\d+$' -and $matching.Count -gt 1 -and [int]$env:WEZTERM_PANE -ne $matching[0].pane_id) { break }

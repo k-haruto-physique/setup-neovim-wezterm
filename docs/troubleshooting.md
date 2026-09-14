@@ -680,3 +680,8 @@ codex app-server --remote-control --listen ws://127.0.0.1:14567
 スキルの実際の警告はExcelプラグインの `interface.icon_small/icon_large` が許可されたplugin/assets外を指していたこと。`repair-skill-icons.ps1` はアイコンをplugin/assetsへコピーし参照を修正する。修復後にCodexの `skills/list` を当リポジトリと他業務4リポジトリで実行し、読み込みエラー0を確認した。キャッシュ更新で再発した場合は同スクリプトを再実行する。
 
 セットアップと正確な寿命/データ仕様は `Codex/README.md`、`Codex/statusline-spec.md` を参照。
+
+
+同日の配置修正: Codex本体を分割すると旧表示が元のタブ最下段へ残り、表示ペインを選んで分割すると5行のシェルが出来ていた。ownerと表示の幾何情報を照合し、違う場合は既存表示だけをowner直下5セルへ移動する監視を追加。既定の分割キーは表示からownerへ対象を戻す。現状の2つのCodex表示を各owner直下に置き直し、ユーザーが開いたシェルは保持した。GUIを増やさず、配置検証を加えた回帰9件成功。
+
+`? for shortcuts` はCodexの内蔵操作案内。status_lineを空にしても残る。composer.toggle_shortcutsを空配列にすると当該案内と `?` ヘルプoverlayが無効になる。設定正本statusline.tomlとinstallerへ追加しユーザー設定へ反映。既存CLIは次回起動時に反映するため、進行中のセッションを終了しない。

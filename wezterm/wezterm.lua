@@ -210,6 +210,22 @@ local function ensure_codex_status(window)
 	wezterm.GLOBAL.codex_status_requests = requests
 end
 
+-- Splitting the status renderer must target its Codex owner instead.
+local function split_session(direction)
+	return wezterm.action_callback(function(window, pane)
+		local owner = pane:get_title():match("^Codex status:%d+:(%d+)$")
+		if owner then
+			for _, tab in ipairs(window:mux_window():tabs()) do
+				for _, candidate in ipairs(tab:panes()) do
+					if candidate:pane_id() == tonumber(owner) then pane = candidate end
+				end
+			end
+		end
+		local created = pane:split({ direction = direction, cwd = pane_cwd(pane) })
+		created:activate()
+	end)
+end
+
 -- 2026-06-05: ファイルパスを nvim（新規ウィンドウ）で開く共通関数。
 -- Ctrl+Click（hyperlink → open-uri）と Ctrl+Shift+O（選択 / QuickSelect）の
 -- 3 経路すべてがここに集約される。
@@ -248,6 +264,13 @@ end
 -- config.leader = { key = "q", mods = "CTRL", timeout_milliseconds = 2000 }
 
 config.keys = {
+	{ key = '"', mods = "CTRL|ALT", action = split_session("Bottom") },
+	{ key = '"', mods = "CTRL|ALT|SHIFT", action = split_session("Bottom") },
+	{ key = "'", mods = "CTRL|ALT|SHIFT", action = split_session("Bottom") },
+	{ key = "%", mods = "CTRL|ALT", action = split_session("Right") },
+	{ key = "%", mods = "CTRL|ALT|SHIFT", action = split_session("Right") },
+	{ key = "5", mods = "CTRL|ALT|SHIFT", action = split_session("Right") },
+
 	-- タブ全体とペイン単体の終了を明示的に分ける。
 	{ key = "w", mods = "CTRL|SHIFT", action = act.CloseCurrentTab({ confirm = true }) },
 	{ key = "w", mods = "CTRL|SHIFT|ALT", action = act.CloseCurrentPane({ confirm = true }) },

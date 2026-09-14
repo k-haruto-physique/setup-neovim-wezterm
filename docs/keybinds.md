@@ -448,3 +448,6 @@ Vim 未経験者が **最初に詰む最大ポイント**。
 - `Space s h` で help をファジー検索
 
 `docs/legacy-nvim/` には **以前手書きしていた lazy.nvim 設定**を保存済み。キーバインドや LSP 設定の参考にできる（特に `keymaps.lua`、`lsp.lua`）。
+
+
+Codex表示ペインを選んで既定の分割キー（Ctrl+Alt+Shift+5 / 引用符系）を押すと、対応するCodex側を分割する。表示は対象Codexの直下5セルへ自動で戻る。Codexの `? for shortcuts` は `tui.keymap.composer.toggle_shortcuts = []` により次回起動から非表示（`?` ヘルプも無効）。

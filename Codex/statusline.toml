@@ -2,3 +2,6 @@
 status_line = []
 status_line_use_colors = true
 terminal_title = ["app-name", "session-id", "model-with-reasoning"]
+
+[tui.keymap.composer]
+toggle_shortcuts = []

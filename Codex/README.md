@@ -9,7 +9,7 @@ Codex 本体と同じ WezTerm ウィンドウの下端に、5セル高の専用�
 3. 現在のディレクトリ
 4. Git ブランチ
 
-通常の `codex`、`codex resume`、`Ctrl+Shift+N` のいずれでも、各Codexペインの下端へ表示を自動追加する。同じcwdでもプロセスID・ペインID・thread UUIDで区別する。新規タブやウィンドウを表示用に追加せず、操作中のタブを切り替えない。
+通常の `codex`、`codex resume`、`Ctrl+Shift+N` のいずれでも、各Codexペインの下端へ表示を自動追加する。後から分割しても対象の直下へ自動で配置を直す。同じcwdでもプロセスID・ペインID・thread UUIDで区別する。新規タブやウィンドウを表示用に追加せず、操作中のタブを切り替えない。
 
 セットアップ:
 
@@ -17,7 +17,7 @@ Codex 本体と同じ WezTerm ウィンドウの下端に、5セル高の専用�
 pwsh -NoProfile -File .\Codex\install-session-status.ps1
 ```
 
-このスクリプトは既存フックを保持して `~/.codex/hooks.json` のSessionStart/SessionEndを登録し、当該コマンド2個のハッシュだけを承認する。`[tui].terminal_title` と内蔵 `status_line = []` も設定する。WezTermはタイトルから起動直後のセッションを捕捉し、最初のターンでSessionStartが完全なUUIDへ結び直す。再開時は同じ表示の対象を更新し、終了時は表示も終了する。`Ctrl+Shift+Y` は選択中の登録済みCodex表示を修復する。
+このスクリプトは既存フックを保持して `~/.codex/hooks.json` のSessionStart/SessionEndを登録し、当該コマンド2個のハッシュだけを承認する。`[tui].terminal_title` と内蔵 `status_line = []` と `toggle_shortcuts = []` も設定する（`? for shortcuts` と `?` ヘルプを無効化、次回CLI起動時反映）。WezTermはタイトルから起動直後のセッションを捕捉し、最初のターンでSessionStartが完全なUUIDへ結び直す。再開時は同じ表示の対象を更新し、終了時は表示も終了する。`Ctrl+Shift+Y` は選択中の登録済みCodex表示を修復する。
 
 モデルとeffortは現在の端末タイトルを優先し、context・cwd・Gitは対象セッションのrolloutから取得する。5h/7d制限は各セッションで最後に取得した値なので、同一アカウントでも更新時刻に差がある。UUIDが曖昧、ログ未生成、使用量未取得の場合はcontextを `unavailable` と表示する。
 

@@ -122,6 +122,21 @@ class SessionStatusTests(unittest.TestCase):
                     process.wait()
                 process.stderr.close()
 
+    def test_split_placement_requires_adjacent_equal_width_footer(self):
+        script = str(SCRIPT).replace("'", "''")
+        cwd = str(self.root).replace("'", "''")
+        command = f""". '{script}' -Path '{cwd}' -SessionId '{A}';
+        $owner = [pscustomobject]@{{tab_id=4;left_col=0;top_row=0;size=@{{rows=12;cols=190}}}};
+        $status = [pscustomobject]@{{tab_id=4;left_col=0;top_row=13;size=@{{rows=5;cols=190}}}};
+        Test-StatusPlacement $owner $status;
+        $status.top_row=39; Test-StatusPlacement $owner $status;
+        $status.top_row=13; $status.size.cols=94; Test-StatusPlacement $owner $status;
+        $status.size.cols=190; $status.tab_id=8; Test-StatusPlacement $owner $status;
+        $status.tab_id=4; $status.size.rows=9; Test-StatusPlacement $owner $status;
+        """
+        result = subprocess.run(["pwsh", "-NoProfile", "-Command", command], env=self.env, capture_output=True, encoding="utf-8", timeout=15, check=True)
+        self.assertEqual(result.stdout.splitlines()[-5:], ["True", "False", "False", "False", "False"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -25,6 +25,15 @@ threadが変わればcontext・制限・cwdをリセットする。モデル/eff
 
 使用量はlast_token_usage.total_tokensを使い、0も有効値として扱う。累積total_token_usageへの代替は行わない。制限のリセット時刻はepochを保持し、毎描画で残時間を計算する。ログの制限値は最後に取得したスナップショットであり、全セッションで同時に更新される保証はない。
 
-UUIDが一致しない場合にcwdの別セッションへフォールバックしない。`-SessionId` は単発診断用にも使える。SessionIdなし・bindingなしの単発診断のみcwdの最近更新されたログを選ぶ。`CODEX_HOME` を指定した隔離環境で8件の回帰テストを実行できる。
+UUIDが一致しない場合にcwdの別セッションへフォールバックしない。`-SessionId` は単発診断用にも使える。SessionIdなし・bindingなしの単発診断のみcwdの最近更新されたログを選ぶ。`CODEX_HOME` を指定した隔離環境で9件の回帰テストを実行できる。
 
 公式参照: [Codex hooks](https://learn.chatgpt.com/docs/hooks)、[WezTerm split](https://wezterm.org/config/lua/pane/split.html)。
+
+
+## 分割後の配置維持と操作案内
+
+監視中はCLIの幾何情報も読み、表示がownerと同じタブ/左端/幅、直下（owner.top + owner.rows + 1）、高さ5セルであることを確認する。分割で崩れた場合は既存表示を `split-pane --move-pane-id` でowner直下へ移動する。ユーザーのCodexやシェルは移動・終了させない。ズーム中は修復しない。ownerが6行以下の場合も追加縮小を避ける。移動前のGUI focused_pane_idを復元する。
+
+既定の分割キー（Ctrl+Alt+Shift+5 / 引用符系）を明示定義し、表示が選択中ならownerを分割対象にする。新しいシェルへフォーカスする。
+
+`[tui.keymap.composer].toggle_shortcuts = []` で `? for shortcuts` を非表示にする。これは `?` のヘルプoverlayも無効にする。内蔵status_lineの非表示とは別設定であり、起動済みCLIには次回起動時に反映する。全フッター行を消す設定ではないため、実行中の中断・queue・終了確認などの案内は残る。根拠: [Codex footer実装](https://github.com/openai/codex/blob/main/codex-rs/tui/src/bottom_pane/footer.rs)、[keymap実装](https://github.com/openai/codex/blob/main/codex-rs/tui/src/keymap.rs)。
