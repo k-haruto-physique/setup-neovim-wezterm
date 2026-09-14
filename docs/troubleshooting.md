@@ -545,6 +545,8 @@ anthropics/claude-code に**同型バグ報告が多数**あり、これは **Cl
 
 ---
 
+2026-09-14 完了確認（B7 CLOSED）: Windows設定によるWezTermのGPU高パフォーマンス固定について、ユーザーが「b7ok」と確認。既定OpenGLでの運用を継続する。
+
 ## 15. `powershell/profile.ps1` が一度も読まれていなかった → WezTerm の既定シェルが cmd.exe
 
 ### 症状
@@ -584,6 +586,8 @@ wezterm --config-file <repo>\wezterm\wezterm.lua start --always-new-process
 → **反映には WezTerm の完全再起動が必要**。
 
 ---
+
+2026-09-14 解決確認（B8 CLOSED）: 稼働中WezTerm直下のシェルはpwsh -NoLogo、新規PowerShellでrepo/v/usage/remoteを認識。ユーザーも実機状態を「概ね問題なさそう」と確認。完全再起動の確認待ちは終了。
 
 ## 16. Remote Control を全セッションで自動接続にする → `remoteControlAtStartup`（シェル層でやらない）
 
@@ -692,11 +696,15 @@ codex app-server --remote-control --listen ws://127.0.0.1:14567
 自作はrolloutのlast_token_usage.total_tokens/model_context_windowを使用率として表示していたが、Codex内蔵context残量とは計算・更新の扱いが一致しない。ユーザー判断でモデル＋effort・context-remaining・thread-nameを内蔵フッターへ移行した。名前は `/rename <名前>`。自作は制限/cwd/Gitの3行、下端4セル。installerとstatusline.tomlへ記録しユーザー設定にも反映。既存CLIの内蔵フッターは次回起動、または `/statusline` から項目を選択して反映する。既存の自作監視プロセスも次回起動で新しいスクリプトを読む。実機反映確認はB9へ集約する。
 
 
+2026-09-14 実機確認（B9 CLOSED）: 現在のセッションでnever + danger-full-access、ユーザー設定で内蔵モデル/effort/context/名前とshortcuts非表示を確認。ユーザーが表示・動作を概ね問題なしと確認し、#17〜#20の次回起動確認待ちは終了。
+
 ## 21. スキル説明短縮警告・コピーモードの強調不足（2026-09-14）
 
 `Skill descriptions were shortened to fit the skills context budget` はスキルの読込失敗ではなく、説明文の総量超過。アイコン参照修復では解消しない。ユーザー設定のclaude-cowork業務プラグイン14個（apollo/bio-research/brand-voice/common-room/cowork-plugin-management/customer-support/finance/human-resources/legal/marketing/operations/product-management/sales/slack-by-salesforce）を無効化し、開発・データ・デザイン・検索・文書・ブラウザ系を維持した。削除はしていない。`codex debug prompt-input hi` の新しいプロンプトで短縮警告・予算超過警告が無いことを確認。既存CLIの表示は次回起動で確認する。
 
 コピーモードの選択色を黄背景/黒文字に明示し、マウス併用時のactive/inactive highlightも指定した。Shift+VとSpaceの選択バインドを追加。copy_mode中はLua側のCodex表示自動追加を止め、設定が同じ場合はset_config_overridesを呼ばない。黄色カーソルはSteadyBlockにする。CopyModeへ入るだけでは選択は始まらない。行コピーはIME OFF → Ctrl+Shift+X → Shift+V → 矢印 → Enter。Luaロードとshow-keysは成功。実機での強調・安定性はB11で確認する。既存の別プロセスによる表示配置修復と旧イベントハンドラはこの変更だけでは停止しない。
+
+2026-09-14 実機確認（B11 CLOSED）: CopyModeの黄背景選択・コピーについてユーザーが「概ね問題なさそう」と確認。再発時は本項を起点に調査する。
 
 ## 22. Codex Remote Controlタスクとデスクトップが競合（2026-09-14）
 
@@ -706,6 +714,12 @@ codex app-server --remote-control --listen ws://127.0.0.1:14567
 
 
 #22 更新（同日、CLI中心の方針で解決）: ユーザーがデスクトップのRemote ControlをOFFにし、常駐側RPC connectedを確認。CLI起動をstart-codex.ps1へ一本化し、PowerShell codex関数とCtrl+Shift+Nから共通サーバーへ--remote接続する。cwdを明示し、resume/fork/agentsも同経路。管理コマンド/exec/help/versionは素通し。未起動時はタスク開始、RPC connectedを確認してから対話起動。タスクをStartWhenAvailable付きで再登録しRunning/connectedを確認。PTYで新しいthread UUIDとモデル/effort/cwd/YOLOを確認、プロンプト送信無し。B10 CLOSED。既存CLIはローカルサーバーのままなので次回起動または共有サーバーへresumeで反映。
+
+#22 追記（同日14:49、「スマホから見えない」再発）: 常駐サーバーはRPC `connected` で正常。原因は**CLI側**。WezTermのpwsh（9:08起動）が `codex` 関数追加（profile.ps1 11:25更新）より前のシェルだったため、13:51の `codex` が素の `codex.exe`（`--remote` 無し・プロセス内ローカルサーバー）で起動し、共有サーバーの `thread/list` では全スレッド `notLoaded`＝スマホに出るライブ会話が無かった。判定: `Get-CimInstance Win32_Process` で codex.exe のコマンドラインに `--remote ws://127.0.0.1:14567` があるか。復旧: そのCodexを終了 → 同ペインで `. $PROFILE` → `codex resume --last`（新規タブならそのまま）。Claude側からTUIへのキー送信・プロセスkillはしない（#13と同じ理由）。
+
+#22 恒久対処（同日、ユーザー要望「Claude Codeと同じ仕様に」）: Codex 0.154.0 には `remoteControlAtStartup` 相当が無い（TUIに `--remote-control` 無し・`codex features list` の `remote_control` は `removed`）。そこで**profile関数を撤去し、`codex.exe` と同じフォルダへ `codex.ps1` シムを配置**（`Codex/install-codex-shim.ps1`）。PowerShellは同一PATHフォルダ内で.ps1を.exeより先に解決する（スクラッチで実測）ため、PATH・プロファイルの読込時期に依存せず**既存シェルでも**次の `codex` から共有サーバー経由になる。検証: `pwsh -NoProfile` で `Get-Command codex` → codex.ps1、`codex --version` とパイプ入力はexeへ素通し（exit 0）、インストーラは冪等。Codex更新でbinが置換されても `remote-control.ps1` がログオン時に再配置。対象外: cmd.exe（PATHEXTで.exe優先）・exeフルパス直接起動・デスクトップアプリ。
+
+2026-09-14 実機確認（B12 CLOSED）: 現在のCLIが共有サーバー経由でresumeしていることをプロセスで確認後、ユーザーがスマホに現在の会話が「表示されてる」と確認。シムの対話起動・スマホ表示の確認待ちは終了。
 
 ## 23. DiXiM USBソフトの「引数が正しくありません」（2026-09-14）
 

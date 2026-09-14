@@ -3,18 +3,16 @@
 セッション開始（`hi`）時に**必ず読む**未完タスク・仕様書の単一台帳。
 troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約点。**完了したら CLOSED へ落とし、起点ファイル（#番号 / memory）にも反映**する。
 
-最終更新: 2026-09-14（Codex下端4段表示を実機反映し、全画面消去による点滅を修正。自動承認はnever + danger-full-accessへ変更。**OPEN は4件（B11・B9・B8・B7）**。B9は次回Codex起動時の内蔵モデル/eff/context/名前と自作3行の反映確認）。前回2026-09-11（Codexの自動承認とRemote Controlログオン起動を実機確認）
+最終更新: 2026-09-14（ユーザーがスマホで現在のCodex会話の表示とB7のGPU固定完了を確認。B12・B7もCLOSEDへ。**OPEN は0件**）。
 
 ---
 
 ## 🔴 OPEN（未完・要対応）
 
+未完タスクなし。
+
 | # | タスク | 状態 | 次の一手 | 起点 |
 |---|---|---|---|---|
-| B11 | **CopyModeの黄背景強調と表示安定性を実機確認** | 選択色・Shift+V/Space・設定再適用抑制を反映、Luaロード成功 | IME OFF → Ctrl+Shift+X → Shift+V → 矢印 → Enter。選択が黄背景で維持されコピーできるか確認 | troubleshooting #21 |
-| B9 | **Codex次回起動後の内蔵モデル/eff/context/名前とshortcuts非表示と確認なし実行を確認** | 設定反映済み。現在のセッションには起動時設定が残る | セッション終了後にCodexを起動し、内蔵モデル/eff/context/セッション名が表示され、自作は制限/cwd/Gitの3行となり、`? for shortcuts` が消え、承認待ちが出ないことを確認（中断/終了など必要時の案内は残る） | troubleshooting #17・#18・#19 |
-| B8 | **WezTerm を完全再起動して `default_prog = pwsh` を実機反映** | 設定・検証は完了。稼働中インスタンスに乗らないため再起動待ち | 全 WezTerm ウィンドウを閉じる（claude セッションは事前に push/`--continue` 前提）→ 再起動 → 新規タブが pwsh・`repo`/`v`/`usage` が通る・新規 `claude` が Remote Control で立つことを確認 | troubleshooting #15 |
-| B7 | **wezterm-gui.exe の GPU を「高パフォーマンス」固定**（Optimus 対策の正規手段。WebGpu 化の代替） | ユーザーの手動 GUI 操作待ち（Claude は GUI 不可） | Windows 設定 > システム > ディスプレイ > グラフィックス → `C:\Program Files\WezTerm\wezterm-gui.exe` を追加 → 「高パフォーマンス」を選択 | troubleshooting #14 |
 
 ---
 
@@ -34,7 +32,12 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | 日付 | タスク | 確定根拠 |
 |---|---|---|
-| 2026-09-14 | **B10 Codex CLIの自動Remote Control接続** | デスクトップ側OFF、共通起動スクリプトへPowerShell codexとCtrl+Shift+Nを統一。タスクRunning/RPC connected、PTYの新規thread起動とcwd/モデル/YOLO、回帰8件確認。既存CLIは次回起動/resumeで移行。troubleshooting #22 |
+| 2026-09-14 | **B12 Codexシム経由のスマホ表示** | CLIの共有サーバー経由resumeを実測済み。ユーザーがスマホに現在の会話が「表示されてる」と確認。#22 |
+| 2026-09-14 | **B7 WezTermのGPU高パフォーマンス固定** | ユーザーが「b7ok」と完了を確認。既定OpenGLでの運用を継続。#14 |
+| 2026-09-14 | **B11 CopyModeの黄背景強調・表示安定性** | ユーザーが実機状態を「概ね問題なさそう」と確認。再発時は#21を起点に再開する |
+| 2026-09-14 | **B9 Codex再起動後の表示・確認なし実行** | 現在のセッションでnever + danger-full-accessを確認。表示設定も一致し、ユーザーが概ね問題なしと確認。#17〜#20 |
+| 2026-09-14 | **B8 WezTermのPowerShell反映** | 稼働中WezTerm直下のシェルはpwsh -NoLogo。新規PowerShellでrepo/v/usage/remoteを認識し、ユーザーが概ね問題なしと確認。#15 |
+| 2026-09-14 | **B10 Codex CLIの自動Remote Control接続** | デスクトップ側OFF、共通起動スクリプトへPowerShell codexとCtrl+Shift+Nを統一。タスクRunning/RPC connected、PTYの新規thread起動とcwd/モデル/YOLO、回帰8件確認。既存CLIは次回起動/resumeで移行。**罠: 関数追加（11:25）より前に開いたpwshで `codex` を打つと素のexeが起動し共有サーバーに乗らない＝スマホに出ない**（14:49 実測: PID 16204 が `--remote` 無し）。古いシェルは `. $PROFILE` か新規タブで。troubleshooting #22 |
 | 2026-09-14 | **Codex分割時の配置修正・shortcuts案内非表示** | 各owner直下に表示2個を移動。幾何照合による自動修復と表示選択時の分割対象修正、GUIなし9件成功。shortcutsの無効化設定を反映（既存CLIは次回起動時）。troubleshooting #19 |
 | 2026-09-14 | **Codex並列表示をセッションごとに自動追従（W6解消）・スキル警告修復** | PID・ペイン・thread UUIDで結合し、タイトルとSessionStart/Endで起動/再開/終了を追従。同cwdの異なるモデル2セッションの独立表示、GUIなし8件の回帰確認。Excelスキルの不正アイコンパスを修復し5リポジトリのskills/listエラー0。詳細 troubleshooting #19 |
 | 2026-09-14 | **再開後のCodexステータス欠落・旧表示タブ残留を復旧** | 旧SessionId固定の表示だけが別タブに残っていた。現在のCodex下端へ表示を作り直し4行を確認、旧表示ペインを終了。タブ閉じるボタンとタブ/ペイン終了キーを明示。troubleshooting #18 |

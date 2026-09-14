@@ -12,6 +12,11 @@ try {
 
     "[$(Get-Date -Format o)] Starting Codex Remote Control" | Set-Content -LiteralPath $logPath
 
+    # Codex updates can replace bin/, which would drop the codex.ps1 shim.
+    try { & (Join-Path $PSScriptRoot 'install-codex-shim.ps1') *>> $logPath } catch {
+        "Codex shim install failed: $_" | Add-Content -LiteralPath $logPath
+    }
+
     & $codexExe app-server --remote-control --listen 'ws://127.0.0.1:14567' *>> $logPath
     $exitCode = $LASTEXITCODE
     "[$(Get-Date -Format o)] Codex Remote Control exited with code $exitCode" |
