@@ -34,14 +34,14 @@ local PATH_PATTERN =
 	[[(?:[A-Za-z]:)?[\w.\-/\\]+\.(?:md|markdown|lua|py|sql|txt|json|toml|ya?ml|tsx?|jsx?|sh|ps1|conf|ini|cfg|html?|css|rs|go)]]
 
 -- Codex 本体は custom/multiline status line を持たないため、下端の専用ペインで4段表示する。
-local CODEX_STATUSLINE_SCRIPT =
-	"C:/Users/81809/Documents/Repositories/setup-neovim-wezterm/Codex/statusline.ps1"
-local CODEX_STATUS_PANE_ROWS = 5
+local CODEX_SESSION_STATUS_SCRIPT =
+	"C:/Users/81809/Documents/Repositories/setup-neovim-wezterm/Codex/session-status.ps1"
 
 ----------------------------------------------------
 -- フォント・基本
 ----------------------------------------------------
 config.automatically_reload_config = true
+wezterm.add_to_config_reload_watch_list("C:/Users/81809/Documents/Repositories/setup-neovim-wezterm/wezterm/wezterm.lua")
 config.font = wezterm.font_with_fallback({
 	"JetBrainsMono Nerd Font",
 	"JetBrains Mono",
@@ -154,26 +154,60 @@ local function pane_cwd(pane)
 	return cwd
 end
 
-local function codex_status_args()
-	return {
-		"pwsh.exe",
-		"-NoLogo",
-		"-NoProfile",
-		"-File",
-		CODEX_STATUSLINE_SCRIPT,
-		"-Watch",
-	}
+local codex_process
+local function repair_codex_status(pane)
+	local pid = codex_process(pane:get_foreground_process_info())
+	if not pid then return end
+	wezterm.run_child_process({ "pwsh.exe", "-NoLogo", "-NoProfile", "-File",
+		CODEX_SESSION_STATUS_SCRIPT, "-RepairPaneId", tostring(pane:pane_id()), "-OwnerProcessId", tostring(pid) })
 end
 
-local function attach_codex_status(pane, cwd)
-	pane:split({
-		direction = "Bottom",
-		size = CODEX_STATUS_PANE_ROWS,
-		args = codex_status_args(),
-		cwd = cwd,
-	})
-	-- 入力先はステータスペインでなく Codex 本体へ戻す。
-	pane:activate()
+codex_process = function(info)
+	-- Windows reports the newest descendant (often an MCP node process).
+	-- Walk its ancestry to the CLI; don't mistake the foreground child for Codex.
+	for _ = 1, 16 do
+		if not info then return nil end
+		if info.executable and info.executable:lower():match("codex%.exe$") then return info.pid end
+		if not info.ppid or info.ppid == 0 then return nil end
+		info = wezterm.procinfo.get_info_for_pid(info.ppid)
+	end
+	return nil
+end
+
+local function ensure_codex_status(window)
+	local focused = window:active_pane()
+	-- Scan all tabs: inactive parallel sessions need their own renderer as well.
+	local requests = wezterm.GLOBAL.codex_status_requests or {}
+	local now = os.time()
+	local existing = {}
+	for _, tab in ipairs(window:mux_window():tabs()) do
+		for _, pane in ipairs(tab:panes()) do
+			local key = pane:get_title():match("^Codex status:(%d+:%d+)$")
+			if key then existing[key] = true end
+		end
+	end
+	for _, tab in ipairs(window:mux_window():tabs()) do
+		for _, pane in ipairs(tab:panes()) do
+			local prefix, model = pane:get_title():match("^codex | ([%x%-]+)%.%.%. | (.+)$")
+			if not prefix then prefix, model = pane:get_title():match("^codex | ([%x%-]+) | (.+)$") end
+			if prefix and #prefix >= 29 then
+				local owner = tostring(pane:pane_id())
+				if not requests[owner] or now - requests[owner] >= 10 then
+					local pid = codex_process(pane:get_foreground_process_info())
+					if pid and not existing[tostring(pid) .. ":" .. owner] then
+						requests[owner] = now
+						pane:split({ direction = "Bottom", size = 5, cwd = pane_cwd(pane), args = {
+							"pwsh.exe", "-NoLogo", "-NoProfile", "-File",
+							CODEX_SESSION_STATUS_SCRIPT:gsub("session%-status%.ps1$", "statusline.ps1"),
+							"-Watch", "-OwnerPaneId", owner, "-OwnerProcessId", tostring(pid),
+							"-SessionPrefix", prefix, "-InitialModel", model } })
+						if focused then focused:activate() end
+					end
+				end
+			end
+		end
+	end
+	wezterm.GLOBAL.codex_status_requests = requests
 end
 
 -- 2026-06-05: ファイルパスを nvim（新規ウィンドウ）で開く共通関数。
@@ -227,7 +261,7 @@ config.keys = {
 		key = "Y",
 		mods = "CTRL|SHIFT",
 		action = wezterm.action_callback(function(_window, pane)
-			attach_codex_status(pane, pane_cwd(pane))
+			repair_codex_status(pane)
 		end),
 	},
 	-- Ctrl+Shift+N → Codex 本体 + 下端5セルの4段ステータスを新規ウィンドウで起動。
@@ -236,8 +270,7 @@ config.keys = {
 		mods = "CTRL|SHIFT",
 		action = wezterm.action_callback(function(_window, pane)
 			local cwd = pane_cwd(pane)
-			local _, codex_pane = wezterm.mux.spawn_window({ args = { "codex" }, cwd = cwd })
-			attach_codex_status(codex_pane, cwd)
+			wezterm.mux.spawn_window({ args = { "codex" }, cwd = cwd })
 		end),
 	},
 	-- 2026-05-29: ペイン入れ替え（分割の向きは変えられないが中身の位置交換は可能）
@@ -399,18 +432,14 @@ table.insert(config.hyperlink_rules, {
 
 -- `wezterm start --always-new-process -- codex` もキー起動と同じ4段構成にする。
 wezterm.on("gui-startup", function(command)
-	local _, pane = wezterm.mux.spawn_window(command or {})
-	local args = command and command.args or {}
-	local program = args[1] and args[1]:gsub("\\", "/"):match("([^/]+)$")
-	if program and (program:lower() == "codex" or program:lower() == "codex.exe") then
-		attach_codex_status(pane, command.cwd or pane_cwd(pane))
-	end
+	wezterm.mux.spawn_window(command or {})
 end)
 
 -- ステータス: コピーモード突入時はカーソルを黄色化（カーソルそのものが標識になる）。
 -- UI 要素を追加しない、リサイズもしない、透過変化もしない。
 -- set_right_status / set_left_status は旧 addon 残骸対策で空文字を上書き。
 wezterm.on("update-status", function(window, _pane)
+	ensure_codex_status(window)
 	window:set_right_status("")
 	window:set_left_status("")
 

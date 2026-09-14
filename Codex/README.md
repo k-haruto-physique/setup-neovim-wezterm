@@ -9,21 +9,27 @@ Codex 本体と同じ WezTerm ウィンドウの下端に、5セル高の専用�
 3. 現在のディレクトリ
 4. Git ブランチ
 
-`Ctrl+Shift+N` で Codex 本体と4段ステータスを組にした新規ウィンドウを起動する。既に開いているCodexへは、そのペインを選んで `Ctrl+Shift+Y` を押すと下端へ後付けできる。
+通常の `codex`、`codex resume`、`Ctrl+Shift+N` のいずれでも、各Codexペインの下端へ表示を自動追加する。同じcwdでもプロセスID・ペインID・thread UUIDで区別する。新規タブやウィンドウを表示用に追加せず、操作中のタブを切り替えない。
 
-`wezterm start --always-new-process -- codex` で起動する場合も同じ構成になる。
-
-Codex の内蔵ステータスは複数項目を指定しても横1行のため、`statusline.toml` の `status_line = []` で非表示にする。`statusline.ps1` が rollout JSONL を2秒間隔で読み、Claude版と同じモデル・effort・context・5h/7d制限・cwd・Git状態を4段で描画する。
-
-レンダラーだけを単独確認する場合:
+セットアップ:
 
 ```powershell
-pwsh -NoProfile -File C:/Users/81809/Documents/Repositories/setup-neovim-wezterm/Codex/statusline.ps1 -Watch
+pwsh -NoProfile -File .\Codex\install-session-status.ps1
 ```
 
-同じディレクトリで複数セッションを使う場合、`-SessionId <thread UUID>` で対象を固定できる。未指定時は、そのディレクトリの最近更新されたセッションを表示する。
+このスクリプトは既存フックを保持して `~/.codex/hooks.json` のSessionStart/SessionEndを登録し、当該コマンド2個のハッシュだけを承認する。`[tui].terminal_title` と内蔵 `status_line = []` も設定する。WezTermはタイトルから起動直後のセッションを捕捉し、最初のターンでSessionStartが完全なUUIDへ結び直す。再開時は同じ表示の対象を更新し、終了時は表示も終了する。`Ctrl+Shift+Y` は選択中の登録済みCodex表示を修復する。
 
-`statusline.toml` の内容は `C:\Users\81809\.codex\config.toml` の `[tui]` へ反映する。既存のCodexセッションでは内蔵1行が残る場合があるため、新規セッションで完全に切り替わる。
+モデルとeffortは現在の端末タイトルを優先し、context・cwd・Gitは対象セッションのrolloutから取得する。5h/7d制限は各セッションで最後に取得した値なので、同一アカウントでも更新時刻に差がある。UUIDが曖昧、ログ未生成、使用量未取得の場合はcontextを `unavailable` と表示する。
+
+表示単独の診断には `statusline.ps1 -SessionId <thread UUID>` を使う。SessionIdなしの単発診断だけはcwdの最新ログを選ぶ。自動表示はこの推測経路を使わない。
+
+GUIを開かない回帰確認:
+
+```powershell
+python .\Codex\test-session-status.py
+```
+
+Excelスキルのアイコン警告を再修復する場合は `pwsh -NoProfile -File .\Codex\repair-skill-icons.ps1`。プラグインキャッシュ更新後に再発した場合にも使える。
 
 ## 自動承認と Remote Control
 

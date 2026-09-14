@@ -1,10 +1,15 @@
-# Codex statusline monitor for a dedicated WezTerm pane.
+﻿# Codex statusline monitor for a dedicated WezTerm pane.
 # Codex does not expose Claude's statusLine.command callback, so this renderer
 # reads the active Codex rollout JSONL and renders the same four information rows.
 [CmdletBinding()]
 param(
     [string]$Path = (Get-Location).Path,
     [string]$SessionId,
+    [string]$BindingPath,
+    [Nullable[int]]$OwnerPaneId,
+    [Nullable[int]]$OwnerProcessId,
+    [string]$SessionPrefix,
+    [string]$InitialModel,
     [switch]$Watch,
     [int]$IntervalSeconds = 2
 )
@@ -21,6 +26,32 @@ $Mauve = "$Esc[38;2;202;158;230m"
 $Peach = "$Esc[38;2;239;159;118m"
 $Yellow = "$Esc[38;2;229;200;144m"
 $Red = "$Esc[38;2;231;130;132m"
+
+$CodexRoot = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $env:USERPROFILE '.codex' }
+
+if ($null -ne $OwnerProcessId -and $null -ne $OwnerPaneId) {
+    $registry = Join-Path $CodexRoot 'status-panes'
+    New-Item -ItemType Directory -Path $registry -Force | Out-Null
+    $BindingPath = Join-Path $registry "$OwnerProcessId-$OwnerPaneId.json"
+    $owner = Get-Process -Id $OwnerProcessId -ErrorAction SilentlyContinue
+    if (-not $owner) { exit 0 }
+    [Console]::Write("$Esc]2;Codex status:${OwnerProcessId}:$OwnerPaneId$([char]7)")
+    $initMutex = [Threading.Mutex]::new($false, "Local\CodexStatus-$OwnerProcessId-$OwnerPaneId")
+    $initLocked = $false
+    try {
+    $initLocked = $initMutex.WaitOne(1500)
+    if (-not $initLocked) { exit 0 }
+    $saved = if (Test-Path -LiteralPath $BindingPath) { Get-Content -LiteralPath $BindingPath -Raw | ConvertFrom-Json } else { $null }
+    if (-not $saved -or $saved.ended -or (([datetime]$saved.ownerStartedAt) - $owner.StartTime.ToUniversalTime()).Duration().TotalMilliseconds -gt 2) {
+        $pendingBinding = @{ sessionId = $SessionPrefix; transcriptPath = $null; cwd = $Path; model = $InitialModel
+            ownerPaneId = $OwnerPaneId; ownerPid = $OwnerProcessId; ownerStartedAt = $owner.StartTime.ToUniversalTime().ToString('o')
+            statusPaneId = [int]$env:WEZTERM_PANE; ended = $false }
+        $temp = "$BindingPath.$PID.tmp"
+        [IO.File]::WriteAllText($temp, ($pendingBinding | ConvertTo-Json -Depth 5))
+        [IO.File]::Move($temp, $BindingPath, $true)
+    }
+    } finally { if ($initLocked) { $initMutex.ReleaseMutex() }; $initMutex.Dispose() }
+}
 
 function Get-StageColor([double]$Percent) {
     if ($Percent -ge 80) { return $Red }
@@ -61,11 +92,17 @@ function Join-Segments([string[]]$Segments) {
 }
 
 function Find-Rollout([string]$Cwd) {
-    $root = Join-Path $env:USERPROFILE '.codex\sessions'
+    $root = Join-Path $CodexRoot 'sessions'
     if ($SessionId) {
-        if ($SessionId -notmatch '^[0-9a-fA-F-]{36}$') { return $null }
-        return Get-ChildItem -LiteralPath $root -Recurse -File -Filter "rollout-*-$SessionId.jsonl" | Select-Object -First 1
+        if ($SessionId -notmatch '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{5}(?:[0-9a-fA-F]{7})?$') { return $null }
+        $candidates = @(Get-ChildItem -LiteralPath $root -Recurse -File -Filter "rollout-*-$SessionId*.jsonl")
+        # Codex 0.154 truncates terminal-title UUIDs to 29 chars. Resolve only a
+        # unique prefix; a collision stays unavailable rather than selecting a log.
+        if ($candidates.Count -ne 1) { return $null }
+        return $candidates[0]
     }
+    # A bound renderer may wait for its transcript, but may never show another session.
+    if ($BindingPath) { return $null }
     $normalized = [IO.Path]::GetFullPath($Cwd).TrimEnd('\').ToLowerInvariant()
     foreach ($file in (Get-ChildItem -LiteralPath $root -Recurse -File -Filter 'rollout-*.jsonl' | Sort-Object LastWriteTime -Descending | Select-Object -First 30)) {
         $first = Get-Content -LiteralPath $file.FullName -TotalCount 1
@@ -108,7 +145,7 @@ $State = @{
     SecondaryReset = ''
     PreviousLines = @()
 }
-$configPath = Join-Path $env:USERPROFILE '.codex\config.toml'
+$configPath = Join-Path $CodexRoot 'config.toml'
 if (Test-Path -LiteralPath $configPath) {
     foreach ($configLine in (Get-Content -LiteralPath $configPath -TotalCount 20)) {
         if ($configLine -match '^model\s*=\s*"([^"]+)"') { $State.Model = $Matches[1] }
@@ -133,6 +170,7 @@ function Render-Status {
         if ($State.FilePath -ne $file.FullName) {
             $State.FilePath = $file.FullName
             $maximumBytes = 16MB
+            try { $meta = Get-Content -LiteralPath $file.FullName -TotalCount 1 | ConvertFrom-Json; if ($meta.payload.cwd) { $Cwd = $meta.payload.cwd } } catch {}
             $used = $null
             $window = $null
         }
@@ -141,22 +179,24 @@ function Render-Status {
             try { $event = $line | ConvertFrom-Json } catch { continue }
             if ($event.type -eq 'session_meta' -and $event.payload.model_provider) { $model = if ($event.payload.model) { $event.payload.model } else { $model } }
             if ($event.type -eq 'turn_context') {
+                if ($event.payload.cwd) { $Cwd = $event.payload.cwd }
                 if ($event.payload.model) { $model = $event.payload.model }
                 if ($event.payload.effort) { $effort = $event.payload.effort }
             }
             if ($event.type -eq 'event_msg' -and $event.payload.type -eq 'token_count') {
-                $used = if ($event.payload.info.last_token_usage.input_tokens) {
-                    [double]$event.payload.info.last_token_usage.input_tokens + [double]$event.payload.info.last_token_usage.output_tokens
-                } else { $event.payload.info.total_token_usage.total_tokens }
+                $used = if ($null -ne $event.payload.info.last_token_usage.total_tokens) {
+                    [double]$event.payload.info.last_token_usage.total_tokens
+                } else { $null }
                 $window = $event.payload.info.model_context_window
                 $primary = $event.payload.rate_limits.primary.used_percent
                 $secondary = $event.payload.rate_limits.secondary.used_percent
-                $primaryReset = Format-Reset $event.payload.rate_limits.primary.resets_at
-                $secondaryReset = Format-Reset $event.payload.rate_limits.secondary.resets_at
+                $primaryReset = $event.payload.rate_limits.primary.resets_at
+                $secondaryReset = $event.payload.rate_limits.secondary.resets_at
             }
         }
     }
 
+    if ($State.LiveModel) { $model = $State.LiveModel; $effort = $State.LiveEffort }
     $State.Model = $model
     $State.Effort = $effort
     $State.Used = $used
@@ -165,7 +205,10 @@ function Render-Status {
     $State.Secondary = $secondary
     $State.PrimaryReset = $primaryReset
     $State.SecondaryReset = $secondaryReset
+    $State.Cwd = $Cwd
 
+    $primaryReset = Format-Reset $primaryReset
+    $secondaryReset = Format-Reset $secondaryReset
     $effortColor = switch ($effort) {
         'low' { $Dim }
         'medium' { $Green }
@@ -227,6 +270,54 @@ function Render-Status {
 if ($Watch) { [Console]::Write("$Esc[?25l") }
 try {
     do {
+        if ($BindingPath) {
+            try { $binding = Get-Content -LiteralPath $BindingPath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop }
+            catch { break }
+            if ($binding.ended) { break }
+            $owner = Get-Process -Id $binding.ownerPid -ErrorAction SilentlyContinue
+            if (-not $owner -or (([datetime]$binding.ownerStartedAt) - $owner.StartTime.ToUniversalTime()).Duration().TotalMilliseconds -gt 2) { break }
+            [Console]::Write("$Esc]2;Codex status:$($binding.ownerPid):$($binding.ownerPaneId)$([char]7)")
+            $State.LiveModel = $null
+            $State.LiveEffort = ''
+            $panes = @(& wezterm cli list --format json | ConvertFrom-Json)
+            if ($LASTEXITCODE -eq 0) {
+                $mainPane = $panes | Where-Object pane_id -eq $binding.ownerPaneId | Select-Object -First 1
+                if (-not $mainPane) { break }
+                # If startup hooks and title discovery raced, retain one renderer.
+                $matching = @($panes | Where-Object title -eq "Codex status:$($binding.ownerPid):$($binding.ownerPaneId)" | Sort-Object pane_id)
+                if ($env:WEZTERM_PANE -match '^\d+$' -and $matching.Count -gt 1 -and [int]$env:WEZTERM_PANE -ne $matching[0].pane_id) { break }
+                if ($mainPane.title -match '^codex \| ([0-9a-f-]{29,36})(?:\.\.\.)? \| (.+)$') {
+                    $titlePrefix = $Matches[1]
+                    $titleModel = $Matches[2]
+                    if (-not $binding.sessionId.StartsWith($titlePrefix)) {
+                        $binding.sessionId = $titlePrefix
+                        $binding.model = $titleModel
+                        $binding.cwd = $Path
+                    }
+                    # Reflect /model and /effort immediately, before another rollout event.
+                    if ($titleModel -match '^(.*?)\s+(low|medium|high|xhigh|max)(?:\s|$)') {
+                        $State.LiveModel = $Matches[1]
+                        $State.LiveEffort = $Matches[2]
+                    }
+                }
+            }
+            if ($SessionId -ne $binding.sessionId) {
+                $SessionId = $binding.sessionId
+                $State.FilePath = ''
+                $State.Used = $null
+                $State.Window = $null
+                $State.Primary = $null
+                $State.Secondary = $null
+                $State.PrimaryReset = $null
+                $State.SecondaryReset = $null
+                $State.Model = if ($binding.model) { $binding.model } else { 'Codex' }
+                if ($binding.model -match '^(.*?)\s+(low|medium|high|xhigh|max)(?:\s|$)') {
+                    $State.Model = $Matches[1]; $State.Effort = $Matches[2]
+                } else { $State.Effort = '' }
+                $State.Cwd = $binding.cwd
+            }
+            $Path = if ($State.Cwd) { $State.Cwd } else { $binding.cwd }
+        }
         Render-Status $Path
         if ($Watch) { Start-Sleep -Seconds ([Math]::Max(1, $IntervalSeconds)) }
     } while ($Watch)

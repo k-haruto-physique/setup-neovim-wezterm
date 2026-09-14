@@ -667,3 +667,16 @@ codex app-server --remote-control --listen ws://127.0.0.1:14567
 同日の点滅修正: 更新ごとに全画面消去してからログを読む処理で、一時的に空白になっていた。全画面消去を撤去し、情報取得後に変更された行だけを一括描画する方式へ変更。
 
 同日の再開時の復旧: 前回の表示専用ペインだけが別タブに残り、新しいCodexタブには表示がなかった。旧表示ペインは前回のSessionIdへ固定されていたため、現在のセッション用に下端5セルの表示を作り直し、旧表示ペインのみ終了した。タブの閉じるボタンを有効化し、`Ctrl+Shift+W` はタブ全体、`Ctrl+Shift+Alt+W` は選択中ペインのみを確認付きで閉じるよう明示した。Codexを通常のシェルから再開する場合は、その新しいペインで `Ctrl+Shift+Y` を使う。
+
+
+## 19. Codex並列セッションの表示混線とスキルアイコン警告（2026-09-14）
+
+旧表示はcwdの最新rolloutを推測する方式で、同じリポジトリの並列セッションを区別できなかった。`Codex/session-status.ps1` とSessionStart/SessionEndフックでCLI PID・WezTerm pane ID・thread UUIDを結合する方式へ変更した。起動直後は端末タイトルで捕捉し、最初のターンで完全UUIDへ更新する。再開・終了も表示へ追従し、表示専用タブを残さない。モデル/effortは現在のタイトル、cwd/contextは対象rollout、Gitはそのcwdから取得する。UUIDが曖昧な場合は `unavailable` とし、別セッションを選ばない。
+
+同cwd・異なるモデルの空セッション2個に各5セルの独立表示が作られることを実機確認した。検証用タブ・ウィンドウはすべて閉じ、他業務の4ペインは維持した。現在のCodex表示も5セルへ戻した。今後の回帰確認は `python Codex/test-session-status.py` でGUIを開かず8件（混線・不存在・省略UUID・衝突・0トークン・cwd・モデル即時更新・thread切替/終了）を検証する。
+
+稼働中WezTermはsymlinkの正本を編集してもreloadしなかった。リンクの属性日時だけを更新しても反映せず、検証したsymlink自身を同ディレクトリ内で一時改名して直ちに戻すとreloadを確認できた（セッションの再起動なし）。設定には正本Luaパスを `add_to_config_reload_watch_list` へ追加し、以後の正本編集を監視する。イベントハンドラがreloadで消えない既知仕様は残るが、自動表示はPID/ペインの表示タイトルと共有throttleで重複を避ける。
+
+スキルの実際の警告はExcelプラグインの `interface.icon_small/icon_large` が許可されたplugin/assets外を指していたこと。`repair-skill-icons.ps1` はアイコンをplugin/assetsへコピーし参照を修正する。修復後にCodexの `skills/list` を当リポジトリと他業務4リポジトリで実行し、読み込みエラー0を確認した。キャッシュ更新で再発した場合は同スクリプトを再実行する。
+
+セットアップと正確な寿命/データ仕様は `Codex/README.md`、`Codex/statusline-spec.md` を参照。

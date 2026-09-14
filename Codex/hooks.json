@@ -1,0 +1,19 @@
+{
+  "description": "Bind each Codex session to its own WezTerm status pane.",
+  "hooks": {
+    "SessionStart": [{
+      "hooks": [{
+        "type": "command",
+        "command": "pwsh.exe -NoLogo -NoProfile -File C:/Users/81809/Documents/Repositories/setup-neovim-wezterm/Codex/session-status.ps1",
+        "timeout": 15
+      }]
+    }],
+    "SessionEnd": [{
+      "hooks": [{
+        "type": "command",
+        "command": "pwsh.exe -NoLogo -NoProfile -File C:/Users/81809/Documents/Repositories/setup-neovim-wezterm/Codex/session-status.ps1",
+        "timeout": 3
+      }]
+    }]
+  }
+}

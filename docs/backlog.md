@@ -21,7 +21,6 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | # | 項目 | なぜ今やらないか | いつ顕在化するか |
 |---|---|---|---|
-| W6 | **Codex下端表示の同一cwd並列セッション** | SessionId未指定時は同じcwdの最近更新されたログを選ぶ。現在の表示は対象UUIDへ固定済み | 同じリポジトリで並列起動した場合。必要なら `-SessionId` で固定する。仕様は `Codex/statusline-spec.md` |
 | W1 | **statusline symlink 切れ** | `~/.claude/statusline.ps1` は symlink ではなく実体ファイル。**2026-08-20 の 4 段化でも repo 正本 → 実体へ手動コピーし、ハッシュ一致を確認済**（表示は最新） | **repo 側 `claude/statusline.ps1` を編集するたび**に手動コピーが要る。symlink 再リンクは `New-Item -ItemType SymbolicLink` が **管理者権限を要求して失敗**（2026-08-20 実測）＝管理者 PowerShell を開ける時にだけ解消可能。それまでは編集後コピーで運用 |
 | W2 | **ペイン入力不能（修飾キー stuck）** | 2026-07-02 発生・原因確定（修飾キーの key-up 取りこぼし）。**コードでは直せない**（WezTerm×Windows 積年の既知問題・設定フラグ無し）。運用回避で足りる | 固まったら **Ctrl/Shift/Alt/Win を 1 回タップ**で復活。予防は「修飾キー押したまま Alt+Tab しない」。詳細 troubleshooting #12 |
 | W3 | **ペイン入力不能（Claude TUI 描画 wedge）** | 2026-07-03 発生・W2 とは別種（修飾キータップで直らない）。特定 Claude ペインが "Esc to cancel" オーバーレイで wedge。**遠隔修復不可を実証**（send-text は Claude TUI に届かず・zoom-pane は mux CLI をデッドロックさせた）。頻発申告あり | 復旧は**ユーザー直接操作**: クリック→`Esc`×1-2→`Ctrl+C`→最終手段 `claude --continue`（会話復元）。`get-text` にオーバーレイが見えたら W3 確定。詳細 troubleshooting #13 |
@@ -34,6 +33,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | 日付 | タスク | 確定根拠 |
 |---|---|---|
+| 2026-09-14 | **Codex並列表示をセッションごとに自動追従（W6解消）・スキル警告修復** | PID・ペイン・thread UUIDで結合し、タイトルとSessionStart/Endで起動/再開/終了を追従。同cwdの異なるモデル2セッションの独立表示、GUIなし8件の回帰確認。Excelスキルの不正アイコンパスを修復し5リポジトリのskills/listエラー0。詳細 troubleshooting #19 |
 | 2026-09-14 | **再開後のCodexステータス欠落・旧表示タブ残留を復旧** | 旧SessionId固定の表示だけが別タブに残っていた。現在のCodex下端へ表示を作り直し4行を確認、旧表示ペインを終了。タブ閉じるボタンとタブ/ペイン終了キーを明示。troubleshooting #18 |
 | 2026-09-14 | **Codex 4段ステータスを同一WezTermウィンドウへ統合** | 内蔵 `[tui].status_line` は項目を横1行に並べる仕様のため `[]` で非表示化。WezTerm `pane:split` の5セル固定ペインでClaude同等の4段表示を常駐させる。詳細 troubleshooting **#18** |
 | 2026-09-11 | **Codex 自動承認 + Remote Control 自動起動** | `~/.codex/config.toml` に `approval_policy = "on-request"` + `approvals_reviewer = "auto_review"`。Windows ログオンタスク `Codex Remote Control` から localhost 限定 app-server を常駐起動し、タスク `Running`・`127.0.0.1:14567` Listen・`/readyz` HTTP 200 を確認。公式ラッパー2種のWindows失敗は troubleshooting **#17** に記録 |
