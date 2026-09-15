@@ -4,6 +4,7 @@
 
 - `runtime.toml` を `sandbox_mode = "workspace-write"` に変更。実際のユーザー設定を正とした（troubleshooting #27）。
 - Claude 側の待受（`claude-listen.ps1`）を、このリポジトリの `hi` で自動起動する運用にした。
+- 全リポジトリ共通の `~/.claude/CLAUDE.md`・`~/.codex/AGENTS.md` に、ブリッジの使い方を追加（他リポジトリの Claude は頼まれた時だけ待受）。
 
 ## 2026-09-15 — Codex → Claude ブリッジ
 
