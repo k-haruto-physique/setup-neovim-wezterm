@@ -77,7 +77,7 @@ pwsh -NoProfile -File .\Codex\ask-codex.ps1 -ThreadId <UUID> '...'    # 会話�
 pwsh -NoProfile -File .\Codex\ask-codex.ps1 -New -Cwd <dir> '...'     # CLIなしで新しい会話を作る
 ```
 
-- 送り先の自動選択: 読み込み中（`thread/loaded/list`）の会話のうち、cwdが一致し、サブエージェントでないものから最も新しいものを選ぶ。複数あれば、他のIDを警告に出す。
+- 送り先の自動選択: 読み込み中（`thread/loaded/list`）の会話のうち、cwdが一致し、サブエージェントでないものが**ちょうど1つの時だけ**送る。2つ以上あれば、候補のIDと名前を出して送らずにexit 6（誤配送防止、backlog B14）。その時は `-ThreadId` で指定する。
 - Codexが作業中（idle以外）なら、送らずに終了する。
 - 途中経過（コマンド・編集・途中のメッセージ）は、標準エラーに `codex>` 付きで出す。
 - 終了コード: 0 完了 / 1 失敗・送り先なし / 2 中断 / 3 タイムアウト（既定1800秒。ターン自体はCodex側で続く）。
@@ -96,8 +96,8 @@ Claude Codeの対話セッションには、外から入力を差し込む公開
 
 - 受信箱: `%LOCALAPPDATA%\Temp\codex-claude-bridge\<claude.exeのPID>\`（`inbox` → `processing` → `done`、返答は `outbox`）。CodexのWindowsサンドボックスは `%LOCALAPPDATA%` 直下に書けないので、Temp配下に置く（troubleshooting #27）。
 - 書き込みは一時ファイルを書いてから名前を変える方式にし、書きかけのファイルを読まないようにしている。
-- 待受の目印は `listener.json`。Claudeのプロセスは、listenの親プロセスをたどって `claude.exe` を見つけて特定する。PIDの再利用で別プロセスへ届かないよう、開始時刻も照合する。
-- 送り先の選び方: 既定はcwdが一致する待受中のセッション。別リポジトリのClaudeへは `-Name <セッション名>` か `-ClaudePid`。待受中のセッションが無ければ、何も置かずにexit 1。
+- 待受の目印は `listener.json`。Claudeのプロセスは、listenの親プロセスをたどって `claude.exe` を見つけて特定する。PIDの再利用で別プロセスへ届かないよう、開始時刻も照合する。Claude Codeの自動更新は、動いている実行ファイルを `claude.exe.old.<数字>` に改名するので、その名前もClaudeとして扱う（troubleshooting #28）。
+- 送り先の選び方: 既定はcwdが一致する待受中のセッションで、**ちょうど1つの時だけ**送る。2つ以上なら、候補を出して送らずにexit 6（backlog B14）。別リポジトリのClaudeへは `-Name <セッション名>` か `-ClaudePid`。待受中のセッションが無ければ、何も置かずにexit 1。
 - 待受が次のメッセージを待つまでの間（返答中）に届いたものは、受信箱で待つ。タイムアウト（既定1800秒）までに受け取られなければ取り下げる。受け取り済みで処理中なら、そのままにする。
 - 待受は時間制限の無いバックグラウンドのシェルで動く。Monitorツールは最長30分で止まるので使わない。
 - 他リポジトリ向けの案内: 全リポジトリ共通の `~/.claude/CLAUDE.md`（Claude）と `~/.codex/AGENTS.md`（Codex）に、絶対パスでの使い方を書いた（2026-09-15、リポジトリ外のファイル）。他リポジトリのClaudeは、ユーザーに頼まれた時だけ待受にする。
@@ -122,7 +122,7 @@ Claude Codeの対話セッションには、外から入力を差し込む公開
 
 - 数える仕組み: `Register-BridgeTurn`（`bridge-common.ps1`）が、送信の直前に `conversations\<id>.json` の往復数と `asks.log` の直近の送信を、ロックファイルで排他して更新する。
 - Codexへ届く文面の先頭には `[bridge conversation=<id> turn=<n>/10 from=claude]` と、送り返さない旨の注意書きが付く。Claudeの待受の出力にも、会話idと往復数が出る。
-- 終了コード（両スクリプト共通）: 0 完了 / 1 失敗・送り先なし / 2 中断 / 3 タイムアウト / 4 上限で拒否 / 5 Codexが作業中（`ask-codex.ps1` のみ）。
+- 終了コード（両スクリプト共通）: 0 完了 / 1 失敗・送り先なし / 2 中断 / 3 タイムアウト / 4 上限で拒否 / 5 Codexが作業中（`ask-codex.ps1` のみ） / 6 送り先の候補が2つ以上で送らない。
 - テスト用に、環境変数 `CODEX_CLAUDE_BRIDGE_ROOT` で受信箱と数える場所を差し替えられる。
 - 検証（2026-09-15）:
   - 上限の単体テスト（テスト用の場所で実施）: 同じ会話の11回目と、全体で21回目の送信を拒否した。

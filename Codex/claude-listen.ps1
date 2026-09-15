@@ -11,7 +11,8 @@ $claude = $null
 $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$PID"
 for ($depth = 0; $proc -and $depth -lt 10; $depth++) {
     $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$($proc.ParentProcessId)"
-    if ($proc -and $proc.Name -eq 'claude.exe') { $claude = $proc; break }
+    # Auto-update renames a running exe to claude.exe.old.<n>, so sessions started before an update match too.
+    if ($proc -and $proc.Name -match '^claude\.exe(\.old\.\d+)?$') { $claude = $proc; break }
 }
 if (-not $claude) { throw 'Run this from a Claude Code session (no claude.exe ancestor found).' }
 

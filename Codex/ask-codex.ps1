@@ -78,17 +78,22 @@ try {
         $thread = (Invoke-Rpc 'thread/start' @{ cwd = (Get-NormalPath $Cwd) }).thread
     } else {
         if (-not $ThreadId) {
-            # Only threads a live client has loaded; the newest one in this cwd is the CLI the user is looking at.
+            # Only threads a live client has loaded, and only when exactly one matches this cwd.
             $want = Get-NormalPath $Cwd
             $candidates = foreach ($id in @((Invoke-Rpc 'thread/loaded/list' @{}).data)) {
                 $t = (Invoke-Rpc 'thread/read' @{ threadId = $id; includeTurns = $false }).thread
                 if ($t.ephemeral -or $t.parentThreadId) { continue }
                 if ((Get-NormalPath $t.cwd) -ieq $want) { $t }
             }
-            $candidates = @($candidates | Sort-Object { [long]$_.updatedAt } -Descending)
-            if (-not $candidates.Count) { throw "No live Codex thread in $want. Start 'codex' there, pass -ThreadId, or use -New." }
-            if ($candidates.Count -gt 1) { Write-Note "$($candidates.Count) live threads in this cwd; using the newest (others: $(($candidates | Select-Object -Skip 1 | ForEach-Object id) -join ', '))" }
-            $ThreadId = $candidates[0].id
+            $describe = {
+                param($t)
+                $title = if ($t.name) { $t.name } else { "$($t.preview)" }
+                if ($title.Length -gt 30) { $title = $title.Substring(0, 30) + '...' }
+                "$($t.id) [$title]"
+            }
+            $chosen = Select-BridgeTarget $candidates 'live Codex threads in this cwd' $describe 'Pass -ThreadId with one of them (ask the user which one if unsure).'
+            if (-not $chosen) { throw "No live Codex thread in $want. Start 'codex' there, pass -ThreadId, or use -New." }
+            $ThreadId = $chosen.id
         }
         # For a running thread, resume rejoins it (subscribes this connection) without reloading.
         $thread = (Invoke-Rpc 'thread/resume' @{ threadId = $ThreadId; excludeTurns = $true }).thread
@@ -146,6 +151,9 @@ try {
     } elseif ($problem -like 'BRIDGE_BUSY:*') {
         [Console]::Error.WriteLine("ask-codex: $($problem.Substring(13))")
         $exitCode = 5
+    } elseif ($problem -like 'BRIDGE_AMBIGUOUS:*') {
+        [Console]::Error.WriteLine("ask-codex: not sent, $($problem.Substring(18))")
+        $exitCode = 6
     } else {
         [Console]::Error.WriteLine("ask-codex: $problem")
         $exitCode = 1

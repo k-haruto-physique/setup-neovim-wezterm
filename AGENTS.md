@@ -24,7 +24,7 @@ Codex 向けの入口。**正本は `CLAUDE.md`**（内容を二重管理しな�
 - 「スマホから見えない」はまずプロセスの codex.exe コマンドラインに `--remote ws://127.0.0.1:14567` があるか確認。サーバー状態は RPC `remoteControl/status/read`（`Codex/remote-client.ps1`）の `connected` で判定し、`/readyz` の HTTP 200 を根拠にしない。
 - デスクトップアプリ側の Remote Control は OFF のまま（同一登録で 409 競合）。
 - Claude Code から `Codex/ask-codex.ps1` 経由でメッセージが届くことがある（スマホからの入力と同じ扱い）。**最後のメッセージだけが Claude に返る**ので、結論はターンの最後のメッセージにまとめる。
-- Codex から Claude Code に頼む時は `pwsh -NoProfile -File .\Codex\ask-claude.ps1 '<依頼>'`（Claude の返答が標準出力に出る。長文は `-MessageFile`）。相手の Claude セッションが `claude-listen.ps1` で待受中の時だけ届く（このリポジトリの Claude は `hi` で自動的に待受を始める）。待受中のセッションが無いと exit 1 になるので、ユーザーに「Claude に Codex 待受を頼んで」と伝える。別リポジトリの Claude へは `-Name <セッション名>` か `-ClaudePid`。
+- Codex から Claude Code に頼む時は `pwsh -NoProfile -File .\Codex\ask-claude.ps1 '<依頼>'`（Claude の返答が標準出力に出る。長文は `-MessageFile`）。相手の Claude セッションが `claude-listen.ps1` で待受中の時だけ届く（このリポジトリの Claude は `hi` で自動的に待受を始める）。待受中のセッションが無いと exit 1 になるので、ユーザーに「Claude に Codex 待受を頼んで」と伝える。別リポジトリの Claude へは `-Name <セッション名>` か `-ClaudePid`。送り先の候補が 2 つ以上あると、送らずに exit 6 になる（表示された一覧から `-ClaudePid` で指定し、分からなければユーザーに聞く）。
 - **自走ルール**:
   - 会話を始めた側が進行役。続けて送る時は `-Conversation <id>` を付ける（id は最初の送信で標準エラーに出る）。
   - Claude から届いた依頼（先頭が `[bridge conversation=...]`）に答えている間は、「Claude に相談して」等と明示的に頼まれた場合を除き、`ask-claude.ps1` で送り返さない。聞きたいことは最後のメッセージに書く。

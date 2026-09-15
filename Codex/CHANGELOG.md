@@ -1,5 +1,12 @@
 # 変更履歴
 
+## 2026-09-15 — 送り先があいまいなら送らない（backlog B14）
+
+- `bridge-common.ps1` に `Select-BridgeTarget` を追加。`ask-codex.ps1`・`ask-claude.ps1` は、送り先の候補が2つ以上あると送らずにexit 6にする（以前は最新を自動で選び、警告だけ出して送っていた）。
+- 相手の指定は、Codex宛てが `-ThreadId`、Claude宛てが `-ClaudePid`（名前が一意なら `-Name`）。
+- 結合テストで、自動更新前から開いているClaudeセッション（プロセス名が `claude.exe.old.<数字>`）を認識できないバグを発見し修正（troubleshooting #28）。修正後、改名済みの実在セッション2つで、あいまいならexit 6・`-ClaudePid` 指定なら配送、を確認。
+- B15（許可した会話だけ受け付ける方式）は導入しない。ブリッジ経由の破壊的・外部送信の操作は、Claudeがユーザーに確認する運用を続ける。
+
 ## 2026-09-15 — 自走ルールと上限
 
 - `bridge-common.ps1` に往復数の上限を追加（1会話10往復、全体で30分20回。超えたらexit 4）。`-Conversation <id>` で会話を続ける。Codexが作業中なら、`ask-codex.ps1` はexit 5。

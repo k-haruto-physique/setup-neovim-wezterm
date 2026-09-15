@@ -21,7 +21,8 @@ $armed = foreach ($marker in Get-ChildItem -LiteralPath $BridgeRoot -Directory -
     if (-not (Test-Path -LiteralPath $marker)) { continue }
     $listener = Read-Json $marker
     $process = Get-Process -Id $listener.claudePid -ErrorAction SilentlyContinue
-    if (-not $process -or $process.ProcessName -ne 'claude' -or [Math]::Abs((Get-StartMs $process.StartTime) - $listener.claudeStartMs) -gt 2000) { continue }
+    # Claude Code's auto-update renames a running exe to claude.exe.old.<n>; the start time still guards PID reuse.
+    if (-not $process -or $process.ProcessName -notmatch '^claude(\.exe\.old\.\d+)?$' -or [Math]::Abs((Get-StartMs $process.StartTime) - $listener.claudeStartMs) -gt 2000) { continue }
     $listener | Add-Member -NotePropertyName dir -NotePropertyValue (Split-Path $marker) -PassThru
 }
 $armed = @($armed)
@@ -33,8 +34,12 @@ if (-not $targets.Count) {
     [Console]::Error.WriteLine("ask-claude: no listening Claude session matches. Listening sessions: $known. Ask the user to tell that Claude session to arm Codex/claude-listen.ps1, or pass -ClaudePid / -Name.")
     exit 1
 }
-$target = $targets | Sort-Object armedAt -Descending | Select-Object -First 1
-if ($targets.Count -gt 1) { [Console]::Error.WriteLine("  claude> $($targets.Count) sessions match; using the most recently armed one.") }
+try {
+    $target = Select-BridgeTarget $targets 'listening Claude sessions' { param($l) "$($l.name) (pid $($l.claudePid), $($l.cwd))" } 'Pass -ClaudePid, or -Name if that name is unique.'
+} catch {
+    [Console]::Error.WriteLine("ask-claude: not sent, $($_.Exception.Message -replace '^BRIDGE_AMBIGUOUS: ', '')")
+    exit 6
+}
 
 $turnInfo = Register-BridgeTurn $Conversation 'codex'
 if ($turnInfo.Refused) { [Console]::Error.WriteLine("ask-claude: refused, $($turnInfo.Refused)"); exit 4 }

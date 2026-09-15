@@ -21,6 +21,16 @@ function Read-Json([string]$Path) { Get-Content -LiteralPath $Path -Raw -Encodin
 
 function Get-StartMs($StartTime) { [DateTimeOffset]::new($StartTime).ToUnixTimeMilliseconds() }
 
+# Pick exactly one target or refuse: guessing between sessions can hand context to the wrong one (backlog B14).
+# Returns $null for no candidates; throws "BRIDGE_AMBIGUOUS: ..." (callers exit 6) for more than one.
+function Select-BridgeTarget($Candidates, [string]$What, [scriptblock]$Describe, [string]$Hint) {
+    $list = @($Candidates)
+    if ($list.Count -eq 0) { return $null }
+    if ($list.Count -eq 1) { return $list[0] }
+    $described = ($list | ForEach-Object { & $Describe $_ }) -join '; '
+    throw "BRIDGE_AMBIGUOUS: $($list.Count) $What match: $described. $Hint"
+}
+
 # Count one exchange before sending. Returns Id/Turn/Max, or Refused with the reason (callers exit 4).
 function Register-BridgeTurn([string]$Conversation, [string]$From) {
     if (-not $Conversation) { $Conversation = [guid]::NewGuid().ToString('N').Substring(0, 8) }
