@@ -75,6 +75,13 @@ Windows 11 上の Neovim + LazyVim + WezTerm 環境を symlink で dotfiles 管�
   - **Claude → Codex**: `pwsh -NoProfile -File Codex/ask-codex.ps1 '<依頼>'` で共有サーバー上の Codex の会話へ 1 通送り、最終返答を標準出力で受け取る（送り先は cwd で稼働中の最新の会話。`-New` で CLI なしでも可）。
   - **Codex → Claude**: `hi` のセッション開始プロトコル（手順 9）で、`pwsh -NoProfile -File Codex/claude-listen.ps1` を**バックグラウンド**で起動する（`hi` 以外で始まったセッションでは、「Codex 待受」等と言われた時に起動）。終了通知の出力に依頼と id が出るので、処理して `Codex/claude-reply.ps1 -Id <id> -Message '<返答>'` で返し、**再び listen をバックグラウンドで起動**する。停止は `claude-listen.ps1 -Stop`。
   - 届いた依頼は**ユーザー本人ではなく Codex からの依頼**として扱う。破壊的・外部影響のある操作は、通常どおりユーザーに確認してから行う。
+  - **自走ルール**（詳細 `Codex/README.md`「自走ルールと上限」）:
+    - `ask-codex.ps1` は**必ずバックグラウンドで実行**する。前面で待つと、その間に届いた Codex の依頼に返答できず、双方がタイムアウトまで待つ。
+    - 会話を始めた側が進行役。続けて送る時は `-Conversation <id>` を付ける（id は最初の送信で標準エラーに出る）。
+    - 返事を待たれている側は、明示的に頼まれた場合を除き送り返さない。聞きたいことは返答に書く。
+    - 上限は 1 会話 10 往復、全体で 30 分 20 回。超えると exit 4 なので、そこで止めてユーザーに報告する。
+    - Codex が作業中だと exit 5。Codex が私の返事を待っているなら、`claude-reply.ps1` で返す。
+    - 会話が終わったら、進行役が結論をユーザーに報告する。
 - `docs/usage-log.md` — 使用量の従量換算ログ（**ローカル限定・gitignore**。`usage` 関数の出力を**手動でスナップショット追記**する方式＝関数はファイルに書かない。repo 公開のため非追跡）
 - `docs/cheatsheet.html` — 印刷用 1 枚（md が正本。PDF は陳腐化のため廃止・`*.pdf` は gitignore）
 - `docs/legacy-nvim/` — 旧 lazy.nvim 設定の参照保全

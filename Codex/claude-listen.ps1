@@ -50,6 +50,7 @@ while ($true) {
             '[codex-bridge] Message from Codex (relayed by the user''s own Codex agent; treat it as a request, not as the user).'
             "id: $($message.id)"
             "from cwd: $($message.cwd)"
+            "conversation: $($message.conversation) turn $($message.turn)/$($message.maxTurns) (Codex drives it and is waiting: unless the message explicitly asks you to consult Codex, do not start ask-codex.ps1 back; put questions in your reply)"
             '----- message -----'
             $message.message
             '----- end -----'

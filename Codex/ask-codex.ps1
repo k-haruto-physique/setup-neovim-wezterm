@@ -1,6 +1,7 @@
 # Claude -> Codex bridge: send one message to a live Codex thread on the shared app-server
 # and print Codex's final reply. The CLI shows the turn exactly like input from the phone
 # (same server, same thread), so the conversation never forks.
+# Claude should run this as a background command: a foreground wait blocks replies to Codex.
 [CmdletBinding(DefaultParameterSetName = 'Text')]
 param(
     [Parameter(ParameterSetName = 'Text', Mandatory, Position = 0)][string]$Message,
@@ -8,11 +9,13 @@ param(
     [string]$ThreadId,
     [string]$Cwd = (Get-Location).Path,
     [switch]$New,
+    [ValidatePattern('^[0-9a-f]{8}$')][string]$Conversation,
     [int]$TimeoutSec = 1800
 )
 $ErrorActionPreference = 'Stop'
 # Hook-style callers read stdout as UTF-8; the console code page (CP932) would garble Japanese (troubleshooting #24).
 try { [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false) } catch {}
+. (Join-Path $PSScriptRoot 'bridge-common.ps1')
 if ($MessageFile) { $Message = Get-Content -LiteralPath $MessageFile -Raw -Encoding utf8 }
 if ([string]::IsNullOrWhiteSpace($Message)) { throw 'Message is empty.' }
 
@@ -40,9 +43,9 @@ function Receive-Json {
                 if ($received.MessageType -eq [Net.WebSockets.WebSocketMessageType]::Close) { throw 'Codex server closed the connection' }
                 $stream.Write($buffer, 0, $received.Count)
             } until ($received.EndOfMessage)
-            $text = [Text.Encoding]::UTF8.GetString($stream.ToArray())
+            $raw = [Text.Encoding]::UTF8.GetString($stream.ToArray())
         } finally { $stream.Dispose() }
-        try { return $text | ConvertFrom-Json } catch { continue }
+        try { return $raw | ConvertFrom-Json } catch { continue }
     }
 }
 function Invoke-Rpc([string]$Method, $Params) {
@@ -59,7 +62,6 @@ function Invoke-Rpc([string]$Method, $Params) {
     }
 }
 function Get-NextMessage { if ($script:pending.Count) { $script:pending.Dequeue() } else { Receive-Json } }
-function Get-NormalPath([string]$Path) { [IO.Path]::GetFullPath($Path).TrimEnd('\', '/') }
 
 $threadIdInUse = $null
 $exitCode = 0
@@ -95,9 +97,21 @@ try {
     $label = if ($thread.name) { $thread.name } else { "$($thread.preview)" }
     if ($label.Length -gt 40) { $label = $label.Substring(0, 40) + '...' }
     [Console]::Error.WriteLine("-> Codex thread $($thread.id) [$label] cwd=$($thread.cwd)")
-    if ($thread.status.type -ne 'idle') { throw "Codex thread is $($thread.status.type); wait until its current turn finishes." }
+    if ($thread.status.type -ne 'idle') {
+        throw "BRIDGE_BUSY: Codex thread is $($thread.status.type). If Codex is waiting for your reply, answer with claude-reply.ps1 instead of sending a new message."
+    }
 
-    $turnId = (Invoke-Rpc 'turn/start' @{ threadId = $thread.id; input = @(@{ type = 'text'; text = $Message }) }).turn.id
+    $turnInfo = Register-BridgeTurn $Conversation 'claude'
+    if ($turnInfo.Refused) { throw "BRIDGE_LIMIT: $($turnInfo.Refused)" }
+    [Console]::Error.WriteLine("   conversation=$($turnInfo.Id) turn $($turnInfo.Turn)/$($turnInfo.Max) (continue it with -Conversation $($turnInfo.Id))")
+    $text = @(
+        "[bridge conversation=$($turnInfo.Id) turn=$($turnInfo.Turn)/$($turnInfo.Max) from=claude]"
+        '(Request from Claude Code. Put your answer in your final message: only that message returns to Claude. Claude drives this conversation: unless this request explicitly asks you to consult Claude, do not send messages back with ask-claude.ps1; include any questions in your answer.)'
+        ''
+        $Message
+    ) -join "`n"
+
+    $turnId = (Invoke-Rpc 'turn/start' @{ threadId = $thread.id; input = @(@{ type = 'text'; text = $text }) }).turn.id
     $reply = $null
     $turn = $null
     while (-not $turn) {
@@ -122,11 +136,18 @@ try {
         default { [Console]::Error.WriteLine("Codex turn $($turn.status): $($turn.error.message)"); $exitCode = 1 }
     }
 } catch {
+    $problem = $_.Exception.Message
     if ($deadline.IsCancellationRequested) {
         [Console]::Error.WriteLine("Timed out after $TimeoutSec s. The turn keeps running in Codex thread $threadIdInUse; read it later with thread/read.")
         $exitCode = 3
+    } elseif ($problem -like 'BRIDGE_LIMIT:*') {
+        [Console]::Error.WriteLine("ask-codex: refused, $($problem.Substring(14))")
+        $exitCode = 4
+    } elseif ($problem -like 'BRIDGE_BUSY:*') {
+        [Console]::Error.WriteLine("ask-codex: $($problem.Substring(13))")
+        $exitCode = 5
     } else {
-        [Console]::Error.WriteLine("ask-codex: $($_.Exception.Message)")
+        [Console]::Error.WriteLine("ask-codex: $problem")
         $exitCode = 1
     }
 } finally {

@@ -7,6 +7,7 @@ param(
     [int]$ClaudePid,
     [string]$Name,
     [string]$Cwd = (Get-Location).Path,
+    [ValidatePattern('^[0-9a-f]{8}$')][string]$Conversation,
     [int]$TimeoutSec = 1800
 )
 $ErrorActionPreference = 'Stop'
@@ -35,10 +36,17 @@ if (-not $targets.Count) {
 $target = $targets | Sort-Object armedAt -Descending | Select-Object -First 1
 if ($targets.Count -gt 1) { [Console]::Error.WriteLine("  claude> $($targets.Count) sessions match; using the most recently armed one.") }
 
+$turnInfo = Register-BridgeTurn $Conversation 'codex'
+if ($turnInfo.Refused) { [Console]::Error.WriteLine("ask-claude: refused, $($turnInfo.Refused)"); exit 4 }
+
 $id = [guid]::NewGuid().ToString('N')
 $inbox = Join-Path $target.dir "inbox\$id.json"
-Write-AtomicJson $inbox ([ordered]@{ id = $id; from = 'codex'; cwd = Get-NormalPath $Cwd; createdAt = [datetime]::UtcNow.ToString('o'); message = $Message })
+Write-AtomicJson $inbox ([ordered]@{
+    id = $id; from = 'codex'; cwd = Get-NormalPath $Cwd; createdAt = [datetime]::UtcNow.ToString('o')
+    conversation = $turnInfo.Id; turn = $turnInfo.Turn; maxTurns = $turnInfo.Max; message = $Message
+})
 [Console]::Error.WriteLine("-> Claude session $($target.name) (pid $($target.claudePid)) cwd=$($target.cwd) id=$id")
+[Console]::Error.WriteLine("   conversation=$($turnInfo.Id) turn $($turnInfo.Turn)/$($turnInfo.Max) (continue it with -Conversation $($turnInfo.Id))")
 if (-not (Get-Process -Id $target.listenerPid -ErrorAction SilentlyContinue)) {
     [Console]::Error.WriteLine('  claude> listener is between messages; this one waits in the inbox until Claude re-arms.')
 }

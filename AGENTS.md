@@ -25,5 +25,10 @@ Codex 向けの入口。**正本は `CLAUDE.md`**（内容を二重管理しな�
 - デスクトップアプリ側の Remote Control は OFF のまま（同一登録で 409 競合）。
 - Claude Code から `Codex/ask-codex.ps1` 経由でメッセージが届くことがある（スマホからの入力と同じ扱い）。**最後のメッセージだけが Claude に返る**ので、結論はターンの最後のメッセージにまとめる。
 - Codex から Claude Code に頼む時は `pwsh -NoProfile -File .\Codex\ask-claude.ps1 '<依頼>'`（Claude の返答が標準出力に出る。長文は `-MessageFile`）。相手の Claude セッションが `claude-listen.ps1` で待受中の時だけ届く（このリポジトリの Claude は `hi` で自動的に待受を始める）。待受中のセッションが無いと exit 1 になるので、ユーザーに「Claude に Codex 待受を頼んで」と伝える。別リポジトリの Claude へは `-Name <セッション名>` か `-ClaudePid`。
+- **自走ルール**:
+  - 会話を始めた側が進行役。続けて送る時は `-Conversation <id>` を付ける（id は最初の送信で標準エラーに出る）。
+  - Claude から届いた依頼（先頭が `[bridge conversation=...]`）に答えている間は、「Claude に相談して」等と明示的に頼まれた場合を除き、`ask-claude.ps1` で送り返さない。聞きたいことは最後のメッセージに書く。
+  - 上限は 1 会話 10 往復、全体で 30 分 20 回。超えると exit 4 なので、そこで止めてユーザーに報告する。
+  - 会話が終わったら、進行役が結論をユーザーに報告する。
 - 検証用に WezTerm のウィンドウ・タブを増やさない。表示系の回帰確認は `python Codex/test-session-status.py`（GUI なし）を優先。
 - コミット末尾の Co-Authored-By 行は、その時の実行環境の指定に従う（Anthropic のモデル名を流用しない）。
