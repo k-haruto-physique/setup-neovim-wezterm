@@ -17,11 +17,12 @@ Codex 向けの入口。**正本は `CLAUDE.md`**（内容を二重管理しな�
 | ユーザー設定 | `~/.claude/settings.json` | `~/.codex/config.toml`（正本スニペット `Codex/runtime.toml`・`Codex/statusline.toml`）、フック `~/.codex/hooks.json` |
 | Remote Control 自動接続 | `settings.json` の `remoteControlAtStartup: true` | **Codex に同等の設定キーは無い**。ログオンタスク `Codex Remote Control`（`Codex/remote-control.ps1`）が `ws://127.0.0.1:14567` に常駐し、`codex.exe` 隣の `codex.ps1` シム（`Codex/install-codex-shim.ps1`）が全 PowerShell 起動を `--remote` 経由にする。troubleshooting **#17・#22** |
 | `Ctrl+Shift+N` | 新規ウィンドウで claude | 新規ウィンドウで Codex＋下端ステータス（`Codex/start-codex.ps1`） |
-| 既知の地雷 | #12〜#16 | 加えて **#17〜#22**（Remote Control の Windows 起動・409 競合・表示混線・context 値の差・スキル説明短縮） |
+| 既知の地雷 | #12〜#16 | 加えて **#17〜#22・#26**（Remote Control の Windows 起動・409 競合・表示混線・context 値の差・スキル説明短縮・デスクトップ版の 409 再発で起動が止まる件） |
 
 ## Codex 固有の注意
 
 - 「スマホから見えない」はまずプロセスの codex.exe コマンドラインに `--remote ws://127.0.0.1:14567` があるか確認。サーバー状態は RPC `remoteControl/status/read`（`Codex/remote-client.ps1`）の `connected` で判定し、`/readyz` の HTTP 200 を根拠にしない。
 - デスクトップアプリ側の Remote Control は OFF のまま（同一登録で 409 競合）。
+- Claude Code から `Codex/ask-codex.ps1` 経由でメッセージが届くことがある（スマホからの入力と同じ扱い）。**最後のメッセージだけが Claude に返る**ので、結論はターンの最後のメッセージにまとめる。
 - 検証用に WezTerm のウィンドウ・タブを増やさない。表示系の回帰確認は `python Codex/test-session-status.py`（GUI なし）を優先。
 - コミット末尾の Co-Authored-By 行は、その時の実行環境の指定に従う（Anthropic のモデル名を流用しない）。

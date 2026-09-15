@@ -70,6 +70,7 @@ Windows 11 上の Neovim + LazyVim + WezTerm 環境を symlink で dotfiles 管�
 - `claude/` — Claude Code statusLine 一式: `statusline.ps1`(正本) + `statusline-spec.md`(設計仕様: 色/アイコン/数値セマンティクス/eff/reset/編集行数/データソース) + `CHANGELOG.md` + `README.md`。`%USERPROFILE%\.claude\statusline.ps1` へ反映
 - `powershell/profile.ps1` — PowerShell プロファイル正本（`repo`/`dotfiles`/`v`/`vrepo`/`kanro`/`remote`/`usage` 関数）。`$PROFILE` から **dot-source**（pwsh7・5.1 両対応＝UTF-8 BOM）。管理者不要。**WezTerm の `default_prog` が pwsh であることが前提**（#15）
 - **Claude Code の Remote Control 自動接続** — 正本は `~/.claude/settings.json` の `"remoteControlAtStartup": true`（＝毎回 `--remote-control` 相当。起動経路に非依存）。**シェル層のラッパーでやらない**（2026-07-16 決着。troubleshooting **#16**）
+- `Codex/ask-codex.ps1` — **Claude → Codex ブリッジ**。共有サーバー上の Codex の会話へ 1 通送り、Codex の最終返答を標準出力で受け取る（`pwsh -NoProfile -File Codex/ask-codex.ps1 '<依頼>'`。送り先は cwd で稼働中の最新の会話、`-New` で CLI なしでも可）。Codex にレビュー・作業を頼む時に使う。**逆方向（Codex → Claude へのライブ送信）は不可**。詳細 `Codex/README.md`
 - `docs/usage-log.md` — 使用量の従量換算ログ（**ローカル限定・gitignore**。`usage` 関数の出力を**手動でスナップショット追記**する方式＝関数はファイルに書かない。repo 公開のため非追跡）
 - `docs/cheatsheet.html` — 印刷用 1 枚（md が正本。PDF は陳腐化のため廃止・`*.pdf` は gitignore）
 - `docs/legacy-nvim/` — 旧 lazy.nvim 設定の参照保全

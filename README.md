@@ -50,6 +50,7 @@ setup-neovim-wezterm/
 │   ├── statusline.toml         # [tui].status_line の正本スニペット
 │   ├── runtime.toml            # 自動承認の正本スニペット
 │   ├── remote-control.ps1      # ログオン時の Remote Control 常駐タスク
+│   ├── ask-codex.ps1           # Claude → Codex ブリッジ（会話へ送信し最終返答を返す）
 │   ├── register-remote-control-task.ps1 # 自動起動タスクの登録
 │   └── README.md
 └── docs/
