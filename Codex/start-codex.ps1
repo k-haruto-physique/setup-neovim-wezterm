@@ -38,7 +38,7 @@ while (-not $status -or $status.status -ne 'connected') {
 if ($status.status -ne 'connected') {
     # Still join the shared server (never silently fall back to a local-only CLI):
     # once Remote Control reconnects, this session becomes visible from the phone.
-    Write-Warning "Remote Control is $($status.status): the phone cannot reach this CLI session. Usually the Codex desktop app took the registration back (409). Turn off Desktop > Settings > Connections > 'Control this Mac or PC'; the shared server reconnects within 30s. Until then, do not type into this conversation from the phone or desktop app: they only hold a copy and the conversation would split (troubleshooting #26)."
+    Write-Warning "Remote Control is $($status.status): the phone cannot reach this CLI session. Usually the Codex desktop app took the registration back (409). Turn off Desktop > Settings > Connections > 'Control this Mac or PC'; the shared server reconnects within 30s. Until then, do not type into this conversation from the phone: it only holds the desktop app's copy and the conversation would split (troubleshooting #26)."
 }
 # The WebSocket backend does not inherit this terminal's cwd or environment.
 # Pass cwd explicitly; status panes discover the TUI PID and exact thread title.
