@@ -726,3 +726,70 @@ codex app-server --remote-control --listen ws://127.0.0.1:14567
 ユーザー画像のウィンドウはdixim-security-endpoint-usb。実プロセスはTemp/DiXiM Security Endpoint for USB@E/dixim-security-endpoint-usb.exe -nocopy、DigiOnの署名Valid、版1.0.0.61。接続中のBUFFALO RUF3-KEV、E: UTILITIES/OPEN_KEV.exe/DiXiMSecurityEndpointと一致する。USB付属のウイルスチェックソフトが発生元で、Codex/WezTermのエラーダイアログではない。
 
 同ソフトのログではD:/E:のDBT_DEVICEREMOVECOMPLETEの直後にBackupDir() failedが反復し、bootDriveLetter:E drive not foundも記録されている。USBの取り外し/再認識時に保存先を失う状態が候補。ただし画像の引数エラーを直接記録した行は見つからず、同じ根本原因とは確定できない。まず安全な取り外し後にPC本体のUSBポートへ差し直して切り分ける。継続する場合はこの版・画像・USBログをBUFFALOサポートへ提示。認証/隔離データやTemp一式を削除する処置、ウイルスチェックの無効化は実施していない。製品仕様: https://www.buffalo.jp/press/detail/20250108-01.html
+
+## 24. `hi` の開始リマインダー（UserPromptSubmit フック）が文字化けして届く（2026-09-15）
+
+### 症状
+
+`hi` で開始したとき、フックの追加指示が `�Z�b�V�����J�n�v���g�R��` のように化けて Claude に届く（2026-09-14 の `hi` で実物を確認。/doctor で発見）。ファイル読込の指示が読めないため、GO ゲートが CLAUDE.md 本文頼みになっていた。
+
+### 原因
+
+フックとして起動された pwsh は、標準出力を**コンソールのコードページ（CP932）**で書き出す。Claude Code はフックの出力を **UTF-8** として読む。`.claude/hooks/session-start-reminder.ps1` の `ConvertTo-Json` は日本語をそのまま出力していたため、CP932 のバイト列が UTF-8 として解釈されて化けた。スクリプトファイル自体の文字コード（BOM 無し UTF-8）は無関係。手元の pwsh で直接実行すると OutputEncoding が utf-8 なので、再現しない点に注意。
+
+### 対処
+
+`ConvertTo-Json -Compress -Depth 10 -EscapeHandling EscapeNonAscii` に変更した。日本語を `\uXXXX` にエスケープし、JSON を ASCII だけにすれば、コードページに関係なく壊れない。
+
+検証: `cmd /c "chcp 932 & echo {""prompt"":""hi""} | pwsh -NoProfile -NonInteractive -File <hook>"` で、出力が ASCII のみ（1,555 文字）であること、`ConvertFrom-Json` で元の日本語に戻ること、`hi` 以外のプロンプトでは出力が空であることを確認。
+
+### 教訓
+
+- Windows で日本語を出力する pwsh フックは、**JSON を EscapeNonAscii にする**か、スクリプトの冒頭で `[Console]::OutputEncoding = [Text.Encoding]::UTF8` にする。
+- 同じ /doctor で見つかった他リポジトリのフック問題 2 件は、各セッションに依頼済み。
+  - sendai-waterworks-bureau: `args` で相対パス `.claude/hooks/hi-gate.ps1` を渡しているため、作業フォルダがリポジトリ直下でないと exit 64 になる。`${CLAUDE_PROJECT_DIR}` を使う形への修正を依頼。→ **2026-09-15 修正済（sendai `1c5d915`・本人承認）**。リポジトリ外から実行して、旧形式の再現・新形式の exit 0・挨拶以外で沈黙を確認済み。常に失敗していたのではなく、作業フォルダ依存だった（リポジトリ直下で起動したセッションでは発火していた）。
+  - Instagram-project-v2: `norm_sweep.py` が単独 1.7 秒のところ、SessionStart の 8 本同時実行で 5〜11 秒かかり、compact のたびに走っている。matcher "startup" 化などを依頼。
+
+## 25. コピーモードにすると背景（透過・backdrop）が点滅して消える（2026-09-15）
+
+### 症状
+
+Claude Code のペインで `Ctrl+Shift+X`（コピーモード）に入ると、ウィンドウ背景が点滅したり、消えたりする。#21（B11）で選択色を足した後に報告された。
+
+### 原因
+
+`update-status` ハンドラが、`json_encode(window:get_config_overrides()) ~= json_encode(overrides)` で「変わった時だけ `set_config_overrides`」としていた。ところが **Lua テーブルのキー順は不定**で、コピーモード中の override は入れ子の `colors`（選択色・カーソル色・tab_bar）を持つため、文字列比較が毎回不一致になる。Claude の TUI は常に再描画するので `update-status` が頻繁に発火し、そのたびに override が再適用され、`win32_system_backdrop`・透過が張り直されて点滅していた。通常時は `window_background_opacity` の 1 キーだけなので、比較がたまたま一致して目立たなかった。
+
+### 対処
+
+比較をやめ、**モード（copy/normal）が切り替わった時だけ** `set_config_overrides` を呼ぶようにした。状態は `wezterm.GLOBAL["override_mode_<window_id>"]` に持つ（reload を跨いで残る。入れ子テーブルへの書き込みは反映が不確かなのでフラットなキーにした）。`wezterm --config-file <repo>\wezterm\wezterm.lua show-keys` で読み込み成功（exit 0）を確認。
+
+### 注意
+
+- 旧ハンドラ（json 比較版）は reload では**解除されない**（#2）。保存での自動 reload 後も点滅が残るなら、旧ハンドラの残骸が原因なので WezTerm の完全再起動が必要。
+- 実機での確認は、コピーモードに入って背景が点滅しないこと、選択が黄背景で見えること。
+
+## 26. Codex が起動しない「Remote Control is not connected (errored)」（2026-09-15）
+
+### 症状
+
+`codex` で起動すると、`start-codex.ps1` が `Remote Control is not connected (errored)` を投げて止まる。
+
+### 原因
+
+#22 の 409 競合が再発した。Codex のログ（`~/.codex/logs_2.sqlite`・target `remote_control`）では、**デスクトップ版の内部 app-server（9/11 から起動したまま）が 07:55:53 に Errored → Connected** で登録を取り、08:15 起動の常駐サーバーは `HTTP error: 409 Conflict ... "Remote app server already online"` を 30 秒ごとに繰り返していた。ネットワークは正常（chatgpt.com:443 到達）。9/14 にデスクトップ側を OFF にしたはずだが、起動しっぱなしのデスクトップ版がスリープ明けなどに再接続したとみられる（設定が ON に戻ったのかは未確定）。
+
+`start-codex.ps1` は「connected になるまで最大 30 秒待ち、ダメなら throw」だったため、競合中は **CLI 自体が起動できなくなっていた**。スマホに見えないだけで CLI としては使える状態なのに、止めてしまうのは過剰だった。
+
+### 対処
+
+- `start-codex.ps1`: 共有サーバーが応答していれば、`errored` は 3 秒、それ以外は 30 秒まで待つ。未接続なら**警告を出して `--remote` で起動を続ける**（ローカル専用 CLI には黙って切り替えない方針は維持）。共有サーバー自体が 30 秒応答しない時だけ throw する。PowerShell パーサで構文エラー 0 を確認。
+- 根本対処はユーザー操作: デスクトップ版 Codex の Remote Control を OFF にするか、デスクトップ版を完全終了する。常駐サーバーは 30 秒以内に自動再接続し、共有サーバーに乗っている CLI の会話もスマホに出る。デスクトップ版のプロセスは Claude 側から kill しない。
+
+### 追記: 会話が分かれる仕組みと「CLI 軸」の運用（同日 12:03 決着）
+
+- **Remote Control はアカウントで 1 つ。** デスクトップ版の内部 app-server（stdio 専用で、外から `--remote` 接続できない）と常駐サーバーは、同じ installation id（`~/.codex/.codex-global-state.json` の `electron-local-remote-control-installation-id`）で競合する。CLI の会話を、デスクトップ版とスマホの両方でライブ共有する手段は現行仕様に無い（openai/codex #45386 が未対応）。
+- **デスクトップ版が Remote Control を持っている間は、CLI の会話がスマホとデスクトップ版に出ても、それは写し。** 08:27:21 にデスクトップ版が各リポジトリの会話を `originator: Codex Desktop` として 11 本作成した（`01a0a23f-…`）。スマホからの入力は、11:58 に写し `01a0a23f-203d…` 側で `thread/resume` され、CLI の元の会話 `01a0a23b…` には入らなかった＝**会話が分岐した**。自動では合流しない。
+- **決定（ユーザー）: CLI 軸＝案 C。** デスクトップ版の「設定 → Connections → Control this Mac or PC」を OFF にした。ログでは 12:03:08 にデスクトップ側が `remoteControl/disable` → `Connected→Disabled`、12:03:33 に常駐サーバーが `connected`。以後、スマホは常駐サーバー上の CLI の会話そのものに入力する（同じサーバーの同じ会話なので分岐しない）。
+- **運用ルール:** CLI の会話に**デスクトップ版から打たない**（打つとデスクトップ版の写しに入って分岐する）。デスクトップ版は別の作業用。`codex` 起動時に「Remote Control is errored」と警告が出たら、デスクトップ版の上記設定が ON に戻っていないか確認する。
+- **実機確認（同日）:** 案 C への切替後、ユーザーがスマホから CLI の会話へ送信し「大丈夫そう」と確認（分岐なし）。

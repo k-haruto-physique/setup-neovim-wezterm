@@ -23,13 +23,22 @@ try { $status = Invoke-CodexRemoteRequest } catch {
     Start-ScheduledTask -TaskName 'Codex Remote Control'
     $status = $null
 }
-$until = [datetime]::UtcNow.AddSeconds(30)
+$started = [datetime]::UtcNow
 while (-not $status -or $status.status -ne 'connected') {
-    if ([datetime]::UtcNow -ge $until) {
-        throw "Remote Control is not connected ($($status.status)). Check Codex Remote Control task and close desktop Remote Control to avoid a 409 conflict."
+    $waited = ([datetime]::UtcNow - $started).TotalSeconds
+    # 'errored' usually means a 409 from another server holding the registration;
+    # it retries on its own every 30s, so don't hold the CLI hostage waiting for it.
+    if ($status -and ($waited -ge 30 -or ($status.status -eq 'errored' -and $waited -ge 3))) { break }
+    if (-not $status -and $waited -ge 30) {
+        throw 'Codex Remote Control server is not running. Check the scheduled task "Codex Remote Control" and ~/.codex/logs/remote-control.log.'
     }
     Start-Sleep -Seconds 1
     try { $status = Invoke-CodexRemoteRequest } catch { $status = $null }
+}
+if ($status.status -ne 'connected') {
+    # Still join the shared server (never silently fall back to a local-only CLI):
+    # once Remote Control reconnects, this session becomes visible from the phone.
+    Write-Warning "Remote Control is $($status.status): the phone cannot reach this CLI session. Usually the Codex desktop app took the registration back (409). Turn off Desktop > Settings > Connections > 'Control this Mac or PC'; the shared server reconnects within 30s. Until then, do not type into this conversation from the phone or desktop app: they only hold a copy and the conversation would split (troubleshooting #26)."
 }
 # The WebSocket backend does not inherit this terminal's cwd or environment.
 # Pass cwd explicitly; status panes discover the TUI PID and exact thread title.

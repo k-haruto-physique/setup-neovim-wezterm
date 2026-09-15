@@ -102,11 +102,13 @@ config.show_close_tab_button_in_tabs = true
 -- タブバーを透過（Acrylic の効果を活かす）
 config.colors = {
 	tab_bar = TAB_BAR_COLORS,
-	selection_bg = "#FFD54F",
-	selection_fg = "#111111",
-	copy_mode_active_highlight_bg = { Color = "#FFD54F" },
-	copy_mode_active_highlight_fg = { Color = "#111111" },
-	copy_mode_inactive_highlight_bg = { Color = "#8D7535" },
+	-- 2026-09-15: 黄 (#FFD54F) は複数行選択で眩しいとの声で水色系へ。
+	-- カーソルの黄色（COPY_MODE_CURSOR_COLORS）はモード標識なので据え置き。
+	selection_bg = "#5DADE2",
+	selection_fg = "#0B1A26",
+	copy_mode_active_highlight_bg = { Color = "#5DADE2" },
+	copy_mode_active_highlight_fg = { Color = "#0B1A26" },
+	copy_mode_inactive_highlight_bg = { Color = "#2E6A8A" },
 	copy_mode_inactive_highlight_fg = { Color = "#FFFFFF" },
 }
 
@@ -501,7 +503,15 @@ wezterm.on("update-status", function(window, _pane)
 		}
 	end
 
-	if wezterm.json_encode(window:get_config_overrides()) ~= wezterm.json_encode(overrides) then
+	-- 2026-09-15: 以前は json_encode 同士の比較で「同じなら呼ばない」としていたが、
+	-- Lua テーブルのキー順は不定で、入れ子の colors があるコピーモード中は毎回不一致になる。
+	-- 結果、Claude の TUI 再描画ごとに set_config_overrides → 背景（backdrop/透過）が
+	-- 点滅して消えていた。モードが切り替わった時だけ適用する（GLOBAL は reload を跨いで残る）。
+	-- GLOBAL は入れ子テーブルへの書き込みが反映されない可能性があるので、フラットなキーで持つ。
+	local key = "override_mode_" .. tostring(window:window_id())
+	local mode = copying and "copy" or "normal"
+	if wezterm.GLOBAL[key] ~= mode then
+		wezterm.GLOBAL[key] = mode
 		window:set_config_overrides(overrides)
 	end
 end)

@@ -36,5 +36,8 @@ $output = @{
     }
 }
 
-$output | ConvertTo-Json -Compress -Depth 10
+# Hook stdout is decoded as UTF-8, but a hook-spawned pwsh writes with the console
+# code page (CP932), which garbled the Japanese reminder. \uXXXX escapes keep the
+# JSON pure ASCII, so it survives any code page.
+$output | ConvertTo-Json -Compress -Depth 10 -EscapeHandling EscapeNonAscii
 exit 0

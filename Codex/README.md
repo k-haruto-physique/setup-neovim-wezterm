@@ -62,7 +62,7 @@ Get-Content ~/.codex/logs/remote-control.log -Tail 30
 
 PowerShellの `codex` は `codex.exe` と同じフォルダに置いた `codex.ps1`（`codex-shim.ps1` の複製）に解決され、`start-codex.ps1` が `--remote ws://127.0.0.1:14567` と現在のcwdを渡す。PowerShellは同一フォルダでは.ps1を.exeより優先するため、**プロファイル未読込の既存シェルやNoProfileでも効く**（Claude Codeの `remoteControlAtStartup` 相当の起動経路非依存）。Ctrl+Shift+Nも同じスクリプトを呼ぶ。配置は `pwsh -NoProfile -File .\Codex\install-codex-shim.ps1`、Codex更新でbinが置き換わっても `remote-control.ps1` がログオン時に再配置する。パイプ入力付きの呼び出しは素のexeへ渡す。対象外はcmd.exe・exeのフルパス直接起動・デスクトップアプリ。既存のローカルCLI会話は自動では移らず、終了後に `codex resume --last` で共有バックエンドへ再開する。
 
-`remote-client.ps1` の `Invoke-CodexRemoteRequest` はWebSocket RPCでRemote Controlの実際の状態を取得する。起動時はconnectedを確認し、サーバー未起動ならログオンタスクを開始する。30秒以内に接続できない場合は理由を表示して終了し、ローカル専用起動へ黙って切り替えない。ネットワーク切断後の再接続はサーバー自身が行う。exec/review/doctor/管理コマンド・help/version・明示的な--remoteは元のCLIへそのまま渡す。resume/fork/agentsは共有バックエンドへ接続する。exeをフルパスで直接起動した場合はこの経路を通らない。
+`remote-client.ps1` の `Invoke-CodexRemoteRequest` はWebSocket RPCでRemote Controlの実際の状態を取得する。起動時はconnectedを確認し、サーバー未起動ならログオンタスクを開始する。共有サーバーが応答していてRemote Controlだけ未接続（`errored`＝多くはデスクトップ版との409競合）の場合は、警告を表示して共有サーバーへ接続したまま起動する（接続が戻ればその会話もスマホに出る）。共有サーバー自体が30秒応答しない場合だけ理由を表示して終了する。いずれもローカル専用起動へ黙って切り替えない（troubleshooting #26）。ネットワーク切断後の再接続はサーバー自身が行う。exec/review/doctor/管理コマンド・help/version・明示的な--remoteは元のCLIへそのまま渡す。resume/fork/agentsは共有バックエンドへ接続する。exeをフルパスで直接起動した場合はこの経路を通らない。
 
 デスクトップ側のRemote ControlはOFFにする。同じ登録で複数サーバーを接続すると409 Remote app server already onlineになる。ローカル /readyz のHTTP 200だけをリモート接続完了と判断しない。
 
