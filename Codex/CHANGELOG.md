@@ -1,5 +1,11 @@
 # 変更履歴
 
+## 2026-09-15 — Codex → Claude ブリッジ
+
+- `ask-claude.ps1`（Codex側）、`claude-listen.ps1`・`claude-reply.ps1`（Claude側）、`bridge-common.ps1` を追加。ファイルの受信箱で、待受中のClaudeへ依頼し、返答を受け取る。
+- 受信箱は `%LOCALAPPDATA%\Temp\codex-claude-bridge`。直下の `%LOCALAPPDATA%` は、Codexのサンドボックスで書けなかった（troubleshooting #27）。
+- 疑似Codexとの往復31秒、待受が無い時に置かないこと、Codex本体の往復37秒を確認。
+
 ## 2026-09-15 — Claude → Codex ブリッジ
 
 - `ask-codex.ps1` を追加。共有サーバー上の稼働中の会話（または `-New` で作る会話）へ1通送り、最終返答を標準出力に返す。

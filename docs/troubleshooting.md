@@ -794,3 +794,26 @@ Claude Code のペインで `Ctrl+Shift+X`（コピーモード）に入ると�
 - **運用ルール:** CLI の会話に**デスクトップ版から打たない**（打つとデスクトップ版の写しに入って分岐する）。デスクトップ版は別の作業用。`codex` 起動時に「Remote Control is errored」と警告が出たら、デスクトップ版の上記設定が ON に戻っていないか確認する。
 - **実機確認（同日）:** 案 C への切替後、ユーザーがスマホから CLI の会話へ送信し「大丈夫そう」と確認（分岐なし）。
 - **訂正（同日・ユーザー実機）:** デスクトップ版では、CLI の会話への入力が**仕様としてできない**（入力欄が無効）。上の「デスクトップ版から打たない」は注意ではなく、アプリ側がすでに防いでいる。分岐が起きうるのは「デスクトップ版が Remote Control を持っている間に、スマホから写しに打つ」経路だけ。案 C ならこの経路も無い。
+
+## 27. Codex から Claude 宛ての受信箱に書けない（Access denied）（2026-09-15）
+
+### 症状
+
+Codex → Claude ブリッジの `Codex/ask-claude.ps1` を Codex から実行すると、`Access to the path 'C:\Users\81809\AppData\Local\codex-claude-bridge\3644\inbox\<id>.json.tmp' is denied.` で失敗する。同じスクリプトを Claude 側のシェルで実行すると成功する。
+
+### 原因
+
+Codex の Windows サンドボックス（`~/.codex/config.toml` の `[windows] sandbox = "elevated"`）は、コマンドを `CodexSandboxUsers` グループのアカウント（`CodexSandboxOnline`/`Offline`）で実行する。書き込めるのは、ワークスペース・`%TEMP%`・`/tmp` 相当だけ（rollout の `turn_context` の `permission_profile` で確認）。`%LOCALAPPDATA%` 直下に作ったフォルダでは、`CodexSandboxUsers` は読み取りのみだった。
+
+### 対処
+
+受信箱を `%LOCALAPPDATA%\Temp\codex-claude-bridge` に移した（`Codex/bridge-common.ps1`）。`Temp` には `CodexSandboxUsers` の Modify が継承付きで付いているので、中に作るフォルダにも書ける。`config.toml` は変更していない。移設後、Codex 本体から Claude へ送って返答を受け取れることを確認した。
+
+### 別件（要判断・backlog B13）
+
+`~/.codex/config.toml` の実際の値は `sandbox_mode = "workspace-write"`・`approvals_reviewer = "auto_review"`（`approval_policy = "never"` はそのまま）。`Codex/README.md` と #17 の 09-14 更新にある「never + danger-full-access の確認なし実行」と食い違っている。いつ・何が戻したのかは未確認。どちらを正とするかはユーザーが決める。
+
+### 教訓
+
+- Codex に実行させるスクリプトの書き込み先は、ワークスペースか `%TEMP%` 配下にする。Claude 側で動いても、Codex のサンドボックスでは拒否されうる。
+- Codex の実効権限は `config.toml` ではなく、rollout の `turn_context`（`sandbox_policy`・`permission_profile`）で確認する。

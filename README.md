@@ -51,6 +51,10 @@ setup-neovim-wezterm/
 │   ├── runtime.toml            # 自動承認の正本スニペット
 │   ├── remote-control.ps1      # ログオン時の Remote Control 常駐タスク
 │   ├── ask-codex.ps1           # Claude → Codex ブリッジ（会話へ送信し最終返答を返す）
+│   ├── ask-claude.ps1          # Codex → Claude ブリッジ（待受中の Claude へ送信し返答を待つ）
+│   ├── claude-listen.ps1       # Claude 側の待受（1 通受けたら終了＝セッションを起こす）
+│   ├── claude-reply.ps1        # Claude 側の返答
+│   ├── bridge-common.ps1       # Codex → Claude ブリッジの共通処理（受信箱 %LOCALAPPDATA%\Temp\codex-claude-bridge）
 │   ├── register-remote-control-task.ps1 # 自動起動タスクの登録
 │   └── README.md
 └── docs/

@@ -3,16 +3,15 @@
 セッション開始（`hi`）時に**必ず読む**未完タスク・仕様書の単一台帳。
 troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約点。**完了したら CLOSED へ落とし、起点ファイル（#番号 / memory）にも反映**する。
 
-最終更新: 2026-09-14（ユーザーがスマホで現在のCodex会話の表示とB7のGPU固定完了を確認。B12・B7もCLOSEDへ。**OPEN は0件**）。
+最終更新: 2026-09-15（Codex ⇄ Claude ブリッジ作成中に、Codex のサンドボックス設定が docs と食い違っていることを発見。B13 を追加。**OPEN は1件**）。
 
 ---
 
 ## 🔴 OPEN（未完・要対応）
 
-未完タスクなし。
-
 | # | タスク | 状態 | 次の一手 | 起点 |
 |---|---|---|---|---|
+| B13 | **Codex の実効サンドボックスが docs と食い違い** | `~/.codex/config.toml` は `sandbox_mode = "workspace-write"` + `approvals_reviewer = "auto_review"`。`Codex/README.md`・#17 は「never + danger-full-access の確認なし実行」と記載。いつ戻ったかは未確認。ブリッジは Temp 配下へ移したので、どちらでも動く | ユーザーがどちらを正とするか決める → `config.toml` か docs（`Codex/README.md`・`runtime.toml`・#17）の片方を直す | troubleshooting **#27** |
 
 ---
 

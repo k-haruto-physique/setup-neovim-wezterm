@@ -82,7 +82,28 @@ pwsh -NoProfile -File .\Codex\ask-codex.ps1 -New -Cwd <dir> '...'     # CLIな�
 - 途中経過（コマンド・編集・途中のメッセージ）は、標準エラーに `codex>` 付きで出す。
 - 終了コード: 0 完了 / 1 失敗・送り先なし / 2 中断 / 3 タイムアウト（既定1800秒。ターン自体はCodex側で続く）。
 - `-New` は会話の立ち上げに1分ほどかかる（実測72秒。既存の会話へは7秒）。作った会話はCodexの履歴に残る。承認要求に答えるCLIがいないので、`runtime.toml` の `approval_policy = "never"` が前提。
-- 逆方向（CodexからClaudeの対話セッションへライブで送る）は手段が無い。Claudeの対話セッションに外から入力を差し込むAPIが無く、`wezterm cli send-text` もClaudeのTUIには届かない（troubleshooting #13）。
 - 検証（2026-09-15）: 稼働中CLIの会話へ送り、「受信」を7秒で取得。送信後も会話は読み込み中・idleのままで、CLIも生存。Codexがいないcwdでは送らずにexit 1。`-New` でも返答の取得を確認。
+
+### Codex → Claude ブリッジ（2026-09-15）
+
+Claude Codeの対話セッションには、外から入力を差し込む公開APIが無い。セッション間通信（名前付きパイプ）は鍵で保護されていて、外から使うのは認証情報の扱いになるので採用しない。そこで、ファイルの受信箱と、Claude自身が起動する待受で実現する。
+
+| 役割 | スクリプト | 動き |
+|---|---|---|
+| Codex | `ask-claude.ps1 '<依頼>'` | 待受中のClaudeの受信箱へ置き、返答ファイルを待って標準出力に出す |
+| Claude | `claude-listen.ps1`（バックグラウンド） | 受信箱を0.7秒ごとに見る。1通届いたら内容とidを出して終了し、その終了通知でセッションが起きる |
+| Claude | `claude-reply.ps1 -Id <id> -Message '<返答>'` | 返答を書く。Claudeはこの後、listenを再びバックグラウンドで起動する |
+
+- 受信箱: `%LOCALAPPDATA%\Temp\codex-claude-bridge\<claude.exeのPID>\`（`inbox` → `processing` → `done`、返答は `outbox`）。CodexのWindowsサンドボックスは `%LOCALAPPDATA%` 直下に書けないので、Temp配下に置く（troubleshooting #27）。
+- 書き込みは一時ファイルを書いてから名前を変える方式にし、書きかけのファイルを読まないようにしている。
+- 待受の目印は `listener.json`。Claudeのプロセスは、listenの親プロセスをたどって `claude.exe` を見つけて特定する。PIDの再利用で別プロセスへ届かないよう、開始時刻も照合する。
+- 送り先の選び方: 既定はcwdが一致する待受中のセッション。別リポジトリのClaudeへは `-Name <セッション名>` か `-ClaudePid`。待受中のセッションが無ければ、何も置かずにexit 1。
+- 待受が次のメッセージを待つまでの間（返答中）に届いたものは、受信箱で待つ。タイムアウト（既定1800秒）までに受け取られなければ取り下げる。受け取り済みで処理中なら、そのままにする。
+- 待受は時間制限の無いバックグラウンドのシェルで動く。Monitorツールは最長30分で止まるので使わない。
+- Claudeは、届いた依頼をユーザー本人ではなくCodexからの依頼として扱う。破壊的な操作は、通常どおりユーザーに確認する（`CLAUDE.md`）。
+- 検証（2026-09-15）:
+  - 疑似Codex（Claude側のシェル）から送り、31秒で往復。
+  - 待受が無い時は、何も置かずにexit 1。
+  - Codex本体の往復は、ClaudeがCodexに `ask-claude.ps1` の実行を頼む形で37秒。1回目は `%LOCALAPPDATA%` 直下でAccess deniedになり、Temp配下へ移して成功した。
 
 検証: タスク再登録後Running、RPC connected、GUIを増やさないPTYでCLI起動→新規thread UUIDとモデル/effort/cwd/YOLO表示→切断時に同サーバーへのresume案内を確認。既存ステータスの回帰8件成功。共有サーバーのフックはTUIの環境変数を継承しないため、表示の紐付けはWezTermタイトルのthread UUIDとTUI PIDによる発見が担当する。
