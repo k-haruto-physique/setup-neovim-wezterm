@@ -34,52 +34,15 @@ Windows 11 上の Neovim + LazyVim + WezTerm 環境を symlink で dotfiles 管�
 - 実体側 (`%LOCALAPPDATA%\nvim` 等) 経由で Edit ツールを叩くと **`Refusing to write through symlink` エラー**が出る。リポジトリ側パスへ切り替えること。
 - symlink 構成は管理者権限 PowerShell で作成済。再構築が必要なら `docs/troubleshooting.md` 参照。
 
-## リロード挙動
+## 触る場所ごとの注意（必要時だけ読み込まれる）
 
-- **WezTerm**: `config.automatically_reload_config = true`。色・キー等は保存で再読込。ただし完全再起動（プロセス kill）が要るものが 2 種:
-  - `wezterm.on(...)` 登録イベントハンドラは reload で**解除されない**（addon 系の挙動変更）
-  - **`default_prog` の変更は稼働中インスタンスに乗らない**（2026-07-16 実測。symlink 経由の config をウォッチャが拾えていない疑い）。反映検証は既存ウィンドウを壊さずに `wezterm --config-file <repo>\wezterm\wezterm.lua start --always-new-process` で行う（#15）
-- **Neovim**: `:Lazy reload <plugin>` か `:qa` → `nvim` 再起動が確実。
-
-## WezTerm の透過率（現状: 静的 0.95 統一 / nvim 検出は廃止済）
-
-透過率は静的 `config.window_background_opacity = 0.95`（`wezterm/wezterm.lua`）で統一。
-**nvim ペインを検出して透過率を動的切替する仕組み（`pane_is_nvim()` / OSC 1337 `IS_NVIM` 送信 / 0.85↔0.95 切替）は実装していない**。当初は動的切替を検討したが Windows TUI で `get_user_vars()`・title・foreground プロセス検出のいずれも不安定（LSP 子プロセスが一瞬 foreground を奪う等）で廃止した。経緯は `docs/troubleshooting.md` 第 2 項。
-
-残っているのは次の 2 つのみ:
-- `nvim/lua/config/options.lua` の `titlestring = "%t - NVIM (%{getcwd()})"`（ペイン名で nvim を視認しやすくする用途。透過率制御には未使用）
-- `wezterm.lua` の `update-status` ハンドラが、過去 addon ハンドラ残骸による opacity 書換えを抑止するため毎フレーム 0.95 を明示 override
-
-## キーバインド（このリポジトリ独自）
-
-- `Ctrl+Shift+X` → CopyMode（明示バインド）。突入時カーソル黄色化で視認。
-- `Ctrl+Shift+I` → 新規 WezTerm ウィンドウで `nvim .`（マルチモニター運用向け、上モニター用）
-- `Ctrl+Shift+N` → 新規ウィンドウで `claude`（下モニターで複数 claude 用）
-- `Ctrl+Shift+O` → 選択中のパスを nvim で開く（無選択時は QuickSelect 数字ラベル → 選んで開く）
-- マウス: **Ctrl+Click = リンク/パスを開く**・プレーン/Shift+Click = 選択のみ（誤爆防止で既定の click-opens-link を無効化済。B2/2026-07-02）
-- Neovim: `<leader>xo` = OS 既定アプリで開く（HTML→ブラウザ、PDF→Edge 等）/ `<leader>xe` = エクスプローラで cwd 開く / `<leader>fh` = neo-tree を ~（ホーム）ルートで開く（LazyVim 既定の help 検索を上書き）
-
-CopyMode key_table は明示定義: 矢印キーを優位 + hjkl 併設。`PageUp/Down/Home/End` も同様の理由で追加。`n`/`N` で検索マッチ間ジャンプ（検索開始は `Ctrl+Shift+F` のみ）。**意図しない検索バー誤発火を防ぐため `/` `?` は `act.Nop` で無効化**（検索パターンのリセットは検索バー内 `Ctrl+U`）。
-
-## 編集対象言語
-
-SQL (PostgreSQL/PostGIS), Python, Markdown, Lua  
-LazyVim Extras 有効化済: `lang.sql`, `lang.python`, `lang.markdown`（lang.lua はコアに同梱・有効化不要）
+- WezTerm のリロード挙動・透過率の経緯・CopyMode/mouse_bindings/GPU の地雷 → `wezterm/CLAUDE.md`
+- Neovim のリロード・カスタムプラグイン構成の意図（init last-wins #11）→ `nvim/CLAUDE.md`
+- 独自キーバインド（`Ctrl+Shift+X/I/N/O/S/E/Y`・Ctrl+Click・`<leader>xo/xe/fh`・CopyMode 内キー）→ `docs/keybinds.md`（`hi` で毎回読む）
 
 ## 重要な gotcha
 
 - **IME × Vim キー**: 日本語 IME ON 中は `h`/`j`/`k`/`l` が IME に奪われ、CopyMode・Normal モードで動かない。矢印キーは IME 透過。詳細 `docs/troubleshooting.md` 第 1 項。
-- **WezTerm reload とイベントハンドラ残骸**: 旧 Claude Code addon 等の `wezterm.on()` が config reload では消えない。完全再起動が必要。詳細 `docs/troubleshooting.md` 第 2 項。
-- **`Search:` バー誤発火**: `act.CopyMode("ClearPattern")` を Multiple action 内で呼ぶと副作用で search overlay が出る。**ClearPattern は使わない**。
-- **CopyMode key_table 上書きの罠**: `config.key_tables.copy_mode = {...}` は WezTerm デフォルトを完全置換（fall through しない）。必要なキーは全て自前で定義する。逆に **`config.mouse_bindings` は既定とマージ**される（消したい既定バインドは明示上書きが必要）。
-- **GPU レンダラー**: `front_end = "WebGpu"` + `HighPerformance` は 2026-07-03 に試して**不採用**（Optimus/NVIDIA 環境で入力ラグ・透過破損の上流報告多数、かつ凍結 2 種= #12/#13 はどちらも GPU 非起因）。既定 OpenGL のまま運用。Optimus のアダプタ固定は Windows 設定 > グラフィックス で行う。詳細 `docs/troubleshooting.md` #14。
-
-## カスタムプラグイン構成
-
-`nvim/lua/plugins/` 配下:
-- `colorscheme.lua` — tokyonight `transparent = true` + 全主要 highlight 群を `bg = NONE` に上書きする ColorScheme autocmd
-- `markdown.lua` — render-markdown.nvim を**完全無効化**（`enabled = false`）+ **markdownlint-cli2 の lint を無効化**（conform のフォーマットは継続）。conceallevel=0 と markdown 背景剥がしは `colorscheme.lua` の単一 `LazyVim/LazyVim` init に集約済（同名 spec の init last-wins 問題 → troubleshooting #11）
-- `ui-clean.lua` — vim-illuminate を背景塗りなしの細い underline のみに
 
 ## レガシー資産
 
