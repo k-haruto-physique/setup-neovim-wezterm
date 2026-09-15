@@ -3,15 +3,16 @@
 セッション開始（`hi`）時に**必ず読む**未完タスク・仕様書の単一台帳。
 troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約点。**完了したら CLOSED へ落とし、起点ファイル（#番号 / memory）にも反映**する。
 
-最終更新: 2026-09-15（Codex ⇄ Claude ブリッジ作成中に、Codex のサンドボックス設定が docs と食い違っていることを発見。B13 を追加。**OPEN は1件**）。
+最終更新: 2026-09-15（Codex ⇄ Claude ブリッジを追加し、`hi` で待受を自動起動。B13 は実際の設定 `workspace-write` を正として docs を合わせ CLOSED。**OPEN は0件**）。
 
 ---
 
 ## 🔴 OPEN（未完・要対応）
 
+未完タスクなし。
+
 | # | タスク | 状態 | 次の一手 | 起点 |
 |---|---|---|---|---|
-| B13 | **Codex の実効サンドボックスが docs と食い違い** | `~/.codex/config.toml` は `sandbox_mode = "workspace-write"` + `approvals_reviewer = "auto_review"`。`Codex/README.md`・#17 は「never + danger-full-access の確認なし実行」と記載。いつ戻ったかは未確認。ブリッジは Temp 配下へ移したので、どちらでも動く | ユーザーがどちらを正とするか決める → `config.toml` か docs（`Codex/README.md`・`runtime.toml`・#17）の片方を直す | troubleshooting **#27** |
 
 ---
 
@@ -31,6 +32,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | 日付 | タスク | 確定根拠 |
 |---|---|---|
+| 2026-09-15 | **B13 Codex の実効サンドボックスと docs の食い違い** | `~/.codex/config.toml` は `workspace-write` + `auto_review`、docs は `danger-full-access` と記載していた。ユーザーの「どちらでもいい、お互いにやりやすい運用で」を受けて、実際の設定を正とし、`Codex/runtime.toml`・`Codex/README.md`・#17 を合わせた。ブリッジは Temp 配下で動作確認済み。#27 |
 | 2026-09-14 | **B12 Codexシム経由のスマホ表示** | CLIの共有サーバー経由resumeを実測済み。ユーザーがスマホに現在の会話が「表示されてる」と確認。#22 |
 | 2026-09-14 | **B7 WezTermのGPU高パフォーマンス固定** | ユーザーが「b7ok」と完了を確認。既定OpenGLでの運用を継続。#14 |
 | 2026-09-14 | **B11 CopyModeの黄背景強調・表示安定性** | ユーザーが実機状態を「概ね問題なさそう」と確認。再発時は#21を起点に再開する |

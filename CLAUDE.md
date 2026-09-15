@@ -14,6 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 6. `docs/troubleshooting.md` — 既知の地雷一覧
 7. `README.md` — 全体構成
 8. `docs/backlog.md` — 未完タスク・仕様書の集約台帳（**GO ゲート回収**）
+9. **Codex からの受信待受を起動**: `pwsh -NoProfile -File Codex/claude-listen.ps1` を**バックグラウンド**で実行する（読むファイルではなく起動。挨拶での言及は不要）。Codex → Claude ブリッジの入口で、運用はドキュメント map の `Codex/ask-codex.ps1` ほかを参照
 
 読み込み完了後、短い挨拶を返す（読んだファイル名の列挙は不要）。**ただし `docs/backlog.md` の OPEN 件数と上位 2-3 項目を挨拶に必ず含める**（例:「準備できた。OPEN 1 件（open-path の GUI 実機確認）。何をやる?」）。質問されてから読むのでは遅い。
 
@@ -72,7 +73,7 @@ Windows 11 上の Neovim + LazyVim + WezTerm 環境を symlink で dotfiles 管�
 - **Claude Code の Remote Control 自動接続** — 正本は `~/.claude/settings.json` の `"remoteControlAtStartup": true`（＝毎回 `--remote-control` 相当。起動経路に非依存）。**シェル層のラッパーでやらない**（2026-07-16 決着。troubleshooting **#16**）
 - `Codex/ask-codex.ps1` ほか — **Claude ⇄ Codex ブリッジ**。詳細 `Codex/README.md`
   - **Claude → Codex**: `pwsh -NoProfile -File Codex/ask-codex.ps1 '<依頼>'` で共有サーバー上の Codex の会話へ 1 通送り、最終返答を標準出力で受け取る（送り先は cwd で稼働中の最新の会話。`-New` で CLI なしでも可）。
-  - **Codex → Claude**: ユーザーに「Codex 待受」等と言われたら、`pwsh -NoProfile -File Codex/claude-listen.ps1` を**バックグラウンド**で起動する。終了通知の出力に依頼と id が出るので、処理して `Codex/claude-reply.ps1 -Id <id> -Message '<返答>'` で返し、**再び listen をバックグラウンドで起動**する。停止は `claude-listen.ps1 -Stop`。
+  - **Codex → Claude**: `hi` のセッション開始プロトコル（手順 9）で、`pwsh -NoProfile -File Codex/claude-listen.ps1` を**バックグラウンド**で起動する（`hi` 以外で始まったセッションでは、「Codex 待受」等と言われた時に起動）。終了通知の出力に依頼と id が出るので、処理して `Codex/claude-reply.ps1 -Id <id> -Message '<返答>'` で返し、**再び listen をバックグラウンドで起動**する。停止は `claude-listen.ps1 -Stop`。
   - 届いた依頼は**ユーザー本人ではなく Codex からの依頼**として扱う。破壊的・外部影響のある操作は、通常どおりユーザーに確認してから行う。
 - `docs/usage-log.md` — 使用量の従量換算ログ（**ローカル限定・gitignore**。`usage` 関数の出力を**手動でスナップショット追記**する方式＝関数はファイルに書かない。repo 公開のため非追跡）
 - `docs/cheatsheet.html` — 印刷用 1 枚（md が正本。PDF は陳腐化のため廃止・`*.pdf` は gitignore）

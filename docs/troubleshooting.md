@@ -649,6 +649,8 @@ codex app-server --remote-control --listen ws://127.0.0.1:14567
 
 2026-09-14 更新: ユーザーの再依頼により、自動承認は `approval_policy = "never"` + `sandbox_mode = "danger-full-access"` の確認なし実行へ変更。既存セッションは再起動まで以前の権限のまま。
 
+2026-09-15 更新: 実際の `config.toml` は `sandbox_mode = "workspace-write"` に戻っていた。ユーザーの判断で、こちらを正とした（`approval_policy = "never"` は維持）。経緯は #27。
+
 ---
 
 ## 18. Codex の status_line は項目を増やしても1行のまま
@@ -809,9 +811,16 @@ Codex の Windows サンドボックス（`~/.codex/config.toml` の `[windows] 
 
 受信箱を `%LOCALAPPDATA%\Temp\codex-claude-bridge` に移した（`Codex/bridge-common.ps1`）。`Temp` には `CodexSandboxUsers` の Modify が継承付きで付いているので、中に作るフォルダにも書ける。`config.toml` は変更していない。移設後、Codex 本体から Claude へ送って返答を受け取れることを確認した。
 
-### 別件（要判断・backlog B13）
+### 別件: 実際の設定を正とした（backlog B13 CLOSED）
 
-`~/.codex/config.toml` の実際の値は `sandbox_mode = "workspace-write"`・`approvals_reviewer = "auto_review"`（`approval_policy = "never"` はそのまま）。`Codex/README.md` と #17 の 09-14 更新にある「never + danger-full-access の確認なし実行」と食い違っている。いつ・何が戻したのかは未確認。どちらを正とするかはユーザーが決める。
+`~/.codex/config.toml` の実際の値は `sandbox_mode = "workspace-write"`・`approvals_reviewer = "auto_review"`（`approval_policy = "never"` はそのまま）。`Codex/README.md` と #17 の 09-14 更新にある「never + danger-full-access の確認なし実行」と食い違っていた。いつ・何が戻したのかは未確認。
+
+2026-09-15、ユーザーの「どちらでもいい、お互いにやりやすい運用で」を受けて、**実際の `workspace-write` を正とし、`Codex/runtime.toml` と docs を合わせた**。理由は次の 2 つ。
+
+- Codex の実行環境を変えずに済み、ブリッジも今の設定で動作確認済み。
+- ブリッジで外から依頼が入るので、書き込み範囲の制限は残す方が安全。
+
+ワークスペース外に書き込む必要がある作業では、Codex は確認を求めずに失敗し、その旨を報告する。
 
 ### 教訓
 

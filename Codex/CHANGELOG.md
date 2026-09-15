@@ -1,5 +1,10 @@
 # 変更履歴
 
+## 2026-09-15 — 権限設定を実際の設定に合わせる・待受の自動起動
+
+- `runtime.toml` を `sandbox_mode = "workspace-write"` に変更。実際のユーザー設定を正とした（troubleshooting #27）。
+- Claude 側の待受（`claude-listen.ps1`）を、このリポジトリの `hi` で自動起動する運用にした。
+
 ## 2026-09-15 — Codex → Claude ブリッジ
 
 - `ask-claude.ps1`（Codex側）、`claude-listen.ps1`・`claude-reply.ps1`（Claude側）、`bridge-common.ps1` を追加。ファイルの受信箱で、待受中のClaudeへ依頼し、返答を受け取る。

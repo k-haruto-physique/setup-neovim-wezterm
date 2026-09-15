@@ -1,4 +1,5 @@
-# Run without approval prompts; full access avoids blocked sandbox escalations.
+# Run without approval prompts inside the workspace sandbox (writable: workspace + %TEMP%).
+# 2026-09-15: the live config's workspace-write is the source of truth, not danger-full-access (troubleshooting #27).
 approval_policy = "never"
-sandbox_mode = "danger-full-access"
+sandbox_mode = "workspace-write"
 approvals_reviewer = "auto_review"

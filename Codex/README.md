@@ -34,7 +34,7 @@ Excelスキルのアイコン警告を再修復する場合は `pwsh -NoProfile 
 
 ## 自動承認と Remote Control
 
-`runtime.toml` は `approval_policy = "never"` と `sandbox_mode = "danger-full-access"` を指定し、確認を挟まず実行する。ユーザー設定 `~/.codex/config.toml` にも反映済み。`never` だけではサンドボックス外の操作が失敗するため、両方を組にする。既存セッションの権限は変わらず、次回起動時に反映される。
+`runtime.toml` は `approval_policy = "never"` と `sandbox_mode = "workspace-write"` を指定し、確認を挟まず実行する。書き込めるのはワークスペース（cwd）と `%TEMP%` 配下だけで、それ以外への書き込みは確認を求めずに失敗する（troubleshooting #27）。2026-09-14 に一度 `danger-full-access` にしたが、実際のユーザー設定は `workspace-write` に戻っていた。2026-09-15 に実際の設定を正とした。ブリッジで外から依頼が入るので、書き込み範囲の制限は残す。既存セッションの権限は変わらず、次回起動時に反映される。
 
 Remote Control は `config.toml` に自動起動キーがないため、Windows のタスク `Codex Remote Control` がログオン時に `remote-control.ps1` を非表示で起動する。
 
@@ -100,6 +100,7 @@ Claude Codeの対話セッションには、外から入力を差し込む公開
 - 送り先の選び方: 既定はcwdが一致する待受中のセッション。別リポジトリのClaudeへは `-Name <セッション名>` か `-ClaudePid`。待受中のセッションが無ければ、何も置かずにexit 1。
 - 待受が次のメッセージを待つまでの間（返答中）に届いたものは、受信箱で待つ。タイムアウト（既定1800秒）までに受け取られなければ取り下げる。受け取り済みで処理中なら、そのままにする。
 - 待受は時間制限の無いバックグラウンドのシェルで動く。Monitorツールは最長30分で止まるので使わない。
+- 待受の起動: このリポジトリのClaudeは、`hi` のセッション開始プロトコル（`CLAUDE.md` の手順9）で自動的に待受を始める。hiフック（`.claude/hooks/session-start-reminder.ps1`）の手順一覧には未反映（Claudeからのフック編集は自動モードでブロックされる）だが、フックは「差異があればCLAUDE.mdが勝つ」としている。`hi` 以外で始めたセッションでは、ユーザーが「Codex待受」と言った時に起動する。
 - Claudeは、届いた依頼をユーザー本人ではなくCodexからの依頼として扱う。破壊的な操作は、通常どおりユーザーに確認する（`CLAUDE.md`）。
 - 検証（2026-09-15）:
   - 疑似Codex（Claude側のシェル）から送り、31秒で往復。
