@@ -867,9 +867,20 @@ Claude Code の自動更新は、**動いている実行ファイルを `claude.
 
 `set_right_status` はタブバー領域に描かれる＝**ウィンドウ幅で固定**（ここでは 190 桁）。ペインをいくら割っても縮まない。
 
-- `Codex/tabbar-status.ps1`: **1 プロセス**で全 Codex ペインを担当。WezTerm のペインタイトル `codex | <thread-uuid> | <model>` から thread UUID を取り、rollout を解決して `%LOCALAPPDATA%\Temp\codex-status\<pane_id>.json` に 5h/7d 制限・cwd・Git を書く。#19 で決めた「UUID で結合」と同じ精度で、ライフサイクルフックは不要。
-- `wezterm/wezterm.lua`: `update-status` がアクティブペインぶんの JSON を読んで `set_right_status`。**分割・移動・幾何修復を一切しない**ので、#19 の配置ずれ機構ごと不要になった。
-- Codex 内蔵は `status_line = ["model-with-reasoning", "context-remaining"]` の 2 項目（約 40 桁）だけにして、47 桁ペインでも切れないようにする。`terminal_title` は **触らない**（`session-id` が監視の結合キー）。
+#### 置き場所は「値の性質」で決める（ユーザー指摘で初版から修正）
+
+初版は cwd と Git もタブバーへ出したが、ユーザー指摘「ディレクトリは各セッションごとに異なるからまとめられるとおかしい」で誤りと判明した。**タブバーはウィンドウに 1 本しかない**ので、ペインごとに違う値を置くと「今どのセッションの cwd を見ているのか」が分からなくなる。正しい分担:
+
+| 値 | 性質 | 置き場所 |
+|---|---|---|
+| モデル+effort / context 残量 / **cwd** / **branch** | **セッション固有** | **Codex 内蔵 status line**（そのペインの中） |
+| **5h / 7d 使用制限** | **アカウント共通**（全セッションで同じ枠） | **タブバー右**（1 つで足り、切れると困る） |
+
+判定基準は「切れると困るか」×「1 つで足りるか」。使用制限だけが両方を満たす。
+
+- `Codex/tabbar-status.ps1`: **1 プロセス**で全 Codex ペインを見て、ペインタイトル `codex | <thread-uuid> | <model>` の UUID から rollout を解決し、**最も新しく書かれた rollout の使用制限**を `%LOCALAPPDATA%\Temp\codex-statusccount.json` に 1 つだけ書く（制限はアカウント共通で、セッション間の差は読んだ時刻の古さだけ）。セッション固有の値は一切書かない。ライフサイクルフックは不要。
+- `wezterm/wezterm.lua`: `update-status` が `account.json` を読んで `set_right_status`。**アクティブペインが Codex の時だけ**出す（クロコのペインで Codex の制限を出すと紛らわしい。クロコ側の制限は Claude 自身の statusline が持つ）。**分割・移動・幾何修復を一切しない**ので、#19 の配置ずれ機構ごと不要になった。
+- Codex 内蔵は `status_line = ["model-with-reasoning", "context-remaining", "project-name", "git-branch"]`。パス全体が要るなら `project-name` → `current-dir` に替える（約 45 桁増えるので広いペイン限定）。`terminal_title` は **触らない**（`session-id` が監視の結合キー）。
 - `hide_tab_bar_if_only_one_tab = false`。true のままだと 1 タブになった瞬間に表示が丸ごと消える。代償は常時 1 行。
 
 検証（headless）: 3 つの Codex セッションが混線せず、それぞれ別 cwd・別 rollout・別使用率で書き出されることを確認（qgis / Instagram / life-haruto）。`wezterm --config-file <repo>\wezterm\wezterm.lua show-keys` exit 0。

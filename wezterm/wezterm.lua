@@ -37,8 +37,11 @@ local PATH_PATTERN =
 -- ペイン内（内蔵 status line / 旧 4 段ペイン）は分割するたびに桁が足りず切れる
 -- ＝実測で内蔵 3 項目が既に 63 桁、クロコ側のペインは 47 桁まで狭くなっていた。
 -- タブバーはウィンドウ幅（190 桁）なので分割に不感。
--- tabbar-status.ps1 が 1 プロセスで全 Codex ペインぶんの JSON を書き、
--- ここで update-status がアクティブペインのぶんだけ読む（分割・移動・修復は一切しない）。
+-- ただしタブバーはウィンドウに 1 本しかないので、**アカウント共通の 5h/7d 使用制限だけ**を
+-- ここへ逃がす。セッション固有の値（モデル / context / cwd / branch）は Codex 内蔵の
+-- status line がペインの中で持つ（まとめると、どのセッションの cwd か分からなくなる）。
+-- tabbar-status.ps1 が 1 プロセスで account.json を書き、update-status はそれを読むだけ
+-- （分割・移動・修復は一切しない）。
 local CODEX_DIR = "C:/Users/81809/Documents/Repositories/setup-neovim-wezterm/Codex/"
 local CODEX_TABBAR_SCRIPT = CODEX_DIR .. "tabbar-status.ps1"
 local CODEX_START_SCRIPT = CODEX_DIR .. "start-codex.ps1"
@@ -130,8 +133,8 @@ local SOLID_RIGHT_ARROW = wezterm.nerdfonts.ple_upper_left_triangle
 -- 引数 4 番目は WezTerm 側の config オブジェクト。名前を `config` にすると
 -- このファイル冒頭の `config` を**シャドウ**して事故るので `_` 付きで受ける。
 wezterm.on("format-tab-title", function(tab, _tabs, _panes, _config, _hover, max_width)
-	-- 2026-05-22: hide_tab_bar_if_only_one_tab=true により 1 タブ時はそもそも fire しない。
-	-- 旧 "#tabs <= 1 -> 空文字" の分岐は dead code として削除。
+	-- 2026-09-16: hide_tab_bar_if_only_one_tab=false にしたので 1 タブでも fire する
+	-- （Codex の使用制限を set_right_status で出すためバーを常設した）。
 	local background = "#5c6d74"
 	local foreground = "#FFFFFF"
 	local edge_background = "none"
@@ -174,9 +177,13 @@ end
 ----------------------------------------------------
 -- Codex ステータス（タブバー右側）
 ----------------------------------------------------
--- tabbar-status.ps1 が書いた JSON を、アクティブペインのぶんだけ読む。
-local function codex_status_for(pane)
-	local file = io.open(CODEX_STATUS_DIR .. "\\" .. tostring(pane:pane_id()) .. ".json", "r")
+-- 置き場所の原則: **セッション固有の値はタブバーに出さない**。
+-- タブバーはウィンドウに 1 本しかないので、ペインごとに違う cwd / branch を出すと
+-- 「今どのセッションのディレクトリを見ているのか」が分からなくなる。
+-- cwd と branch は Codex 内蔵の status line（各ペインの中）が持つ。
+-- タブバーへ逃がすのは **アカウント共通で、切れると困る** 使用制限だけ。
+local function codex_account_limits()
+	local file = io.open(CODEX_STATUS_DIR .. "\\account.json", "r")
 	if not file then return nil end
 	local raw = file:read("*a")
 	file:close()
@@ -187,13 +194,20 @@ local function codex_status_for(pane)
 	return data
 end
 
+-- Codex の制限なので、クロコのペインを見ている時に出すと紛らわしい（クロコ側の
+-- 制限は Claude 自身の statusline が持っている）。Codex のペイン限定で出す。
+local function is_codex_pane(pane)
+	-- plain find（第4引数 true）: "|" を Lua パターンとして解釈させない。
+	return pane ~= nil and pane:get_title():find("codex | ", 1, true) == 1
+end
+
 -- 🚫 ここから監視プロセスを起動してはいけない（2026-09-16 実測・troubleshooting #29）。
 -- `wezterm.background_child_process` で `conhost --headless pwsh` を起こしたところ、
 -- 30 秒ごとに **0xc0000142（STATUS_DLL_INIT_FAILED）のモーダルダイアログ**が出た。
 -- wezterm-gui はコンソールを持たない GUI プロセスなので、その子として conhost の
 -- headless 起動が成立しない（タスクスケジューラ経由では成立する。register-*-task.ps1 参照）。
 -- 監視プロセスの起動はログオンタスク `Codex Tab Bar Status` の責務。
--- Lua 側は**読むだけ**にして、止まっていたら黙って非表示にする（codex_status_for の鮮度判定）。
+-- Lua 側は**読むだけ**にして、止まっていたら黙って非表示にする（codex_account_limits の鮮度判定）。
 
 local STATUS_DIM = "#737994"
 local function stage_color(percent)
@@ -203,37 +217,25 @@ local function stage_color(percent)
 end
 
 -- statusline.ps1 と同じ記号・Catppuccin Frappe 配色のまま 1 行へ畳む。
-local function format_codex_status(data)
+-- 出すのは 5h / 7d の使用制限だけ（アカウント共通なので 1 つで正しい）。
+local function format_codex_limits(data)
 	local out = {}
-	local function segment(items)
+	local function limit(label, percent, resets)
+		if type(percent) ~= "number" then return end
 		if #out > 0 then
 			table.insert(out, { Foreground = { Color = STATUS_DIM } })
 			table.insert(out, { Text = " │ " })
 		end
-		for _, item in ipairs(items) do
-			table.insert(out, item)
-		end
-	end
-	local function limit(label, percent, resets)
-		if type(percent) ~= "number" then return end
 		local tail = (type(resets) == "string" and resets ~= "") and (" ↺" .. resets) or ""
-		segment({
-			{ Foreground = { Color = STATUS_DIM } },
-			{ Text = label },
-			{ Foreground = { Color = stage_color(percent) } },
-			{ Text = string.format("%d%%", math.floor(percent + 0.5)) },
-			{ Foreground = { Color = STATUS_DIM } },
-			{ Text = tail },
-		})
+		table.insert(out, { Foreground = { Color = STATUS_DIM } })
+		table.insert(out, { Text = label })
+		table.insert(out, { Foreground = { Color = stage_color(percent) } })
+		table.insert(out, { Text = string.format("%d%%", math.floor(percent + 0.5)) })
+		table.insert(out, { Foreground = { Color = STATUS_DIM } })
+		table.insert(out, { Text = tail })
 	end
 	limit("◐ 5h:", data.primary, data.primary_reset)
 	limit("◑ 7d:", data.secondary, data.secondary_reset)
-	if type(data.dir) == "string" and data.dir ~= "" then
-		segment({ { Foreground = { Color = "#8caaee" } }, { Text = "▸ " .. data.dir } })
-	end
-	if type(data.git) == "string" and data.git ~= "" then
-		segment({ { Foreground = { Color = "#a6d189" } }, { Text = "⎇ " .. data.git } })
-	end
 	if #out == 0 then return "" end
 	table.insert(out, { Text = " " })
 	return wezterm.format(out)
@@ -494,8 +496,8 @@ wezterm.on("update-status", function(window, _pane)
 	local pane_id = active and active:pane_id() or -1
 	local now = os.time()
 	if codex_status_cache.at ~= now or codex_status_cache.pane ~= pane_id then
-		local data = active and codex_status_for(active) or nil
-		codex_status_cache = { at = now, pane = pane_id, text = data and format_codex_status(data) or "" }
+		local data = is_codex_pane(active) and codex_account_limits() or nil
+		codex_status_cache = { at = now, pane = pane_id, text = data and format_codex_limits(data) or "" }
 	end
 	window:set_right_status(codex_status_cache.text)
 	window:set_left_status("")

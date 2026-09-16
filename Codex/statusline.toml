@@ -1,5 +1,5 @@
 [tui]
-status_line = ["model-with-reasoning", "context-remaining"]
+status_line = ["model-with-reasoning", "context-remaining", "project-name", "git-branch"]
 status_line_use_colors = true
 terminal_title = ["app-name", "session-id", "model-with-reasoning"]
 
