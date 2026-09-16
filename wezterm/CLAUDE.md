@@ -23,6 +23,7 @@
 
 - **置き場所の原則**: タブバーはウィンドウに 1 本しかない。だから**アカウント共通で、切れると困る値**（使用制限）だけを置く。セッション固有の値（モデル / context / cwd / branch）は Codex 内蔵 `status_line` がペインの中で持つ。まとめるとどのセッションの cwd か分からなくなる。
 - `hide_tab_bar_if_only_one_tab = false` はこの表示の前提（true だと 1 タブ時にバーごと消える）。
+- **タブバー背景は端末と同じ不透明色**（`TERMINAL_BG = "#000000"`＝color_scheme 未指定時の WezTerm 既定を明示したもの）。以前は `rgba(0, 0, 0, 0)` の完全透明で、タブの右側＝使用制限を出す領域だけが `window_background_opacity = 0.95` を無視して素通しになり数字が読めなかった。`format-tab-title` の `edge_background` も同色にして筋が残らないようにしてある。`config.colors` に足したキーは、`update-status` の copy_mode override（colors を丸ごと置換する）にも**同じものを足す**こと。
 - 旧方式（セッションごとに下端 4 段ペインを分割）は廃止。ペイン幅は分割で 47 桁まで落ち、内蔵行すら 63 桁で切れるのが理由。詳細 `docs/troubleshooting.md` #29。
 
 ## gotcha

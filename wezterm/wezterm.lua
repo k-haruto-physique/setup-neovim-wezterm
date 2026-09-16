@@ -13,10 +13,18 @@ local config = wezterm.config_builder()
 -- 安定しないため 0.95 で統一。Acrylic はやや控えめだが nvim/claude 両方読みやすい。
 local WINDOW_OPACITY = 0.95
 
--- タブバーの透過設定。update-status で colors を override する際、
--- ここを一緒に渡さないとタブバーの透過が外れる（override は colors を丸ごと置換するため）。
+-- 端末セルの背景色。color_scheme 未指定時の WezTerm 既定と同じ値を**明示**する
+-- （実測: 既定スキームの background は #000000）。タブバーをここへ揃えるための基準色。
+local TERMINAL_BG = "#000000"
+
+-- タブバーの配色。update-status で colors を override する際、
+-- ここを一緒に渡さないとタブバーの設定が外れる（override は colors を丸ごと置換するため）。
+-- 2026-09-16: background を `rgba(0, 0, 0, 0)`（**完全透明**）から端末と同じ不透明色へ変更。
+-- 透明だとタブの右側（set_right_status で Codex の使用制限を出す領域）だけが
+-- window_background_opacity=0.95 を無視して素通しになり、数字が読めなかった。
+-- 不透明色にすればウィンドウ全体の 0.95 が等しく掛かり、ペインと同じ透け具合になる。
 local TAB_BAR_COLORS = {
-	background = "rgba(0, 0, 0, 0)",
+	background = TERMINAL_BG,
 	inactive_tab_edge = "none",
 }
 
@@ -113,6 +121,9 @@ config.show_close_tab_button_in_tabs = true
 
 -- タブバーを透過（Acrylic の効果を活かす）
 config.colors = {
+	-- 既定任せにせず明示する。タブバーを TERMINAL_BG に揃えている以上、
+	-- 端末側の背景が将来 WezTerm の既定変更でずれると色差が出るため。
+	background = TERMINAL_BG,
 	tab_bar = TAB_BAR_COLORS,
 	-- 2026-09-15: 黄 (#FFD54F) は複数行選択で眩しいとの声で水色系へ。
 	-- カーソルの黄色（COPY_MODE_CURSOR_COLORS）はモード標識なので据え置き。
@@ -137,7 +148,9 @@ wezterm.on("format-tab-title", function(tab, _tabs, _panes, _config, _hover, max
 	-- （Codex の使用制限を set_right_status で出すためバーを常設した）。
 	local background = "#5c6d74"
 	local foreground = "#FFFFFF"
-	local edge_background = "none"
+	-- タブ両端の三角形の隙間。ここも "none"（透明）だと、その分だけ素通しの筋が残る。
+	-- タブバー背景と同色にして、バー全体で透け具合を揃える（2026-09-16）。
+	local edge_background = TERMINAL_BG
 	if tab.is_active then
 		background = "#ae8b2d"
 		foreground = "#FFFFFF"
@@ -513,6 +526,8 @@ wezterm.on("update-status", function(window, _pane)
 	if copying then
 		overrides.default_cursor_style = "SteadyBlock"
 		overrides.colors = {
+			-- colors は丸ごと置換なので、config.colors 側に足したキーはここにも要る。
+			background = TERMINAL_BG,
 			cursor_bg = COPY_MODE_CURSOR_COLORS.cursor_bg,
 			cursor_fg = COPY_MODE_CURSOR_COLORS.cursor_fg,
 			cursor_border = COPY_MODE_CURSOR_COLORS.cursor_border,
