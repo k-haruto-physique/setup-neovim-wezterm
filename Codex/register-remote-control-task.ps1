@@ -10,9 +10,18 @@ if (-not (Test-Path -LiteralPath $remoteControlScript)) {
     throw "Remote Control script not found: $remoteControlScript"
 }
 
+# 2026-09-16: wrap in `conhost --headless` so no console window is ever created.
+# `-WindowStyle Hidden` does NOT prevent the window: it creates one and hides it after
+# PowerShell finishes initializing, so a PseudoConsoleWindow stays visible for a moment
+# on every logon. Measured A/B on this machine (EnumWindows polled every 25ms):
+#   A `pwsh.exe -WindowStyle Hidden`              -> PseudoConsoleWindow visible, ran OK
+#   B `conhost.exe --headless pwsh.exe ...`       -> no window at all, ran OK
+# Keep `-WindowStyle Hidden` as well (belt and braces); keep LogonType Interactive
+# because the app-server is expected to live in the user's interactive session.
+$conhostExe = Join-Path $env:SystemRoot 'System32\conhost.exe'
 $action = New-ScheduledTaskAction `
-    -Execute $pwshExe `
-    -Argument "-NoLogo -NoProfile -WindowStyle Hidden -File `"$remoteControlScript`""
+    -Execute $conhostExe `
+    -Argument "--headless `"$pwshExe`" -NoLogo -NoProfile -WindowStyle Hidden -File `"$remoteControlScript`""
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $currentUser
 $settings = New-ScheduledTaskSettingsSet `
     -AllowStartIfOnBatteries `
