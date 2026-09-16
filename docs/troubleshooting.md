@@ -847,3 +847,48 @@ Claude Code の自動更新は、**動いている実行ファイルを `claude.
 ### 教訓
 
 - Windows で実行中のプロセスを実行ファイル名で特定する時は、自動更新による改名を想定する。本人確認には、PID と開始時刻の組を使う。
+
+## 29. Codex ステータスをタブバーへ移設。`wezterm.lua` からのプロセス起動は 0xc0000142 で失敗する（2026-09-16）
+
+### きっかけ
+
+ユーザー指摘「A（Codex 内蔵 status_line 1 行）だとペイン分割した時によめなくね?」。実測で裏付けられた:
+
+| 実測 | 値 |
+|---|---|
+| 内蔵 status line（3 項目・pane 実測） | `gpt-5.6-sol medium · Context 66% left · 20260916_life-codex` = **63 桁** |
+| 制限まで載せた 5 項目版の見積り | 約 **86 桁** |
+| その時の Codex ペイン幅 | 94-95 桁（ギリ入る） |
+| その時のクロコ側ペイン幅 | **47 桁**（3 項目でも入らない） |
+
+**ペイン内に出す表示は、分割前提の運用と構造的に相性が悪い**。2026-08-20 にクロコ statusline を 4 段化したのと同じ壁。
+
+### 対処: タブバー（`set_right_status`）へ
+
+`set_right_status` はタブバー領域に描かれる＝**ウィンドウ幅で固定**（ここでは 190 桁）。ペインをいくら割っても縮まない。
+
+- `Codex/tabbar-status.ps1`: **1 プロセス**で全 Codex ペインを担当。WezTerm のペインタイトル `codex | <thread-uuid> | <model>` から thread UUID を取り、rollout を解決して `%LOCALAPPDATA%\Temp\codex-status\<pane_id>.json` に 5h/7d 制限・cwd・Git を書く。#19 で決めた「UUID で結合」と同じ精度で、ライフサイクルフックは不要。
+- `wezterm/wezterm.lua`: `update-status` がアクティブペインぶんの JSON を読んで `set_right_status`。**分割・移動・幾何修復を一切しない**ので、#19 の配置ずれ機構ごと不要になった。
+- Codex 内蔵は `status_line = ["model-with-reasoning", "context-remaining"]` の 2 項目（約 40 桁）だけにして、47 桁ペインでも切れないようにする。`terminal_title` は **触らない**（`session-id` が監視の結合キー）。
+- `hide_tab_bar_if_only_one_tab = false`。true のままだと 1 タブになった瞬間に表示が丸ごと消える。代償は常時 1 行。
+
+検証（headless）: 3 つの Codex セッションが混線せず、それぞれ別 cwd・別 rollout・別使用率で書き出されることを確認（qgis / Instagram / life-haruto）。`wezterm --config-file <repo>\wezterm\wezterm.lua show-keys` exit 0。
+
+### 🚫 地雷: `wezterm.lua` から監視プロセスを起動してはいけない
+
+自己修復のつもりで `wezterm.background_child_process({ conhost, "--headless", "pwsh.exe", ... })` を `update-status` に入れたところ、**30 秒ごとに `pwsh.exe - アプリケーション エラー: アプリケーションを正しく起動できませんでした (0xc0000142)` のモーダルダイアログ**が出た。
+
+- 証拠: System ログ **イベント ID 26（アプリケーション ポップアップ）** に 11:00:46 / 11:01:15 / 11:02:15 / 11:02:55 / 11:03:15 / 11:03:45 の 6 件（≒30 秒間隔＝スロットル周期と一致）。同時刻帯に `conhost.exe` の Application Error が 10 件。それ以前は 0 件。
+- 原因: **0xc0000142 = STATUS_DLL_INIT_FAILED**。`wezterm-gui.exe` はコンソールを持たない GUI プロセスで、その子として `conhost --headless` は初期化できない。タスクスケジューラ経由なら成立する（`Codex Remote Control` が実績）。
+- 対処: Lua からの起動を削除し、**ログオンタスク `Codex Tab Bar Status`**（`Codex/register-tabbar-status-task.ps1`）へ移した。Lua は**読むだけ**で、鮮度 30 秒を過ぎたら黙って非表示にする。監視側は WezTerm が落ちても exit せずバックオフして待つ（完全再起動が routine な環境なので daemon にした）。
+- 停止確認: 最後のポップアップ 11:03:45 → 監視プロセス起動後、11:05:41 時点で 2 分間ゼロ（発生間隔 30 秒に対し十分）。
+
+**教訓**: `automatically_reload_config = true` は**編集した瞬間に本番へ出る**。GUI プロセスからの子プロセス起動は、まず 1 回だけ手で叩いて成否を見てから常駐ループに入れる。モーダルダイアログを出す失敗はリトライさせてはいけない。
+
+### 注意: 反映には WezTerm の完全再起動が要る
+
+`wezterm.on()` の登録は reload で解除されない（#2）。旧 `update-status`（ペインを分割する版）と、上記の失敗した conhost 版が、**プロセスが生きている間は登録されたまま**。したがって:
+
+- 旧 4 段ステータスペインは、完全再起動するまで作られ続ける（手で閉じても復活しうる）。
+- 完全再起動後に初めて「タブバーのみ」の状態になる。
+

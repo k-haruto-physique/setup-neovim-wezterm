@@ -33,9 +33,16 @@ local COPY_MODE_CURSOR_COLORS = {
 local PATH_PATTERN =
 	[[(?:[A-Za-z]:)?[\w.\-/\\]+\.(?:md|markdown|lua|py|sql|txt|json|toml|ya?ml|tsx?|jsx?|sh|ps1|conf|ini|cfg|html?|css|rs|go)]]
 
--- Codex 本体は custom/multiline status line を持たないため、下端の専用ペインで4段表示する。
-local CODEX_SESSION_STATUS_SCRIPT =
-	"C:/Users/81809/Documents/Repositories/setup-neovim-wezterm/Codex/session-status.ps1"
+-- Codex のステータスは**タブバー**に出す（2026-09-16 に専用ペイン方式から変更）。
+-- ペイン内（内蔵 status line / 旧 4 段ペイン）は分割するたびに桁が足りず切れる
+-- ＝実測で内蔵 3 項目が既に 63 桁、クロコ側のペインは 47 桁まで狭くなっていた。
+-- タブバーはウィンドウ幅（190 桁）なので分割に不感。
+-- tabbar-status.ps1 が 1 プロセスで全 Codex ペインぶんの JSON を書き、
+-- ここで update-status がアクティブペインのぶんだけ読む（分割・移動・修復は一切しない）。
+local CODEX_DIR = "C:/Users/81809/Documents/Repositories/setup-neovim-wezterm/Codex/"
+local CODEX_TABBAR_SCRIPT = CODEX_DIR .. "tabbar-status.ps1"
+local CODEX_START_SCRIPT = CODEX_DIR .. "start-codex.ps1"
+local CODEX_STATUS_DIR = (os.getenv("LOCALAPPDATA") or "") .. "\\Temp\\codex-status"
 
 ----------------------------------------------------
 -- フォント・基本
@@ -81,7 +88,9 @@ config.show_tabs_in_tab_bar = true
 -- (WezTerm 仕様上 set_right_status はタブバー領域専用なので、タブバー自体は
 -- 残さざるを得ない。format-tab-title で見た目だけ消す。)
 -- 2026-05-22: タブ 1 つの時はバー非表示（ペイン領域を最大化）
-config.hide_tab_bar_if_only_one_tab = true
+-- 2026-09-16: false へ。Codex のステータスは set_right_status＝タブバー領域にしか出せず、
+-- true のままだと 1 タブになった瞬間に使用制限の表示が丸ごと消える。代償は常時 1 行。
+config.hide_tab_bar_if_only_one_tab = false
 -- 2026-05-22: タブバーを画面上部に戻した（コピーモードの MODE 表示も上に出る）
 config.tab_bar_at_bottom = false
 -- ファンシータブバーを無効化（OS 風クロームだと透過が効かないため、
@@ -162,73 +171,78 @@ local function pane_cwd(pane)
 	return cwd
 end
 
-local codex_process
-local function repair_codex_status(pane)
-	local pid = codex_process(pane:get_foreground_process_info())
-	if not pid then return end
-	wezterm.run_child_process({ "pwsh.exe", "-NoLogo", "-NoProfile", "-File",
-		CODEX_SESSION_STATUS_SCRIPT, "-RepairPaneId", tostring(pane:pane_id()), "-OwnerProcessId", tostring(pid) })
+----------------------------------------------------
+-- Codex ステータス（タブバー右側）
+----------------------------------------------------
+-- tabbar-status.ps1 が書いた JSON を、アクティブペインのぶんだけ読む。
+local function codex_status_for(pane)
+	local file = io.open(CODEX_STATUS_DIR .. "\\" .. tostring(pane:pane_id()) .. ".json", "r")
+	if not file then return nil end
+	local raw = file:read("*a")
+	file:close()
+	local parsed, data = pcall(wezterm.json_parse, raw)
+	if not parsed or type(data) ~= "table" then return nil end
+	-- 監視が落ちた後に古い使用率を出し続けないよう鮮度で足切りする。
+	if type(data.updated) ~= "number" or os.time() - data.updated > 30 then return nil end
+	return data
 end
 
-codex_process = function(info)
-	-- Windows reports the newest descendant (often an MCP node process).
-	-- Walk its ancestry to the CLI; don't mistake the foreground child for Codex.
-	for _ = 1, 16 do
-		if not info then return nil end
-		if info.executable and info.executable:lower():match("codex%.exe$") then return info.pid end
-		if not info.ppid or info.ppid == 0 then return nil end
-		info = wezterm.procinfo.get_info_for_pid(info.ppid)
-	end
-	return nil
+-- 🚫 ここから監視プロセスを起動してはいけない（2026-09-16 実測・troubleshooting #29）。
+-- `wezterm.background_child_process` で `conhost --headless pwsh` を起こしたところ、
+-- 30 秒ごとに **0xc0000142（STATUS_DLL_INIT_FAILED）のモーダルダイアログ**が出た。
+-- wezterm-gui はコンソールを持たない GUI プロセスなので、その子として conhost の
+-- headless 起動が成立しない（タスクスケジューラ経由では成立する。register-*-task.ps1 参照）。
+-- 監視プロセスの起動はログオンタスク `Codex Tab Bar Status` の責務。
+-- Lua 側は**読むだけ**にして、止まっていたら黙って非表示にする（codex_status_for の鮮度判定）。
+
+local STATUS_DIM = "#737994"
+local function stage_color(percent)
+	if percent >= 80 then return "#e78284" end
+	if percent >= 50 then return "#e5c890" end
+	return "#a6d189"
 end
 
-local function ensure_codex_status(window)
-	local focused = window:active_pane()
-	-- Scan all tabs: inactive parallel sessions need their own renderer as well.
-	local requests = wezterm.GLOBAL.codex_status_requests or {}
-	local now = os.time()
-	local existing = {}
-	for _, tab in ipairs(window:mux_window():tabs()) do
-		for _, pane in ipairs(tab:panes()) do
-			local key = pane:get_title():match("^Codex status:(%d+:%d+)$")
-			if key then existing[key] = true end
+-- statusline.ps1 と同じ記号・Catppuccin Frappe 配色のまま 1 行へ畳む。
+local function format_codex_status(data)
+	local out = {}
+	local function segment(items)
+		if #out > 0 then
+			table.insert(out, { Foreground = { Color = STATUS_DIM } })
+			table.insert(out, { Text = " │ " })
+		end
+		for _, item in ipairs(items) do
+			table.insert(out, item)
 		end
 	end
-	for _, tab in ipairs(window:mux_window():tabs()) do
-		for _, pane in ipairs(tab:panes()) do
-			local prefix, model = pane:get_title():match("^codex | ([%x%-]+)%.%.%. | (.+)$")
-			if not prefix then prefix, model = pane:get_title():match("^codex | ([%x%-]+) | (.+)$") end
-			if prefix and #prefix >= 29 then
-				local owner = tostring(pane:pane_id())
-				if not requests[owner] or now - requests[owner] >= 10 then
-					local pid = codex_process(pane:get_foreground_process_info())
-					if pid and not existing[tostring(pid) .. ":" .. owner] then
-						requests[owner] = now
-						pane:split({ direction = "Bottom", size = 4, cwd = pane_cwd(pane), args = {
-							"pwsh.exe", "-NoLogo", "-NoProfile", "-File",
-							CODEX_SESSION_STATUS_SCRIPT:gsub("session%-status%.ps1$", "statusline.ps1"),
-							"-Watch", "-OwnerPaneId", owner, "-OwnerProcessId", tostring(pid),
-							"-SessionPrefix", prefix, "-InitialModel", model } })
-						if focused then focused:activate() end
-					end
-				end
-			end
-		end
+	local function limit(label, percent, resets)
+		if type(percent) ~= "number" then return end
+		local tail = (type(resets) == "string" and resets ~= "") and (" ↺" .. resets) or ""
+		segment({
+			{ Foreground = { Color = STATUS_DIM } },
+			{ Text = label },
+			{ Foreground = { Color = stage_color(percent) } },
+			{ Text = string.format("%d%%", math.floor(percent + 0.5)) },
+			{ Foreground = { Color = STATUS_DIM } },
+			{ Text = tail },
+		})
 	end
-	wezterm.GLOBAL.codex_status_requests = requests
+	limit("◐ 5h:", data.primary, data.primary_reset)
+	limit("◑ 7d:", data.secondary, data.secondary_reset)
+	if type(data.dir) == "string" and data.dir ~= "" then
+		segment({ { Foreground = { Color = "#8caaee" } }, { Text = "▸ " .. data.dir } })
+	end
+	if type(data.git) == "string" and data.git ~= "" then
+		segment({ { Foreground = { Color = "#a6d189" } }, { Text = "⎇ " .. data.git } })
+	end
+	if #out == 0 then return "" end
+	table.insert(out, { Text = " " })
+	return wezterm.format(out)
 end
 
--- Splitting the status renderer must target its Codex owner instead.
+-- 分割は cwd を引き継ぐだけ（旧: ステータスペインを選んで分割した時に owner へ
+-- 転送する補正が要ったが、ステータスがペインでなくなったので不要になった）。
 local function split_session(direction)
-	return wezterm.action_callback(function(window, pane)
-		local owner = pane:get_title():match("^Codex status:%d+:(%d+)$")
-		if owner then
-			for _, tab in ipairs(window:mux_window():tabs()) do
-				for _, candidate in ipairs(tab:panes()) do
-					if candidate:pane_id() == tonumber(owner) then pane = candidate end
-				end
-			end
-		end
+	return wezterm.action_callback(function(_window, pane)
 		local created = pane:split({ direction = direction, cwd = pane_cwd(pane) })
 		created:activate()
 	end)
@@ -286,23 +300,18 @@ config.keys = {
 	{ key = "x", mods = "CTRL|SHIFT", action = act.ActivateCopyMode },
 	-- 2026-05-22: nvim を別ウィンドウで起動（上モニターへドラッグ用）
 	{ key = "I", mods = "CTRL|SHIFT", action = act.SpawnCommandInNewWindow({ args = { "nvim", "." } }) },
-	-- Ctrl+Shift+Y → 現在のペイン下端へ Codex の4段ステータスを追加。
-	-- 稼働中の Codex セッションへ後付けする用途。
-	{
-		key = "Y",
-		mods = "CTRL|SHIFT",
-		action = wezterm.action_callback(function(_window, pane)
-			repair_codex_status(pane)
-		end),
-	},
-	-- Ctrl+Shift+N → Codex 本体 + 下端5セルの4段ステータスを新規ウィンドウで起動。
+	-- 2026-09-16: Ctrl+Shift+Y（4 段ステータスの後付け）は廃止。
+	-- ステータスはタブバーに出るようになり、ペインへの後付け自体が不要になった。
+	-- Ctrl+Shift+N → Codex を新規ウィンドウで起動（ステータスはタブバーに出る）。
 	{
 		key = "N",
 		mods = "CTRL|SHIFT",
 		action = wezterm.action_callback(function(_window, pane)
 			local cwd = pane_cwd(pane)
-			wezterm.mux.spawn_window({ args = { "pwsh.exe", "-NoLogo", "-NoProfile", "-File",
-				CODEX_SESSION_STATUS_SCRIPT:gsub("session%-status%.ps1$", "start-codex.ps1") }, cwd = cwd })
+			wezterm.mux.spawn_window({
+				args = { "pwsh.exe", "-NoLogo", "-NoProfile", "-File", CODEX_START_SCRIPT },
+				cwd = cwd,
+			})
 		end),
 	},
 	-- 2026-05-29: ペイン入れ替え（分割の向きは変えられないが中身の位置交換は可能）
@@ -472,11 +481,23 @@ end)
 -- ステータス: コピーモード突入時はカーソルを黄色化（カーソルそのものが標識になる）。
 -- UI 要素を追加しない、リサイズもしない、透過変化もしない。
 -- set_right_status / set_left_status は旧 addon 残骸対策で空文字を上書き。
+-- update-status は TUI の再描画のたびに発火しうる（troubleshooting #25）。
+-- 1 秒に 1 回だけ実ファイルを読み、それ以外は直前の描画結果を使い回す。
+local codex_status_cache = { at = 0, pane = -1, text = "" }
+
 wezterm.on("update-status", function(window, _pane)
 	local copying = window:active_key_table() == "copy_mode"
-	-- CopyMode must keep the viewport and focus intact while selecting text.
-	if not copying then ensure_codex_status(window) end
-	window:set_right_status("")
+	-- 旧方式はここでペインを分割していたため copy_mode 中は抑止が必要だったが、
+	-- 現在はファイルを読んで文字列を返すだけなのでモードを問わず出してよい。
+	-- ここでプロセスを起こさないこと（上の 🚫 参照）。
+	local active = window:active_pane()
+	local pane_id = active and active:pane_id() or -1
+	local now = os.time()
+	if codex_status_cache.at ~= now or codex_status_cache.pane ~= pane_id then
+		local data = active and codex_status_for(active) or nil
+		codex_status_cache = { at = now, pane = pane_id, text = data and format_codex_status(data) or "" }
+	end
+	window:set_right_status(codex_status_cache.text)
 	window:set_left_status("")
 
 	-- 過去ハンドラ残骸が opacity を 0.85 等に書き換えるのを抑止するため、

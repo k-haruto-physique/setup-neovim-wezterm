@@ -1,5 +1,13 @@
 # 変更履歴
 
+## 2026-09-16 — ステータスをタブバーへ移設（ペイン分割を廃止）
+
+- きっかけはユーザー指摘「ペイン分割した時によめなくね?」。実測で、Codex 内蔵 status line は**3 項目で既に 63 桁**、制限まで載せると約 86 桁。当時のクロコ側ペインは **47 桁**で、ペイン内表示は分割前提の運用と構造的に噛み合わないと確定した。
+- `tabbar-status.ps1` を新設。**1 プロセス**で全 Codex ペインを担当し、ペインタイトルの thread UUID から rollout を解決して `%LOCALAPPDATA%\Temp\codex-status\<pane_id>.json` に 5h/7d 制限・cwd・Git を書く。`wezterm.lua` の `update-status` がアクティブペインのぶんだけ読んで `set_right_status` する。タブバーは**ウィンドウ幅（190 桁）なので分割に不感**。
+- 内蔵は `status_line = ["model-with-reasoning", "context-remaining"]` の 2 項目（約 40 桁）に縮小。`terminal_title` は監視の結合キー（`session-id`）なので変更しない。
+- ライフサイクルフック（`hooks.json` → `session-status.ps1`）と、ペインの分割・移動・幾何修復（#19）は**すべて不要**になった。`Ctrl+Shift+Y` も廃止。旧ファイル群の物理削除は実機確認後（backlog B17）。
+- 🚫 `wezterm.lua` から監視プロセスを起動してはいけない。`wezterm.background_child_process` で `conhost --headless pwsh` を起こしたところ、**30 秒ごとに 0xc0000142 のモーダルダイアログ**が出た（System ログ ID 26 で 6 件・conhost の Application Error 10 件を確認）。wezterm-gui はコンソールを持たない GUI プロセスなので子の conhost が初期化できない。起動はログオンタスク `Codex Tab Bar Status`（`register-tabbar-status-task.ps1`）の責務にし、Lua は読むだけにした。詳細 troubleshooting #29。
+
 ## 2026-09-15 — 送り先があいまいなら送らない（backlog B14）
 
 - `bridge-common.ps1` に `Select-BridgeTarget` を追加。`ask-codex.ps1`・`ask-claude.ps1` は、送り先の候補が2つ以上あると送らずにexit 6にする（以前は最新を自動で選び、警告だけ出して送っていた）。

@@ -3,16 +3,16 @@
 セッション開始（`hi`）時に**必ず読む**未完タスク・仕様書の単一台帳。
 troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約点。**完了したら CLOSED へ落とし、起点ファイル（#番号 / memory）にも反映**する。
 
-最終更新: 2026-09-15（ユーザー判断で B14 は「あいまいなら送らない」を実装、B15 は今の運用を続ける。どちらも CLOSED。**OPEN は0件**）。
+最終更新: 2026-09-16（Codex ステータスをタブバーへ移設。**OPEN 2 件**＝B16 実機確認・B17 旧 4 段機構の物理削除）。
 
 ---
 
 ## 🔴 OPEN（未完・要対応）
 
-未完タスクなし。
-
 | # | タスク | 状態 | 次の一手 | 起点 |
 |---|---|---|---|---|
+| B16 | **Codex ステータスのタブバー表示を実機確認** | 実装・headless 検証済 / GUI 未確認 | **WezTerm を完全再起動**（reload では旧ハンドラが消えない＝#2）。その後 ① Codex ペインを選ぶとタブバー右に `◐ 5h:… ◑ 7d:… ▸ cwd ⎇ branch` が出る ② 旧 4 段ペインが作られない ③ 1 タブでもバーが出る ④ 0xc0000142 ダイアログが再発しない、を確認 | #29 |
+| B17 | **旧 4 段ステータスペイン機構の物理削除** | B16 確認待ち | B16 が OK なら `Codex/session-status.ps1`・`install-session-status.ps1`・`hooks.json`・`test-session-status.py`・`statusline.ps1` を git rm し、README / statusline-spec / CHANGELOG を整理。NG ならこれらで巻き戻す（`install-session-status.ps1` 再実行＋`~/.codex/hooks.json` 復元） | #29 |
 
 ---
 

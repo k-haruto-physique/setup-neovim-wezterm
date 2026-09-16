@@ -66,8 +66,7 @@ WezTerm + LazyVim + PowerShell の **このリポジトリのセットアップ�
 | キー | 動作 |
 |---|---|
 | **`Ctrl+Shift+I`** | **nvim を新規ウィンドウで起動**（上モニター用） |
-| **`Ctrl+Shift+Y`** | **現在のCodexペインの登録済み4段表示を修復**（通常は自動追従） |
-| **`Ctrl+Shift+N`** | **Codex＋下端4段ステータスを新規ウィンドウで起動**（下モニター用） |
+| **`Ctrl+Shift+N`** | **Codex を新規ウィンドウで起動**（下モニター用）。ステータスは**タブバー右**に出る（ペイン分割なし） |
 | `Ctrl+Shift+T` | 新規タブ（同一ウィンドウ内） |
 | `Ctrl+Shift+W` | タブ全体を閉じる（確認あり） |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | タブ前後切替 |
@@ -451,4 +450,4 @@ Vim 未経験者が **最初に詰む最大ポイント**。
 `docs/legacy-nvim/` には **以前手書きしていた lazy.nvim 設定**を保存済み。キーバインドや LSP 設定の参考にできる（特に `keymaps.lua`、`lsp.lua`）。
 
 
-Codex表示ペインを選んで既定の分割キー（Ctrl+Alt+Shift+5 / 引用符系）を押すと、対応するCodex側を分割する。表示は対象Codexの直下5セルへ自動で戻る。Codexの `? for shortcuts` は `tui.keymap.composer.toggle_shortcuts = []` により次回起動から非表示（`?` ヘルプも無効）。
+2026-09-16: Codex のステータスは**タブバー右**（ウィンドウ幅・分割に不感）へ移設。専用ペインは廃止し、`Ctrl+Shift+Y`（4段表示の後付け）と分割キーの転送補正も撤去した。Codex ペイン内に残るのは内蔵 1 行（モデル+effort / context）だけ。詳細 troubleshooting #29。Codexの `? for shortcuts` は `tui.keymap.composer.toggle_shortcuts = []` により非表示（`?` ヘルプも無効）。
