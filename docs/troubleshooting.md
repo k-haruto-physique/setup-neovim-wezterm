@@ -894,6 +894,14 @@ Claude Code の自動更新は、**動いている実行ファイルを `claude.
 - 対処: Lua からの起動を削除し、**ログオンタスク `Codex Tab Bar Status`**（`Codex/register-tabbar-status-task.ps1`）へ移した。Lua は**読むだけ**で、鮮度 30 秒を過ぎたら黙って非表示にする。監視側は WezTerm が落ちても exit せずバックオフして待つ（完全再起動が routine な環境なので daemon にした）。
 - 停止確認: 最後のポップアップ 11:03:45 → 監視プロセス起動後、11:05:41 時点で 2 分間ゼロ（発生間隔 30 秒に対し十分）。
 
+### 🚫 地雷 2: ログオンタスクの監視は `WEZTERM_UNIX_SOCKET` を継承しない
+
+タスク配下へ移した直後、監視プロセスは生きているのに heartbeat が進まなくなった（＝表示が永久に空）。
+
+- 原因: `WEZTERM_UNIX_SOCKET` は **wezterm-gui の子プロセスにだけ**渡る。タスクから起動した監視には無く、`wezterm cli list` が `failed to connect to Socket("gui-sock-10064")` で **exit 1**。実測: 同じコマンドを env 明示ありで exit 0 / 無しで exit 1。
+- 対処: 監視が自分でソケットを探す。`%USERPROFILE%\.local\share\wezterm\gui-sock-<pid>` のうち **`<pid>` が生きている `wezterm-gui`** のものだけを採用し（死んだ GUI のファイルが残る）、複数 GUI がある場合は全ソケットの `wezterm cli list` をマージする。`wezterm.exe` も PATH 頼みにせず `Get-Command` で解決し、無ければ `%ProgramFiles%\WezTerm\wezterm.exe`。
+- 併せて: **失敗時も heartbeat は進める**（「デーモンが生きている」と「WezTerm が起動している」は別の事実）。片方の失敗で両方が止まると、一時的な失敗と監視の死が区別できず、今回のように原因究明が遅れる。5 回連続で見つからない時だけ `errors.log` に 1 行残す。
+
 **教訓**: `automatically_reload_config = true` は**編集した瞬間に本番へ出る**。GUI プロセスからの子プロセス起動は、まず 1 回だけ手で叩いて成否を見てから常駐ループに入れる。モーダルダイアログを出す失敗はリトライさせてはいけない。
 
 ### 注意: 反映には WezTerm の完全再起動が要る

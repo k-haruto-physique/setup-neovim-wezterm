@@ -29,6 +29,38 @@ if (-not $mutex.WaitOne(0)) { exit 0 }
 $CodexRoot = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $env:USERPROFILE '.codex' }
 $SessionsRoot = Join-Path $CodexRoot 'sessions'
 New-Item -ItemType Directory -Path $StatusDirectory -Force | Out-Null
+$ErrorLog = Join-Path $StatusDirectory 'errors.log'
+
+# Run as a logon task, this process does NOT inherit WEZTERM_UNIX_SOCKET (only children
+# of wezterm-gui get it). Without it `wezterm cli list` exits 1 with
+# "failed to connect to Socket(gui-sock-NNNN)" and the whole watcher stalls silently
+# — measured 2026-09-16. Find the socket ourselves instead.
+$WezTermExe = (Get-Command wezterm -ErrorAction SilentlyContinue).Source
+if (-not $WezTermExe) { $WezTermExe = Join-Path $env:ProgramFiles 'WezTerm\wezterm.exe' }
+$SocketRoot = Join-Path $env:USERPROFILE '.local\share\wezterm'
+
+function Get-LiveSockets {
+    # gui-sock-<pid>; stale files outlive their GUI, so keep only live wezterm-gui PIDs.
+    $livePids = @(Get-Process wezterm-gui -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id)
+    if ($livePids.Count -eq 0) { return @() }
+    $sockets = @(Get-ChildItem -LiteralPath $SocketRoot -Filter 'gui-sock-*' -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match '^gui-sock-(\d+)$' -and $livePids -contains [int]$Matches[1] } |
+        Select-Object -ExpandProperty FullName)
+    return $sockets
+}
+
+function Get-AllPanes {
+    # Several wezterm-gui processes can be running; merge the panes of all of them so a
+    # Codex session is found whichever window it lives in.
+    $all = @()
+    foreach ($socket in (Get-LiveSockets)) {
+        $env:WEZTERM_UNIX_SOCKET = $socket
+        $listed = & $WezTermExe cli list --format json 2>$null
+        if ($LASTEXITCODE -ne 0 -or -not $listed) { continue }
+        try { $all += @($listed | ConvertFrom-Json) } catch { continue }
+    }
+    return $all
+}
 
 # Codex 0.154 truncates the terminal-title UUID to 29 chars; accept both forms.
 $TitlePattern = '^codex \| ([0-9a-fA-F-]{29,36})(?:\.\.\.)? \| '
@@ -88,18 +120,25 @@ function Read-RateLimits([string]$FilePath) {
 $missedListings = 0
 try {
     while ($true) {
-        $panes = @(& wezterm cli list --format json 2>$null | ConvertFrom-Json)
-        if ($LASTEXITCODE -ne 0 -or $panes.Count -eq 0) {
+        $now = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+        $panes = @(Get-AllPanes)
+        if ($panes.Count -eq 0) {
             # WezTerm is closed, or the mux is briefly wedged (troubleshooting #13).
             # Never exit: this is a logon-scoped daemon and WezTerm gets restarted often
             # (troubleshooting #2 makes a full restart routine here). wezterm.lua must not
             # relaunch it — spawning from the GUI process raises 0xc0000142 dialogs (#29).
             $missedListings++
+            if ($missedListings -eq 5) {
+                Add-Content -LiteralPath $ErrorLog -Value "$(Get-Date -Format o) no panes; sockets=$((Get-LiveSockets) -join ',') exe=$WezTermExe"
+            }
+            # Keep the heartbeat moving: it means "the daemon is alive", not "WezTerm is up".
+            # Otherwise a transient failure looks identical to a dead watcher and the tab bar
+            # stays blank for good (that is exactly how this bug was found).
+            [IO.File]::WriteAllText((Join-Path $StatusDirectory 'heartbeat'), "$now")
             Start-Sleep -Seconds ([Math]::Min(10, $IntervalSeconds * [Math]::Min(5, $missedListings)))
             continue
         }
         $missedListings = 0
-        $now = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
 
         # Rate limits belong to the account, so every live session reports the same
         # window; they differ only by how stale each session's last reading is.
