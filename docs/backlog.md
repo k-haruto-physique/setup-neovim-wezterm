@@ -11,7 +11,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | # | タスク | 状態 | 次の一手 | 起点 |
 |---|---|---|---|---|
-| B16 | **Codex ステータスのタブバー表示を実機確認** | 実装・headless 検証済 / GUI 未確認 | **WezTerm を完全再起動**（reload では旧ハンドラが消えない＝#2）。その後 ① Codex ペインを選ぶとタブバー右に `◐ 5h:… ◑ 7d:… ▸ cwd ⎇ branch` が出る ② 旧 4 段ペインが作られない ③ 1 タブでもバーが出る ④ 0xc0000142 ダイアログが再発しない、を確認 | #29 |
+| B16 | **Codex ステータスのタブバー表示を実機確認** | 実装・headless 検証済 / GUI 未確認 | **WezTerm を完全再起動**（reload では旧ハンドラが消えない＝#2）。その後 ① Codex ペインを選ぶとタブバー右に `◐ 5h:… ◑ 7d:… ▸ cwd ⎇ branch` が出る ② 旧 4 段ペインが作られない ③ 1 タブでもバーが出る ④ 0xc0000142 ダイアログが再発しない ⑤ タブバー右の透け具合がペインと同じ ⑥ Codex で `/rename` すると内蔵行にセッション名が出る ⑦ 最初のターン後に `git-branch` が出る、を確認 | #29 |
 | B17 | **旧 4 段ステータスペイン機構の物理削除** | B16 確認待ち | B16 が OK なら `Codex/session-status.ps1`・`install-session-status.ps1`・`hooks.json`・`test-session-status.py`・`statusline.ps1` を git rm し、README / statusline-spec / CHANGELOG を整理。NG ならこれらで巻き戻す（`install-session-status.ps1` 再実行＋`~/.codex/hooks.json` 復元） | #29 |
 
 ---

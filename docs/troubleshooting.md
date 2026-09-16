@@ -880,7 +880,7 @@ Claude Code の自動更新は、**動いている実行ファイルを `claude.
 
 - `Codex/tabbar-status.ps1`: **1 プロセス**で全 Codex ペインを見て、ペインタイトル `codex | <thread-uuid> | <model>` の UUID から rollout を解決し、**最も新しく書かれた rollout の使用制限**を `%LOCALAPPDATA%\Temp\codex-status\account.json` に 1 つだけ書く（制限はアカウント共通で、セッション間の差は読んだ時刻の古さだけ）。セッション固有の値は一切書かない。ライフサイクルフックは不要。
 - `wezterm/wezterm.lua`: `update-status` が `account.json` を読んで `set_right_status`。**アクティブペインが Codex の時だけ**出す（クロコのペインで Codex の制限を出すと紛らわしい。クロコ側の制限は Claude 自身の statusline が持つ）。**分割・移動・幾何修復を一切しない**ので、#19 の配置ずれ機構ごと不要になった。
-- Codex 内蔵は `status_line = ["model-with-reasoning", "context-remaining", "project-name", "git-branch"]`。パス全体が要るなら `project-name` → `current-dir` に替える（約 45 桁増えるので広いペイン限定）。`terminal_title` は **触らない**（`session-id` が監視の結合キー）。
+- Codex 内蔵は `status_line = ["model-with-reasoning", "context-remaining", "thread-name", "project-name", "git-branch"]`（ユーザー指定: セッション名はディレクトリの直前）。実測で 5 項目は約 96 桁＝94 桁ペインを 2 桁あふれ、末尾の `git-branch` から切れる。名前は中ほどなので残る。**`thread-name` は `/rename` するまで出ない**（項目定義が "omitted when unnamed"。実測: 名前付きセッションでは `20260916_life-codex` と表示され、未命名の新規セッションでは項目ごと消える）。`git-branch` も起動直後は出ず、スレッドの活動時に解決される（binary に `StatusLineBranchUpdated` / `SyncThreadGitBranch` あり）。パス全体が要るなら `project-name` → `current-dir`（約 45 桁増えるので広いペイン限定）。`terminal_title` は **触らない**（`session-id` が監視の結合キー）。
 - `hide_tab_bar_if_only_one_tab = false`。true のままだと 1 タブになった瞬間に表示が丸ごと消える。代償は常時 1 行。
 
 検証（headless）: 3 つの Codex セッションが混線せず、それぞれ別 cwd・別 rollout・別使用率で書き出されることを確認（qgis / Instagram / life-haruto）。`wezterm --config-file <repo>\wezterm\wezterm.lua show-keys` exit 0。
