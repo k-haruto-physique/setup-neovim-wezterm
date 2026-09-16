@@ -19,7 +19,7 @@
 
 ## Codex ステータス（タブバー右・2026-09-16）
 
-`update-status` が `%LOCALAPPDATA%\Temp\codex-statusccount.json` を読み、**アクティブペインが Codex の時だけ** `set_right_status` で 5h/7d 使用制限を出す。書き手は `Codex/tabbar-status.ps1`（ログオンタスク `Codex Tab Bar Status` が常駐させる）。
+`update-status` が `%LOCALAPPDATA%\Temp\codex-status\account.json` を読み、**アクティブペインが Codex の時だけ** `set_right_status` で 5h/7d 使用制限を出す。書き手は `Codex/tabbar-status.ps1`（ログオンタスク `Codex Tab Bar Status` が常駐させる）。
 
 - **置き場所の原則**: タブバーはウィンドウに 1 本しかない。だから**アカウント共通で、切れると困る値**（使用制限）だけを置く。セッション固有の値（モデル / context / cwd / branch）は Codex 内蔵 `status_line` がペインの中で持つ。まとめるとどのセッションの cwd か分からなくなる。
 - `hide_tab_bar_if_only_one_tab = false` はこの表示の前提（true だと 1 タブ時にバーごと消える）。
