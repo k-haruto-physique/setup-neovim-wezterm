@@ -99,9 +99,11 @@ config.show_tabs_in_tab_bar = true
 -- (WezTerm 仕様上 set_right_status はタブバー領域専用なので、タブバー自体は
 -- 残さざるを得ない。format-tab-title で見た目だけ消す。)
 -- 2026-05-22: タブ 1 つの時はバー非表示（ペイン領域を最大化）
--- 2026-09-16: false へ。Codex のステータスは set_right_status＝タブバー領域にしか出せず、
--- true のままだと 1 タブになった瞬間に使用制限の表示が丸ごと消える。代償は常時 1 行。
-config.hide_tab_bar_if_only_one_tab = false
+-- 2026-09-16: Codex の使用制限を set_right_status＝タブバー領域に出すので一度 false に
+-- したが、ユーザー判断で true に戻した。1 タブ時はバーごと消える＝使用制限も出ないが、
+-- 通常は 2 タブ（クロコ用 / Codex 用）運用なので実害が出るのは稀。
+-- ペイン領域を 1 行削られる方を嫌う、という判断。
+config.hide_tab_bar_if_only_one_tab = true
 -- 2026-05-22: タブバーを画面上部に戻した（コピーモードの MODE 表示も上に出る）
 config.tab_bar_at_bottom = false
 -- ファンシータブバーを無効化（OS 風クロームだと透過が効かないため、
@@ -144,8 +146,7 @@ local SOLID_RIGHT_ARROW = wezterm.nerdfonts.ple_upper_left_triangle
 -- 引数 4 番目は WezTerm 側の config オブジェクト。名前を `config` にすると
 -- このファイル冒頭の `config` を**シャドウ**して事故るので `_` 付きで受ける。
 wezterm.on("format-tab-title", function(tab, _tabs, _panes, _config, _hover, max_width)
-	-- 2026-09-16: hide_tab_bar_if_only_one_tab=false にしたので 1 タブでも fire する
-	-- （Codex の使用制限を set_right_status で出すためバーを常設した）。
+	-- hide_tab_bar_if_only_one_tab=true なので 1 タブ時はそもそも fire しない。
 	local background = "#5c6d74"
 	local foreground = "#FFFFFF"
 	-- タブ両端の三角形の隙間。ここも "none"（透明）だと、その分だけ素通しの筋が残る。
