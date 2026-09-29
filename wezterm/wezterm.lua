@@ -281,6 +281,26 @@ local function open_path_in_nvim(window, pane, path)
 	window:perform_action(act.SpawnCommandInNewWindow(spawn), pane)
 end
 
+-- 2026-09-29: ペインの中身を「止まった写し」にして nvim（新規タブ）で開く＝コピー用。
+-- 画面を書き換え続けるアプリ（作業中の Claude Code のスピナー等）がいるペインでは、
+-- WezTerm のマウス選択もコピーモードの選択も、出力のたびに消える（上流バグ・troubleshooting #30）。
+-- 写しは書き換わらないので、nvim の V+矢印+y でも、Ctrl+Shift+X のコピーモードでも普通にコピーできる。
+-- 書き出しは Lua の io.open だけ（子プロセスは起こさない・#29）。Temp 直下なら mkdir も要らない。
+local function open_pane_snapshot(window, pane)
+	local dims = pane:get_dimensions()
+	-- logical lines: 端末の自動折り返しを 1 行に戻す（Claude 自身が改行した行はそのまま）。
+	local text = pane:get_logical_lines_as_text(dims.scrollback_rows)
+	local path = (os.getenv("LOCALAPPDATA") or "") .. "\\Temp\\wezterm-pane-" .. pane:pane_id() .. ".txt"
+	local file = io.open(path, "w")
+	if not file then
+		return
+	end
+	file:write(text, "\n")
+	file:close()
+	-- -R: 読み取り専用（写しなので保存しない）。+: 最終行から開く（直近の出力を探すことが多い）。
+	window:perform_action(act.SpawnCommandInNewTab({ args = { "nvim", "-R", "+", path } }), pane)
+end
+
 -- コピーして copy_mode を抜ける（y と Enter が同一挙動なので 1 箇所に定義）。
 -- 注意: ClearPattern は副作用で search overlay を表示することがあるため**使わない**
 -- （troubleshooting 第 3 項）。
@@ -316,8 +336,9 @@ config.keys = {
 	{ key = "x", mods = "CTRL|SHIFT", action = act.ActivateCopyMode },
 	-- 2026-05-22: nvim を別ウィンドウで起動（上モニターへドラッグ用）
 	{ key = "I", mods = "CTRL|SHIFT", action = act.SpawnCommandInNewWindow({ args = { "nvim", "." } }) },
-	-- 2026-09-16: Ctrl+Shift+Y（4 段ステータスの後付け）は廃止。
-	-- ステータスはタブバーに出るようになり、ペインへの後付け自体が不要になった。
+	-- 2026-09-29: Ctrl+Shift+Y → ペインの写しを nvim で開く（コピー用・open_pane_snapshot 参照）。
+	-- 旧 Ctrl+Shift+Y（Codex 4 段ステータスの後付け）は 2026-09-16 に廃止済みで、空いていたキーを再利用。
+	{ key = "Y", mods = "CTRL|SHIFT", action = wezterm.action_callback(open_pane_snapshot) },
 	-- Ctrl+Shift+N → Codex を新規ウィンドウで起動（ステータスはタブバーに出る）。
 	{
 		key = "N",

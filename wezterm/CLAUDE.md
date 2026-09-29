@@ -30,6 +30,8 @@
 
 - **🚫 `wezterm.lua` から子プロセスを起こさない**: `wezterm.background_child_process` で `conhost --headless pwsh` を常駐起動しようとしたら、**30 秒ごとに `0xc0000142`（STATUS_DLL_INIT_FAILED）のモーダルダイアログ**が出た（2026-09-16 実測。System ログ ID 26 で 6 件）。`wezterm-gui.exe` はコンソールを持たない GUI プロセスなので、子の conhost が初期化できない。常駐はタスクスケジューラの責務（`Codex/register-*-task.ps1`）。`automatically_reload_config = true` は**保存した瞬間に本番へ出る**ので、GUI からの子プロセス起動は必ず手で 1 回試してからループに入れる。
 
+- **出力中のペインでは選択が消える（WezTerm 本体のバグ・設定で直せない）**: コピーモードは `overlay/copy.rs` の `update_search()` が、そのペインに出力があるたびに選択を消す。マウス選択も、選択した行が書き換わると消える。作業中の Claude のスピナーで点滅・コピー不能になる。回避策は Claude の `/copy` と `Ctrl+Shift+Y`（ペインの写しを nvim で開く・`open_pane_snapshot`）。上流 #7984 / PR #8037（未マージ）。`update-status` や色の override をいじっても直らないので、そこを疑わないこと。詳細 `docs/troubleshooting.md` #30。
+
 - **reload とイベントハンドラ残骸**: 旧 Claude Code addon 等の `wezterm.on()` が config reload では消えない。完全再起動が必要。詳細 `docs/troubleshooting.md` 第 2 項。
 - **`Search:` バー誤発火**: `act.CopyMode("ClearPattern")` を Multiple action 内で呼ぶと副作用で search overlay が出る。**ClearPattern は使わない**。
 - **CopyMode key_table 上書きの罠**: `config.key_tables.copy_mode = {...}` は WezTerm デフォルトを完全置換（fall through しない）。必要なキーは全て自前で定義する（矢印キー優位＋hjkl 併設、`/` `?` は誤発火防止で `act.Nop`）。逆に **`config.mouse_bindings` は既定とマージ**される（消したい既定バインドは明示上書きが必要）。

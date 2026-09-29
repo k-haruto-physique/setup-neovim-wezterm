@@ -3,7 +3,7 @@
 セッション開始（`hi`）時に**必ず読む**未完タスク・仕様書の単一台帳。
 troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約点。**完了したら CLOSED へ落とし、起点ファイル（#番号 / memory）にも反映**する。
 
-最終更新: 2026-09-16（Codex ステータスをタブバーへ移設。**OPEN 2 件**＝B16 実機確認・B17 旧 4 段機構の物理削除）。
+最終更新: 2026-09-29（Claude ペインのコピー不調＝WezTerm 上流バグと確定・`Ctrl+Shift+Y` 追加。**OPEN 3 件**＝B18 `Ctrl+Shift+Y` 実機確認・B16 実機確認・B17 旧 4 段機構の物理削除）。
 
 ---
 
@@ -11,7 +11,8 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | # | タスク | 状態 | 次の一手 | 起点 |
 |---|---|---|---|---|
-| B16 | **Codex ステータスのタブバー表示を実機確認** | 実装・headless 検証済 / GUI 未確認 | **WezTerm を完全再起動**（reload では旧ハンドラが消えない＝#2）。その後 ① Codex ペインを選ぶとタブバー右に `◐ 5h:… ◑ 7d:… ▸ cwd ⎇ branch` が出る ② 旧 4 段ペインが作られない ③ 1 タブにするとバーが消える（hide_tab_bar_if_only_one_tab=true の想定どおり） ④ 0xc0000142 ダイアログが再発しない ⑤ タブバー右の透け具合がペインと同じ ⑥ Codex で `/rename` すると内蔵行にセッション名が出る ⑦ 最初のターン後に `git-branch` が出る、を確認 | #29 |
+| B18 | **`Ctrl+Shift+Y`（ペインの写しを nvim で開く）の実機確認** | 実装・`show-keys` 検証済 / GUI 未確認。保存で自動 reload 済み（キー追加なので完全再起動は不要） | 作業中の Claude のペインで `Ctrl+Shift+Y` → ① 新しいタブで nvim が最終行から開く ② `V`+矢印+`y` で他アプリに貼れる ③ `:q` でタブが閉じて元に戻る。あわせて Claude の `/copy` も試す。NG なら **#30** を起点に見直す | #30 |
+| B16 | **Codex ステータスのタブバー表示を実機確認** | 実装・headless 検証済 / GUI 未確認。**WezTerm は 2026-09-28 08:00 に完全再起動済み＝今なら確認できる** | **WezTerm を完全再起動**（reload では旧ハンドラが消えない＝#2）。その後 ① Codex ペインを選ぶとタブバー右に `◐ 5h:… ◑ 7d:… ▸ cwd ⎇ branch` が出る ② 旧 4 段ペインが作られない ③ 1 タブにするとバーが消える（hide_tab_bar_if_only_one_tab=true の想定どおり） ④ 0xc0000142 ダイアログが再発しない ⑤ タブバー右の透け具合がペインと同じ ⑥ Codex で `/rename` すると内蔵行にセッション名が出る ⑦ 最初のターン後に `git-branch` が出る、を確認 | #29 |
 | B17 | **旧 4 段ステータスペイン機構の物理削除** | B16 確認待ち | B16 が OK なら `Codex/session-status.ps1`・`install-session-status.ps1`・`hooks.json`・`test-session-status.py`・`statusline.ps1` を git rm し、README / statusline-spec / CHANGELOG を整理。NG ならこれらで巻き戻す（`install-session-status.ps1` 再実行＋`~/.codex/hooks.json` 復元） | #29 |
 
 ---
@@ -25,6 +26,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 | W3 | **ペイン入力不能（Claude TUI 描画 wedge）** | 2026-07-03 発生・W2 とは別種（修飾キータップで直らない）。特定 Claude ペインが "Esc to cancel" オーバーレイで wedge。**遠隔修復不可を実証**（send-text は Claude TUI に届かず・zoom-pane は mux CLI をデッドロックさせた）。頻発申告あり | 復旧は**ユーザー直接操作**: クリック→`Esc`×1-2→`Ctrl+C`→最終手段 `claude --continue`（会話復元）。`get-text` にオーバーレイが見えたら W3 確定。詳細 troubleshooting #13 |
 | W4 | **statusline ◒ F5（Fable5 週間制限）セグメントが休眠中** | 2026-07-21 前方互換で実装済。だが Claude Code 2.1.216 の statusLine payload は `rate_limits` に `five_hour`/`seven_day` しか載せず（claude.exe 実体で確定）、Fable5 週間制限（内部 `seven_day_overage_included`）は転送されない＝**現在は非表示**。今すぐ出すには自前ポーラー要（不採用） | Claude Code 更新で payload に premium-weekly キーが載れば**自動点灯**（作業ゼロ）。更新後に `◒ F5:xx%` が出るか目視。載らないまま欲しくなったら usage ポーラーを再検討。詳細 `claude/statusline-spec.md`「前方互換」 |
 | W5 | **statusline の ultracode 検出が claude 内部実装に依存** | 2026-08-20 に **transcript の `ultra_effort_enter`/`ultra_effort_exit` attachment レコード**方式へ置換し、合成 11 ケース + **実 transcript 3 本**で検証済（当初の system-reminder テキスト方式は**永続化されない**ことが判明＝死んでいた。settings.json 方式は嘘をつきうるので撤去）。残るのは (a) attachment レコードが内部実装で将来変わりうる (b) model-picker / Remote Control で OFF にした時だけ次のプロンプトまで表示が 1 ターン遅れる、の 2 点。どちらも**失敗方向は xhigh への縮退**で誤表示にはならない | 次回の全体監査で claude.exe 実体に対し `"attachment":{"type":"ultra_effort_` が生きているか再確認。消えていたら検出を撤去。詳細 `claude/statusline-spec.md`「effort セグメントと ultracode 検出」 |
+| W6 | **WezTerm のコピーモード／マウス選択が、出力中のペインで消える** | WezTerm 本体のバグ（`overlay/copy.rs` の `update_search()` が、出力のたびに選択を消す）。設定では直せず、2026-09-29 時点の `main` も未修正。回避策（Claude の `/copy`・`Ctrl+Shift+Y`）で足りる | 上流 [#8037](https://github.com/wezterm/wezterm/pull/8037)（#7984 の修正案）がマージされ、リリースに入ったら WezTerm を更新する。作業中の Claude のペインで `Ctrl+Shift+X` の選択が保てれば、`Ctrl+Shift+Y` は予備に格下げ。詳細 troubleshooting #30 |
 
 ---
 

@@ -44,7 +44,7 @@ WezTerm + LazyVim + PowerShell の **このリポジトリのセットアップ�
 
 ## 🪟 WezTerm: ペイン・タブ・ウィンドウ
 
-**基本のペイン/タブ操作は WezTerm デフォルト**。ただし独自バインドを追加定義済: `Ctrl+Shift+X/I/N/S/E/O`（`config.keys`）・コピーモード key_table 全置換・`config.mouse_bindings`（Ctrl+Click でパスを開く / クリック誤爆防止）。旧 tmux 風レガシーは `wezterm.lua` 内で 4 行コメントアウトのまま退避。
+**基本のペイン/タブ操作は WezTerm デフォルト**。ただし独自バインドを追加定義済: `Ctrl+Shift+X/I/N/S/E/O/Y`（`config.keys`）・コピーモード key_table 全置換・`config.mouse_bindings`（Ctrl+Click でパスを開く / クリック誤爆防止）。旧 tmux 風レガシーは `wezterm.lua` 内で 4 行コメントアウトのまま退避。
 
 ### ペイン操作 ★★★
 
@@ -81,6 +81,7 @@ WezTerm + LazyVim + PowerShell の **このリポジトリのセットアップ�
 | `Ctrl+Shift+V` | 貼り付け |
 | `Ctrl+Shift+F` | スクロールバック検索 |
 | **`Ctrl+Shift+X`** | **コピーモード起動**（次表参照） |
+| **`Ctrl+Shift+Y`** | **ペインの写しを nvim（新規タブ）で開く**。作業中の Claude のペインでコピーしたい時に使う（下の注意参照）。`:q` で閉じる |
 | `Ctrl+Shift+Space` | QuickSelect（画面上のパス等にラベル表示 → タイプで選択。WezTerm デフォルト） |
 | `Ctrl+Shift+PageUp/Down` | スクロール（タブ移動と被るので注意） |
 | `Ctrl+Shift+K` | スクロールバックをクリア |
@@ -109,6 +110,13 @@ WezTerm + LazyVim + PowerShell の **このリポジトリのセットアップ�
 > - 何か入力しても画面に何も出ない → IME OFF or コピーモード成功
 
 **コピーモードに入れているかの判定**: **カーソルが黄色に変わる**（2026-05-22 設定）。黄色くなければ未起動 → IME OFF にして `Ctrl+Shift+X` リトライ。
+
+> ⚠️ **作業中の Claude のペインではコピーモードが使えない**（WezTerm のバグ・troubleshooting #30）
+>
+> スピナーが回っている間は、選択が出力のたびに消えて点滅し、`y` でコピーできない。設定では直せない。
+> - **Claude の直前の返答** → Claude に `/copy`（`/copy 2` で 1 つ前）。折り返しの改行が入らない全文が取れる
+> - **それ以外の部分** → `Ctrl+Shift+Y` で写しを nvim に開き、`V`+矢印+`y`（またはそのタブで `Ctrl+Shift+X`）
+> - 待機中（スピナーが止まった）のペインなら、このままコピーモードで取れる
 
 | キー | 動作 | 備考 |
 |---|---|---|
@@ -450,4 +458,4 @@ Vim 未経験者が **最初に詰む最大ポイント**。
 `docs/legacy-nvim/` には **以前手書きしていた lazy.nvim 設定**を保存済み。キーバインドや LSP 設定の参考にできる（特に `keymaps.lua`、`lsp.lua`）。
 
 
-2026-09-16: Codex のステータスは**タブバー右**（ウィンドウ幅・分割に不感）へ移設。専用ペインは廃止し、`Ctrl+Shift+Y`（4段表示の後付け）と分割キーの転送補正も撤去した。Codex ペイン内に残るのは内蔵 1 行（モデル+effort / context）だけ。詳細 troubleshooting #29。Codexの `? for shortcuts` は `tui.keymap.composer.toggle_shortcuts = []` により非表示（`?` ヘルプも無効）。
+2026-09-16: Codex のステータスは**タブバー右**（ウィンドウ幅・分割に不感）へ移設。専用ペインは廃止し、`Ctrl+Shift+Y`（4段表示の後付け）と分割キーの転送補正も撤去した（`Ctrl+Shift+Y` は 2026-09-29 に「ペインの写しを nvim で開く」へ再割当て）。Codex ペイン内に残るのは内蔵 1 行（モデル+effort / context）だけ。詳細 troubleshooting #29。Codexの `? for shortcuts` は `tui.keymap.composer.toggle_shortcuts = []` により非表示（`?` ヘルプも無効）。
