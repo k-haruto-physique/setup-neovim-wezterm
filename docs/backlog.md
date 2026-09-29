@@ -3,7 +3,7 @@
 セッション開始（`hi`）時に**必ず読む**未完タスク・仕様書の単一台帳。
 troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約点。**完了したら CLOSED へ落とし、起点ファイル（#番号 / memory）にも反映**する。
 
-最終更新: 2026-09-29（Claude ペインのコピー不調＝WezTerm 上流バグと確定・`Ctrl+Shift+Y` 追加。**OPEN 3 件**＝B18 `Ctrl+Shift+Y` 実機確認・B16 実機確認・B17 旧 4 段機構の物理削除）。
+最終更新: 2026-09-29（Claude ペインのコピー不調＝WezTerm 上流バグと確定・`Ctrl+Shift+Y` 追加・B18 実機確認で CLOSED。**OPEN 2 件**＝B16 実機確認・B17 旧 4 段機構の物理削除）。
 
 ---
 
@@ -11,7 +11,6 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | # | タスク | 状態 | 次の一手 | 起点 |
 |---|---|---|---|---|
-| B18 | **`Ctrl+Shift+Y`（ペインの写しを nvim で開く）の実機確認** | 実装・`show-keys` 検証済 / GUI 未確認。保存で自動 reload 済み（キー追加なので完全再起動は不要） | 作業中の Claude のペインで `Ctrl+Shift+Y` → ① 新しいタブで nvim が最終行から開く ② `V`+矢印+`y` で他アプリに貼れる ③ `:q` でタブが閉じて元に戻る。あわせて Claude の `/copy` も試す。NG なら **#30** を起点に見直す | #30 |
 | B16 | **Codex ステータスのタブバー表示を実機確認** | 実装・headless 検証済 / GUI 未確認。**WezTerm は 2026-09-28 08:00 に完全再起動済み＝今なら確認できる** | **WezTerm を完全再起動**（reload では旧ハンドラが消えない＝#2）。その後 ① Codex ペインを選ぶとタブバー右に `◐ 5h:… ◑ 7d:… ▸ cwd ⎇ branch` が出る ② 旧 4 段ペインが作られない ③ 1 タブにするとバーが消える（hide_tab_bar_if_only_one_tab=true の想定どおり） ④ 0xc0000142 ダイアログが再発しない ⑤ タブバー右の透け具合がペインと同じ ⑥ Codex で `/rename` すると内蔵行にセッション名が出る ⑦ 最初のターン後に `git-branch` が出る、を確認 | #29 |
 | B17 | **旧 4 段ステータスペイン機構の物理削除** | B16 確認待ち | B16 が OK なら `Codex/session-status.ps1`・`install-session-status.ps1`・`hooks.json`・`test-session-status.py`・`statusline.ps1` を git rm し、README / statusline-spec / CHANGELOG を整理。NG ならこれらで巻き戻す（`install-session-status.ps1` 再実行＋`~/.codex/hooks.json` 復元） | #29 |
 
@@ -34,6 +33,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | 日付 | タスク | 確定根拠 |
 |---|---|---|
+| 2026-09-29 | **B18 `Ctrl+Shift+Y`（ペインの写しを nvim で開く）** | ユーザーが実機で「nvim では問題なくコピーできた」と確認。作業中の Claude のペインでコピーモードが点滅・コピー不能になるのは WezTerm 本体のバグ（上流 #7984）で、Claude の再起動でも直らない。回避策は `/copy` と `Ctrl+Shift+Y`。上流の修正は W6 で見張る。#30 |
 | 2026-09-15 | **B14 ブリッジの送り先があいまいな時は送らない** | ユーザーが (b) を選択。`Select-BridgeTarget`（`bridge-common.ps1`）で候補が 2 つ以上なら exit 6 にし、`-ThreadId`／`-ClaudePid` で指定させる。単体テスト（0/1/2 件）と、`ask-claude.ps1` の結合テスト（テスト用の場所で、実在セッション 2 つを指す仮の起動記録）で確認。`Codex/README.md` |
 | 2026-09-15 | **B15 受信箱の真正性（許可した会話だけ受け付けるか）** | ユーザーが (a) 今のままを選択。許可制は導入せず、ブリッジ経由の破壊的・外部送信の操作は Claude がユーザーに確認する運用を続ける（`CLAUDE.md`・`~/.claude/CLAUDE.md`）。検証に使える情報（ファイル所有者・プロセスツリー）は `Codex/README.md` に記録済み |
 | 2026-09-15 | **B13 Codex の実効サンドボックスと docs の食い違い** | `~/.codex/config.toml` は `workspace-write` + `auto_review`、docs は `danger-full-access` と記載していた。ユーザーの「どちらでもいい、お互いにやりやすい運用で」を受けて、実際の設定を正とし、`Codex/runtime.toml`・`Codex/README.md`・#17 を合わせた。ブリッジは Temp 配下で動作確認済み。#27 |
