@@ -147,5 +147,7 @@ Slack で投稿役をメンションすると、そのチャンネルに対応�
 | `missing_scope` | 手順 2 の権限を足し、同じ画面で「Reinstall to Workspace」を押す（鍵は変わらないことが多いが、変わったらしまい直す） |
 | `invalid_auth` / `token_revoked` | 鍵をコピーし直して `--store-token-from-clipboard` をやり直す |
 | 鍵が見つからない | 手順 4 をやる。環境変数 `SLACK_BOT_TOKEN` があれば、そちらが優先される |
+| アプリの設定画面で保存すると「Hmm, something's gone wrong.」 | Chrome の自動翻訳を切る（アドレスバーの翻訳のマーク →「英語」）。翻訳が入るとイベント名 `app_mention` が日本語に置き換わり、保存が失敗する（2026-10-01 実害）。原文に戻したら「Discard Changes」で捨てて読み直してから、もう一度追加して保存 |
+| メンションしても 👀 が付かない | `listen.log` に「受けた」が無ければ Slack 側。「Event Subscriptions」が On で `app_mention` が入っているか、権限を足した後に「Reinstall」したか（`--check` の後で投稿役の権限を確かめる）。2 つのセッション（や窓）で同じ設定画面を同時に触ると、保存が上書きされて消える |
 
 自己テスト（ネットにつながない）: `python slack\post.py --self-test`
