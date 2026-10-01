@@ -4,9 +4,27 @@ Windows 11 上の Neovim + LazyVim + WezTerm 環境を、シンボリックリ�
 
 ## PC が壊れたとき（復旧の入口）
 
-このリポは、PC 全体を立て直すときの入口です。新しい PC にあるのは、GitHub・Google ドライブ・自宅の外付け SSD だけ、という前提で書いています。
+このリポは、PC 全体を立て直すときの入口です。新しい PC にあるのは、GitHub・Google ドライブ・自宅の外付け SSD だけ、という前提で書いています。新品の PC を買ったときも同じ手順です。
 
-1. 新しい PC にこのリポを clone し、Claude Code を開いて「PC を立て直したい」と頼む（決まりは `CLAUDE.md` の「このリポの役目」）。
+0. **最初に入れる物**（新しい PC の「ターミナル」＝Windows PowerShell で、1 行ずつ）。
+
+   ```powershell
+   winget install --id Microsoft.PowerShell -e
+   winget install --id Git.Git -e
+   winget install --id GitHub.cli -e
+   irm https://claude.ai/install.ps1 | iex
+   ```
+
+   入れ終わったらターミナルを閉じて開き直し（新しい PATH を読ませる）、`pwsh` で PowerShell 7 に入って次を打つ。
+
+   ```powershell
+   mkdir $HOME\Documents\Repositories; cd $HOME\Documents\Repositories
+   git clone https://github.com/k-haruto-physique/setup-neovim-wezterm
+   cd setup-neovim-wezterm; claude
+   ```
+
+   Claude Code が開いたら、ブラウザで claude.ai にログインする。
+1. Claude に「PC が壊れたので、README の『PC が壊れたとき』の手順で立て直したい」と頼む。以下は Claude が順に進める（決まりは `CLAUDE.md` の「このリポの役目」）。
 2. `gh auth login` で GitHub にログインする。
 3. 人生管理用の非公開リポを clone する（名前は `gh repo list` で確かめる）。
 4. その非公開リポの `.pc_backup/README.md` の順に戻す（設定・MCP・常駐タスク・memory）。鍵やパスワードは控えに入っていないので、パスワード管理ソフトから入れ直す。
