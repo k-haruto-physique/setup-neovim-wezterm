@@ -11,7 +11,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | # | タスク | 状態 | 次の一手 | 起点 |
 |---|---|---|---|---|
-| B16 | **Codex ステータスのタブバー表示を実機確認** | 実装・headless 検証済 / GUI 未確認。**WezTerm は 2026-09-28 08:00 に完全再起動済み＝今なら確認できる** | **WezTerm を完全再起動**（reload では旧ハンドラが消えない＝#2）。その後 ① Codex ペインを選ぶとタブバー右に `◐ 5h:… ◑ 7d:… ▸ cwd ⎇ branch` が出る ② 旧 4 段ペインが作られない ③ 1 タブにするとバーが消える（hide_tab_bar_if_only_one_tab=true の想定どおり） ④ 0xc0000142 ダイアログが再発しない ⑤ タブバー右の透け具合がペインと同じ ⑥ Codex で `/rename` すると内蔵行にセッション名が出る ⑦ 最初のターン後に `git-branch` が出る、を確認 | #29 |
+| B16 | **Codex ステータスのタブバー表示を実機確認** | 2026-10-01 確認: ②④ ✅（ペイン一覧・プロセス・System ログ ID 26 が 0 件）、③⑤⑥ ✅（本人）。**残り ①⑦**。⚠️ `Ctrl+Shift+N` の Codex は新しいウィンドウ＝タブ 1 つなので、③ のとおりタブバーごと消え、① の使用制限が出なかった → 2026-10-01 本人が案 A を選び、Codex のあるウィンドウだけ 1 タブでもバーを出すようにした（`wezterm.lua` の `window_has_codex`）。`Ctrl+Shift+N` で Codex を開いてバーと使用制限が出るか、Claude だけのウィンドウではバーが出ないままかを確認 | **WezTerm を完全再起動**（reload では旧ハンドラが消えない＝#2）。その後 ① Codex ペインを選ぶとタブバー右に `◐ 5h:… ◑ 7d:… ▸ cwd ⎇ branch` が出る ② 旧 4 段ペインが作られない ③ 1 タブにするとバーが消える（hide_tab_bar_if_only_one_tab=true の想定どおり） ④ 0xc0000142 ダイアログが再発しない ⑤ タブバー右の透け具合がペインと同じ ⑥ Codex で `/rename` すると内蔵行にセッション名が出る ⑦ 最初のターン後に `git-branch` が出る、を確認 | #29 |
 | B17 | **旧 4 段ステータスペイン機構の物理削除** | B16 確認待ち | B16 が OK なら `Codex/session-status.ps1`・`install-session-status.ps1`・`hooks.json`・`test-session-status.py`・`statusline.ps1` を git rm し、README / statusline-spec / CHANGELOG を整理。NG ならこれらで巻き戻す（`install-session-status.ps1` 再実行＋`~/.codex/hooks.json` 復元） | #29 |
 
 ---

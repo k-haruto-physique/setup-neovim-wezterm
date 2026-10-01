@@ -103,6 +103,8 @@ config.show_tabs_in_tab_bar = true
 -- したが、ユーザー判断で true に戻した。1 タブ時はバーごと消える＝使用制限も出ないが、
 -- 通常は 2 タブ（クロコ用 / Codex 用）運用なので実害が出るのは稀。
 -- ペイン領域を 1 行削られる方を嫌う、という判断。
+-- 2026-10-01: ただし Codex のペインがあるウィンドウだけは、update-status の override で
+-- false にしてバーを出す（Ctrl+Shift+N の Codex は 1 タブなので、そうしないと使用制限が見えない）。
 config.hide_tab_bar_if_only_one_tab = true
 -- 2026-05-22: タブバーを画面上部に戻した（コピーモードの MODE 表示も上に出る）
 config.tab_bar_at_bottom = false
@@ -146,7 +148,7 @@ local SOLID_RIGHT_ARROW = wezterm.nerdfonts.ple_upper_left_triangle
 -- 引数 4 番目は WezTerm 側の config オブジェクト。名前を `config` にすると
 -- このファイル冒頭の `config` を**シャドウ**して事故るので `_` 付きで受ける。
 wezterm.on("format-tab-title", function(tab, _tabs, _panes, _config, _hover, max_width)
-	-- hide_tab_bar_if_only_one_tab=true なので 1 タブ時はそもそも fire しない。
+	-- 1 タブ時は通常バーごと隠れるので fire しない。Codex のウィンドウだけは 1 タブでも出る（update-status 参照）。
 	local background = "#5c6d74"
 	local foreground = "#FFFFFF"
 	-- タブ両端の三角形の隙間。ここも "none"（透明）だと、その分だけ素通しの筋が残る。
@@ -522,6 +524,34 @@ end)
 -- 1 秒に 1 回だけ実ファイルを読み、それ以外は直前の描画結果を使い回す。
 local codex_status_cache = { at = 0, pane = -1, text = "" }
 
+-- 2026-10-01: Codex のペインを含むウィンドウだけは、タブ 1 つでもタブバーを出す（案 A）。
+-- Ctrl+Shift+N の Codex は新しいウィンドウ＝タブ 1 つなので、hide_tab_bar_if_only_one_tab=true
+-- のままだとバーごと消え、使用制限が見える場面が無かった。クロコだけのウィンドウは従来どおり隠す。
+-- タイトルが一瞬変わってもバーが出入りしないよう、Codex が見えなくなってから 5 秒は出したままにする。
+-- 1 秒に 1 回だけ数える（update-status は TUI の再描画ごとに発火しうる）。
+local CODEX_TABBAR_GRACE = 5
+local codex_window_cache = {}
+local function window_has_codex(window)
+	local id = window:window_id()
+	local now = os.time()
+	local cached = codex_window_cache[id]
+	if cached and cached.at == now then return cached.value end
+	local seen = false
+	local mux_window = window:mux_window()
+	for _, tab in ipairs(mux_window and mux_window:tabs() or {}) do
+		for _, p in ipairs(tab:panes()) do
+			if is_codex_pane(p) then seen = true break end
+		end
+		if seen then break end
+	end
+	local last_key = "codex_seen_at_" .. tostring(id)
+	if seen then wezterm.GLOBAL[last_key] = now end
+	local last = wezterm.GLOBAL[last_key]
+	local value = seen or (type(last) == "number" and now - last < CODEX_TABBAR_GRACE)
+	codex_window_cache[id] = { at = now, value = value }
+	return value
+end
+
 wezterm.on("update-status", function(window, _pane)
 	local copying = window:active_key_table() == "copy_mode"
 	-- 旧方式はここでペインを分割していたため copy_mode 中は抑止が必要だったが、
@@ -539,8 +569,10 @@ wezterm.on("update-status", function(window, _pane)
 
 	-- 過去ハンドラ残骸が opacity を 0.85 等に書き換えるのを抑止するため、
 	-- 毎フレーム明示的に WINDOW_OPACITY を override する。
+	local has_codex = window_has_codex(window)
 	local overrides = {
 		window_background_opacity = WINDOW_OPACITY,
+		hide_tab_bar_if_only_one_tab = not has_codex,
 	}
 
 	-- コピーモード等のキーテーブルアクティブ時: カーソル黄色化。
@@ -568,8 +600,11 @@ wezterm.on("update-status", function(window, _pane)
 	-- 結果、Claude の TUI 再描画ごとに set_config_overrides → 背景（backdrop/透過）が
 	-- 点滅して消えていた。モードが切り替わった時だけ適用する（GLOBAL は reload を跨いで残る）。
 	-- GLOBAL は入れ子テーブルへの書き込みが反映されない可能性があるので、フラットなキーで持つ。
-	local key = "override_mode_" .. tostring(window:window_id())
-	local mode = copying and "copy" or "normal"
+	-- 2026-10-01 にキー名を override_mode_ → override_state_ へ変えた。reload では旧ハンドラが
+	-- 残る（#2）ので、同じキーを共有すると新旧が交互に書き換えて override を張り直し続ける。
+	local key = "override_state_" .. tostring(window:window_id())
+	-- Codex の有無もモードに含める（切り替わった時だけ override を張り直す＝点滅させない）。
+	local mode = (copying and "copy" or "normal") .. (has_codex and "+codex" or "")
 	if wezterm.GLOBAL[key] ~= mode then
 		wezterm.GLOBAL[key] = mode
 		window:set_config_overrides(overrides)
