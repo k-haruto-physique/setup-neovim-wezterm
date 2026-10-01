@@ -11,7 +11,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | # | タスク | 状態 | 次の一手 | 起点 |
 |---|---|---|---|---|
-| — | （なし） | | | |
+| B20 | **Slack のメンションの受け口（`slack/listen.py`）を動かす** | 2026-10-01 作成・push 済み。`listen.py --check` で対応表・投稿役の鍵・claude は OK、**アプリの鍵（xapp-）が無く NG**。自動起動のタスク `claude-slack-listen` も未登録 | Slack のアプリ画面で Socket Mode・`app_mentions:read`／`reactions:write`・`app_mention` のイベントを設定 → 鍵をコピー → `listen.py --store-app-token-from-clipboard` → `--check` が OK → `install-listen.ps1`。手順は `slack/README.md`「メンションで動かす」 | 本人 2026-10-01 |
 
 ---
 

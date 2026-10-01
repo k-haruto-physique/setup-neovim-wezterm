@@ -91,7 +91,7 @@ Windows 11 上の Neovim + LazyVim + WezTerm 環境を symlink で dotfiles 管�
     - 上限は 1 会話 10 往復、全体で 30 分 20 回。超えると exit 4 なので、そこで止めてユーザーに報告する。
     - Codex が作業中だと exit 5。Codex が私の返事を待っているなら、`claude-reply.ps1` で返す。
     - 会話が終わったら、進行役が結論をユーザーに報告する。
-- `slack/` — 全リポ共通の Slack 投稿役（ボット）から投稿する道具 `post.py`。鍵は資格情報マネージャーの `claude-slack-bot` だけ。作り方と PC を作り直したときの戻し方は `slack/README.md`。どのチャンネルにどの名前で出すかは `~/.claude/CLAUDE.md`「送り主とチャンネル名」（公開リポなので、ここには書かない）
+- `slack/` — 全リポ共通の Slack 投稿役（ボット）から投稿する道具 `post.py`。鍵は資格情報マネージャーの `claude-slack-bot` だけ。メンションで Claude Code を起動する受け口 `listen.py`（ログオンタスク `claude-slack-listen`・登録は `install-listen.ps1`・アプリの鍵は `claude-slack-app`・対応表は `~/.claude/slack-routes.json`＝個人情報なのでリポ外）。作り方と PC を作り直したときの戻し方は `slack/README.md`。どのチャンネルにどの名前で出すかは `~/.claude/CLAUDE.md`「送り主とチャンネル名」（公開リポなので、ここには書かない）
 - `docs/usage-log.md` — 使用量の従量換算ログ（**ローカル限定・gitignore**。`usage` 関数の出力を**手動でスナップショット追記**する方式＝関数はファイルに書かない。repo 公開のため非追跡）
 - `docs/cheatsheet.html` — 印刷用 1 枚（md が正本。PDF は陳腐化のため廃止・`*.pdf` は gitignore）
 - `docs/legacy-nvim/` — 旧 lazy.nvim 設定の参照保全
