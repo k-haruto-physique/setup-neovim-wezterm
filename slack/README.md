@@ -85,7 +85,7 @@ python slack\post.py --channel C0XXXXXXXXX --delete-scheduled Q0XXXXXXXXX
 Slack で投稿役をメンションすると、そのチャンネルに対応するリポで Claude Code が1回起動し、スレッドに返事を貼る。本体は `listen.py`。
 
 - 公式の Slack 連携（Claude Tag）は Team / Enterprise のプランだけで、個人のプランでは使えない（<https://claude.com/docs/claude-tag/overview>）。だから、この PC で受ける。
-- **動かせるのは対応表の `allow_users` に入れた人だけ**（家族や同僚がメンションしても動かない）。
+- **動かせるのは対応表の `allow_users` に入れた人だけ**（ほかのメンバーがメンションしても動かない）。
 - **起動は安全装置つき**（`claude -p --permission-mode auto`＝ふだんの自動モードと同じ安全装置）。確認なし（`--dangerously-skip-permissions`）では起動しない。外から届く書き込みで何でも動かせてしまう作りは、自動モードの安全装置に止められた（2026-10-01）。安全装置が止めた操作は実行されず、返事で「PC で続けて」と伝える。
 - 本人名義の LINE などの道具は外して起動する。勤務中（平日 8:00〜16:30）はブラウザの道具も外す（窓を前に出さない）。
 - 受けたら 👀、終わったら ✅（失敗は ❌）の目印を付ける。同じリポへの依頼は1つずつ順番に流す。
