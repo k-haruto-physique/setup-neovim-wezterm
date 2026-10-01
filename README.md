@@ -56,10 +56,9 @@ setup-neovim-wezterm/
 │   ├── statusline-spec.md     # 設計仕様
 │   ├── CHANGELOG.md
 │   └── README.md
-├── Codex/                     # Codex用の下端4段ステータスペイン
+├── Codex/                     # Codex 用（タブバーのステータス・Remote Control・Claude ⇄ Codex ブリッジ）
 │   ├── tabbar-status.ps1       # タブバー用ステータス書き出し（全Codexを1プロセスで担当）
 │   ├── register-tabbar-status-task.ps1 # 上をログオンタスクで常駐（wezterm から起動すると 0xc0000142・#29）
-│   ├── statusline.ps1          # 旧4段レンダラー（B17 で削除予定）
 │   ├── statusline-spec.md      # データ源・数値・色の仕様
 │   ├── CHANGELOG.md            # 変更履歴
 │   ├── statusline.toml         # [tui].status_line の正本スニペット

@@ -232,7 +232,7 @@ local function stage_color(percent)
 	return "#a6d189"
 end
 
--- statusline.ps1 と同じ記号・Catppuccin Frappe 配色のまま 1 行へ畳む。
+-- claude/statusline.ps1 と同じ記号・Catppuccin Frappe 配色のまま 1 行へ畳む。
 -- 出すのは 5h / 7d の使用制限だけ（アカウント共通なので 1 つで正しい）。
 local function format_codex_limits(data)
 	local out = {}

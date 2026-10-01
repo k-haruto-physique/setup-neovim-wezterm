@@ -1,40 +1,30 @@
 # Codex ステータス表示の仕様
 
-内蔵フッターは `[tui].status_line = ["model-with-reasoning", "context-remaining", "thread-name"]`。モデル＋effort、コンテキスト残量、セッション名をCodex自身が表示する。`/rename <名前>` で命名でき、未命名の場合は名前を省略する。contextの計算と表示を自作しない。
+2026-09-16 にタブバー方式へ移し、2026-10-01 に旧方式（下端 4 段の専用ペイン）を削除した。経緯は `CHANGELOG.md` と troubleshooting #29。
 
-WezTerm下端4セルの自作ペインに3行を描画する。
+## 置き場所
 
-| 行 | 表示 | データ源 |
+| 値 | 置き場所 | 理由 |
 |---|---|---|
-| 1 | 5h/7d使用率、リセットまでの時間 | 対象rolloutのtoken_count.rate_limits |
-| 2 | 作業ディレクトリ | 対象rolloutのsession_meta/turn_context.cwd。ホームを `~` へ短縮 |
-| 3 | Gitブランチ、変更状態、ahead/behind | gitの読み取りコマンド |
+| モデル＋effort / context 残量 / セッション名 / リポ名 / ブランチ | Codex 内蔵 status line | セッションごとに違う。タブバーはウィンドウに 1 本なので、ここに出すとどのセッションの値か分からなくなる |
+| 5h / 7d 使用制限 | タブバー右（`set_right_status`） | アカウント共通で 1 つで足り、切れると困る。タブバーはウィンドウ幅なので分割で縮まない |
 
-5h/7dは使用率。50%以上は黄色、80%以上は赤、それ未満は緑。cwdは青、Gitは緑。
+## 内蔵 status line
 
-Git記号は `=` 競合、`+` ステージ済み、`!` 変更、`?` 未追跡、`x` 削除、`vN` behind、`^N` ahead。
+`[tui].status_line = ["model-with-reasoning", "context-remaining", "thread-name", "project-name", "git-branch"]`（正本 `statusline.toml`）。幅が足りないと末尾から切れる（5 項目で約 96 桁）。
 
-`-Watch` は2秒間隔で更新する。初回はログ末尾16MB、更新時は256KBから最新の情報を読み、取得済みの値を保持する。描画は変更された行のみを1回の書き込みで更新し、全画面消去を行わない。データ未取得時は制限を `limits: unavailable` と表示する。Claude専用callbackの編集行数は取得しない。
+- `context-remaining` は**残り**の割合（`Context 59% left` ＝ 59% 残っている）。Claude 側の statusline の `ctx:N%` は使った割合なので、向きが逆。
+- `thread-name` は `/rename` するまで項目ごと出ない。
+- `git-branch` は 0.154.0 では出ない（2026-10-01 実測。最初のやりとりの後・190 桁のペインでも出なかった）。backlog W7。
+- `terminal_title = ["app-name", "session-id", "model-with-reasoning"]` は**変えない**。タブバーの書き手と `wezterm.lua` が、タイトル `codex | <thread UUID> | <model>` で Codex のペインを見分けている。
 
-## セッションの識別と寿命
+## タブバー（使用制限）
 
-自動表示は `~/.codex/status-panes/<CLI PID>-<owner pane ID>.json` を介して対象threadへ結び付ける。WezTermは全タブを走査するが表示は対象ペインの下端4セルだけを分割し、元のフォーカスを保持する。WindowsのforegroundはMCP子プロセスになることがあるため、ppidを辿って実際のcodex.exeを識別する。
+- 書き手 `tabbar-status.ps1`: ログオンタスク `Codex Tab Bar Status` で常駐（2 秒間隔・多重起動は mutex で防ぐ）。全 WezTerm GUI のソケットを自分で探し（タスクは `WEZTERM_UNIX_SOCKET` を継承しない）、Codex のペインのタイトルの UUID から rollout を解決して、最も新しく書かれた rollout の `token_count.rate_limits` を `%LOCALAPPDATA%\Temp\codex-status\account.json` に書く。Codex のペインが無い時は値を `null` にする。`heartbeat` は失敗しても進める。見つからない状態が続いた時だけ `errors.log` に 1 行残す。
+- 読み手 `wezterm.lua`（`update-status`）: 1 秒に 1 回だけ読む。`updated` が 30 秒より古ければ出さない。アクティブなペインが Codex の時だけ `◐ 5h:N% ↺残り │ ◑ 7d:N% ↺残り` を出す。50% 以上は黄、80% 以上は赤、それ未満は緑。
+- Codex のペインがあるウィンドウは、タブが 1 つでもタブバーを出す（`window_has_codex`。Codex が見えなくなってから 5 秒は出したまま）。それ以外のウィンドウは `hide_tab_bar_if_only_one_tab = true` のまま。
+- 🚫 `wezterm.lua` から書き手を起動しない（0xc0000142 のダイアログ・troubleshooting #29）。
 
-起動直後はタイトルのUUIDで捕捉する。CLI 0.154.0ではタイトルのUUIDが29文字へ省略されるため、一意に一致するrolloutだけを採用する。SessionStartは最初のターンで完全なUUID・transcript・cwdを通知し、既存表示を更新する。共有mutexとatomic renameでタイトル捕捉とフックの競合を防ぐ。
-
-threadが変われば制限・cwdをリセットする。モデル/effortの表示は内蔵フッターへ委譲する。SessionEnd、CLI終了、ownerペイン消失のいずれでも表示が終了する。PID再利用はプロセス開始時刻で検出し、古いSessionEndは別threadのbindingを終了させない。
-
-制限のリセット時刻はepochを保持し、毎描画で残時間を計算する。ログの制限値は最後に取得したスナップショットであり、全セッションで同時に更新される保証はない。
-
-UUIDが一致しない場合にcwdの別セッションへフォールバックしない。`-SessionId` は単発診断用にも使える。SessionIdなし・bindingなしの単発診断のみcwdの最近更新されたログを選ぶ。`CODEX_HOME` を指定した隔離環境で8件の回帰テストを実行できる。
-
-公式参照: [Codex hooks](https://learn.chatgpt.com/docs/hooks)、[WezTerm split](https://wezterm.org/config/lua/pane/split.html)。
-
-
-## 分割後の配置維持と操作案内
-
-監視中はCLIの幾何情報も読み、表示がownerと同じタブ/左端/幅、直下（owner.top + owner.rows + 1）、高さ4セルであることを確認する。分割で崩れた場合は既存表示を `split-pane --move-pane-id` でowner直下へ移動する。ユーザーのCodexやシェルは移動・終了させない。ズーム中は修復しない。ownerが6行以下の場合も追加縮小を避ける。移動前のGUI focused_pane_idを復元する。
-
-既定の分割キー（Ctrl+Alt+Shift+5 / 引用符系）を明示定義し、表示が選択中ならownerを分割対象にする。新しいシェルへフォーカスする。
+## 操作案内の非表示
 
 `[tui.keymap.composer].toggle_shortcuts = []` で `? for shortcuts` を非表示にする。これは `?` のヘルプoverlayも無効にする。内蔵status_lineとは別設定であり、起動済みCLIには次回起動時に反映する。全フッター行を消す設定ではないため、実行中の中断・queue・終了確認などの案内は残る。根拠: [Codex footer実装](https://github.com/openai/codex/blob/main/codex-rs/tui/src/bottom_pane/footer.rs)、[keymap実装](https://github.com/openai/codex/blob/main/codex-rs/tui/src/keymap.rs)。

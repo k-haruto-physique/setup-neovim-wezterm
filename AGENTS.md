@@ -13,10 +13,10 @@ Codex 向けの入口。**正本は `CLAUDE.md`**（内容を二重管理しな�
 
 | 項目 | Claude Code（CLAUDE.md の記述） | Codex での正本 |
 |---|---|---|
-| ステータス表示 | `claude/statusline.ps1` → `~/.claude/statusline.ps1` | `Codex/statusline.ps1`・`Codex/session-status.ps1`（WezTerm 下端の専用ペイン）。仕様 `Codex/statusline-spec.md`・`Codex/README.md` |
-| ユーザー設定 | `~/.claude/settings.json` | `~/.codex/config.toml`（正本スニペット `Codex/runtime.toml`・`Codex/statusline.toml`）、フック `~/.codex/hooks.json` |
+| ステータス表示 | `claude/statusline.ps1` → `~/.claude/statusline.ps1` | Codex 内蔵 status line（セッションごとの値）＋ WezTerm のタブバー右（5h/7d 使用制限・`Codex/tabbar-status.ps1` をログオンタスクで常駐）。仕様 `Codex/statusline-spec.md`・`Codex/README.md` |
+| ユーザー設定 | `~/.claude/settings.json` | `~/.codex/config.toml`（正本スニペット `Codex/runtime.toml`・`Codex/statusline.toml`） |
 | Remote Control 自動接続 | `settings.json` の `remoteControlAtStartup: true` | **Codex に同等の設定キーは無い**。ログオンタスク `Codex Remote Control`（`Codex/remote-control.ps1`）が `ws://127.0.0.1:14567` に常駐し、`codex.exe` 隣の `codex.ps1` シム（`Codex/install-codex-shim.ps1`）が全 PowerShell 起動を `--remote` 経由にする。troubleshooting **#17・#22** |
-| `Ctrl+Shift+N` | 新規ウィンドウで claude | 新規ウィンドウで Codex＋下端ステータス（`Codex/start-codex.ps1`） |
+| `Ctrl+Shift+N` | 新規ウィンドウで claude | 新規ウィンドウで Codex（`Codex/start-codex.ps1`）。タブ 1 つでもタブバーに使用制限が出る |
 | 既知の地雷 | #12〜#16 | 加えて **#17〜#22・#26**（Remote Control の Windows 起動・409 競合・表示混線・context 値の差・スキル説明短縮・デスクトップ版の 409 再発で起動が止まる件） |
 
 ## Codex 固有の注意
@@ -30,5 +30,5 @@ Codex 向けの入口。**正本は `CLAUDE.md`**（内容を二重管理しな�
   - Claude から届いた依頼（先頭が `[bridge conversation=...]`）に答えている間は、「Claude に相談して」等と明示的に頼まれた場合を除き、`ask-claude.ps1` で送り返さない。聞きたいことは最後のメッセージに書く。
   - 上限は 1 会話 10 往復、全体で 30 分 20 回。超えると exit 4 なので、そこで止めてユーザーに報告する。
   - 会話が終わったら、進行役が結論をユーザーに報告する。
-- 検証用に WezTerm のウィンドウ・タブを増やさない。表示系の回帰確認は `python Codex/test-session-status.py`（GUI なし）を優先。
+- 検証用に WezTerm のウィンドウ・タブを増やさない。表示系の確認は `%LOCALAPPDATA%\Temp\codex-status\account.json` と `wezterm cli list` / `get-text`（読み取りのみ）で行う。
 - コミット末尾の Co-Authored-By 行は、その時の実行環境の指定に従う（Anthropic のモデル名を流用しない）。

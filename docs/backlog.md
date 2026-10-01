@@ -3,7 +3,7 @@
 セッション開始（`hi`）時に**必ず読む**未完タスク・仕様書の単一台帳。
 troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約点。**完了したら CLOSED へ落とし、起点ファイル（#番号 / memory）にも反映**する。
 
-最終更新: 2026-09-29（Claude ペインのコピー不調＝WezTerm 上流バグと確定・`Ctrl+Shift+Y` 追加・B18 実機確認で CLOSED。**OPEN 2 件**＝B16 実機確認・B17 旧 4 段機構の物理削除）。2026-10-01: **B19（PC が壊れても立て直せるように）を追加し、同日 README に復旧の入口を足して CLOSED＝OPEN 2 件**。
+最終更新: 2026-09-29（Claude ペインのコピー不調＝WezTerm 上流バグと確定・`Ctrl+Shift+Y` 追加・B18 実機確認で CLOSED。**OPEN 2 件**＝B16 実機確認・B17 旧 4 段機構の物理削除）。2026-10-01: **B19（PC が壊れても立て直せるように）を追加し、同日 README に復旧の入口を足して CLOSED＝OPEN 2 件**。同日、B16 実機確認・B17 旧 4 段の削除も CLOSED＝**OPEN 0 件**。⑦ ブランチ名は W7 へ。
 
 ---
 
@@ -11,8 +11,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | # | タスク | 状態 | 次の一手 | 起点 |
 |---|---|---|---|---|
-| B16 | **Codex ステータスのタブバー表示を実機確認** | 2026-10-01 確認: ②④ ✅（ペイン一覧・プロセス・System ログ ID 26 が 0 件）、③⑤⑥ ✅（本人）。**残り ①⑦**。⚠️ `Ctrl+Shift+N` の Codex は新しいウィンドウ＝タブ 1 つなので、③ のとおりタブバーごと消え、① の使用制限が出なかった → 2026-10-01 本人が案 A を選び、Codex のあるウィンドウだけ 1 タブでもバーを出すようにした（`wezterm.lua` の `window_has_codex`）。`Ctrl+Shift+N` で Codex を開いてバーと使用制限が出るか、Claude だけのウィンドウではバーが出ないままかを確認 | **WezTerm を完全再起動**（reload では旧ハンドラが消えない＝#2）。その後 ① Codex ペインを選ぶとタブバー右に `◐ 5h:… ◑ 7d:… ▸ cwd ⎇ branch` が出る ② 旧 4 段ペインが作られない ③ 1 タブにするとバーが消える（hide_tab_bar_if_only_one_tab=true の想定どおり） ④ 0xc0000142 ダイアログが再発しない ⑤ タブバー右の透け具合がペインと同じ ⑥ Codex で `/rename` すると内蔵行にセッション名が出る ⑦ 最初のターン後に `git-branch` が出る、を確認 | #29 |
-| B17 | **旧 4 段ステータスペイン機構の物理削除** | B16 確認待ち | B16 が OK なら `Codex/session-status.ps1`・`install-session-status.ps1`・`hooks.json`・`test-session-status.py`・`statusline.ps1` を git rm し、README / statusline-spec / CHANGELOG を整理。NG ならこれらで巻き戻す（`install-session-status.ps1` 再実行＋`~/.codex/hooks.json` 復元） | #29 |
+| — | （なし） | | | |
 
 ---
 
@@ -26,6 +25,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 | W4 | **statusline ◒ F5（Fable5 週間制限）セグメントが休眠中** | 2026-07-21 前方互換で実装済。だが Claude Code 2.1.216 の statusLine payload は `rate_limits` に `five_hour`/`seven_day` しか載せず（claude.exe 実体で確定）、Fable5 週間制限（内部 `seven_day_overage_included`）は転送されない＝**現在は非表示**。今すぐ出すには自前ポーラー要（不採用） | Claude Code 更新で payload に premium-weekly キーが載れば**自動点灯**（作業ゼロ）。更新後に `◒ F5:xx%` が出るか目視。載らないまま欲しくなったら usage ポーラーを再検討。詳細 `claude/statusline-spec.md`「前方互換」 |
 | W5 | **statusline の ultracode 検出が claude 内部実装に依存** | 2026-08-20 に **transcript の `ultra_effort_enter`/`ultra_effort_exit` attachment レコード**方式へ置換し、合成 11 ケース + **実 transcript 3 本**で検証済（当初の system-reminder テキスト方式は**永続化されない**ことが判明＝死んでいた。settings.json 方式は嘘をつきうるので撤去）。残るのは (a) attachment レコードが内部実装で将来変わりうる (b) model-picker / Remote Control で OFF にした時だけ次のプロンプトまで表示が 1 ターン遅れる、の 2 点。どちらも**失敗方向は xhigh への縮退**で誤表示にはならない | 次回の全体監査で claude.exe 実体に対し `"attachment":{"type":"ultra_effort_` が生きているか再確認。消えていたら検出を撤去。詳細 `claude/statusline-spec.md`「effort セグメントと ultracode 検出」 |
 | W6 | **WezTerm のコピーモード／マウス選択が、出力中のペインで消える** | WezTerm 本体のバグ（`overlay/copy.rs` の `update_search()` が、出力のたびに選択を消す）。設定では直せず、2026-09-29 時点の `main` も未修正。回避策（Claude の `/copy`・`Ctrl+Shift+Y`）で足りる | 上流 [#8037](https://github.com/wezterm/wezterm/pull/8037)（#7984 の修正案）がマージされ、リリースに入ったら WezTerm を更新する。作業中の Claude のペインで `Ctrl+Shift+X` の選択が保てれば、`Ctrl+Shift+Y` は予備に格下げ。詳細 troubleshooting #30 |
+| W7 | **Codex 内蔵の `git-branch` が出ない** | 2026-10-01 実測（0.154.0）: 設定には入っているのに、最初のやりとりの後・190 桁のペインでも最下行に出なかった。リポ名（`project-name`）は出ており、ブランチもほぼ master だけなので実害は小さい | Codex を更新したら、Codex のペインの最下行にブランチ名が出るかを見る（`wezterm cli get-text` で読める）。出ないまま要るなら、`status_line` の項目名を Codex の版の定義で確かめ直す。`Codex/statusline-spec.md` |
 
 ---
 
@@ -33,6 +33,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | 日付 | タスク | 確定根拠 |
 |---|---|---|
+| 2026-10-01 | **B16 Codex ステータスのタブバー表示を実機確認 / B17 旧 4 段ペインの仕組みを削除** | ②（古い 4 段ペインが作られない）④（0xc0000142 は 9/28 以降 0 件・System ログ ID 26）は Claude が確認。③⑤⑥①は本人が確認。① の確認中に「`Ctrl+Shift+N` の Codex は 1 タブなのでタブバーごと消え、使用制限が見えない」と分かり、本人が案 A を選んで Codex のあるウィンドウだけ 1 タブでもバーを出すようにした（`0ba66de`）。⑦ ブランチ名は出ない → W7。B17: `Codex/session-status.ps1`・`install-session-status.ps1`・`hooks.json`・`test-session-status.py`・`statusline.ps1` を git rm し、`Codex/README.md`・`statusline-spec.md`・`CHANGELOG.md`・`AGENTS.md`・`README.md` を整理。#29 |
 | 2026-10-01 | **B19 PC が壊れても立て直せるようにする** | 本人の判断で、普段の控え＝人生管理の非公開リポ／本当に大事な物＝自宅の外付け SSD にも。控えを取る仕組みと戻し方は、その非公開リポの `.pc_backup/README.md`（秘密は伏せ字）。このリポの `README.md` 冒頭に「PC が壊れたとき（復旧の入口）」を足し、`CLAUDE.md` のドキュメント map に `slack/`（投稿役の戻し方）を載せた。外付け SSD はドライブ文字だけで決めない旨も README に書いた |
 | 2026-09-29 | **B18 `Ctrl+Shift+Y`（ペインの写しを nvim で開く）** | ユーザーが実機で「nvim では問題なくコピーできた」と確認。作業中の Claude のペインでコピーモードが点滅・コピー不能になるのは WezTerm 本体のバグ（上流 #7984）で、Claude の再起動でも直らない。回避策は `/copy` と `Ctrl+Shift+Y`。上流の修正は W6 で見張る。#30 |
 | 2026-09-15 | **B14 ブリッジの送り先があいまいな時は送らない** | ユーザーが (b) を選択。`Select-BridgeTarget`（`bridge-common.ps1`）で候補が 2 つ以上なら exit 6 にし、`-ThreadId`／`-ClaudePid` で指定させる。単体テスト（0/1/2 件）と、`ask-claude.ps1` の結合テスト（テスト用の場所で、実在セッション 2 つを指す仮の起動記録）で確認。`Codex/README.md` |

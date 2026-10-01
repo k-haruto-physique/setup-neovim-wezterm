@@ -1,5 +1,12 @@
 # 変更履歴
 
+## 2026-10-01 — 旧 4 段ペインの仕組みを削除・Codex のウィンドウはタブ 1 つでもタブバーを出す
+
+- 実機確認（backlog B16）で、タブバー方式の動作を確かめた。古い 4 段ペインは作られない、0xc0000142 のダイアログは 9/28 以降 0 件、透け具合・セッション名・使用制限の表示も OK（本人）。
+- 確認中に、`Ctrl+Shift+N` の Codex は新しいウィンドウ＝タブ 1 つで、`hide_tab_bar_if_only_one_tab = true` によりタブバーごと消え、使用制限が見える場面が無いと分かった。本人が案 A を選び、Codex のペインがあるウィンドウだけ 1 タブでもバーを出すようにした（`wezterm.lua` の `window_has_codex`）。
+- 旧方式のファイル `session-status.ps1`・`install-session-status.ps1`・`hooks.json`・`test-session-status.py`・`statusline.ps1` を削除した（backlog B17）。`~/.codex/hooks.json` は 9/16 から空。`statusline-spec.md`・`README.md` はタブバー方式の説明に書き直した。
+- 内蔵の `git-branch` は、最初のやりとりの後でも出なかった（0.154.0）。Codex の更新で出るかを backlog W7 で見張る。
+
 ## 2026-09-16 — ステータスをタブバーへ移設（ペイン分割を廃止）
 
 - きっかけはユーザー指摘「ペイン分割した時によめなくね?」。実測で、Codex 内蔵 status line は**3 項目で既に 63 桁**、制限まで載せると約 86 桁。当時のクロコ側ペインは **47 桁**で、ペイン内表示は分割前提の運用と構造的に噛み合わないと確定した。

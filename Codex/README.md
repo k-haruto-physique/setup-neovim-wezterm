@@ -1,34 +1,18 @@
 # Codex ステータス表示
 
-Codex 本体と同じ WezTerm ウィンドウの下端に、4セル高の専用ペインとして常時表示する。
+表示は 2 か所に分けている（2026-09-16〜。置き場所は値の性質で決める）。
 
-Codex内蔵フッターにモデル＋reasoning effort、コンテキスト残量、セッション名を表示する。名前は `/rename <名前>` で設定する。未命名なら名前の項目は省略される。
+| 値 | 性質 | 置き場所 |
+|---|---|---|
+| モデル＋effort / context 残量 / セッション名 / リポ名 / ブランチ | セッションごとに違う | Codex 内蔵の status line（そのペインの最下行） |
+| 5h / 7d 使用制限 | アカウントで共通 | WezTerm のタブバー右（Codex のペインを選んでいる時だけ） |
 
-自作ペインは次の3行を表示する。
+- 内蔵行は `statusline.toml` の `status_line = ["model-with-reasoning", "context-remaining", "thread-name", "project-name", "git-branch"]`。セッション名は `/rename <名前>` で付けるまで出ない。`toggle_shortcuts = []` で `? for shortcuts` と `?` ヘルプも消している。⚠️ `git-branch` は 0.154.0 では最初のやりとりの後も出ない（2026-10-01 実測・backlog W7）。
+- タブバー側の書き手は `tabbar-status.ps1`（ログオンタスク `Codex Tab Bar Status` が常駐させる。登録は `register-tabbar-status-task.ps1`）。1 プロセスで全 Codex ペインを見て、最新の rollout の使用制限を `%LOCALAPPDATA%\Temp\codex-status\account.json` に書く。`wezterm.lua` は読むだけ（**Lua からプロセスを起こすと 0xc0000142 のダイアログが出る**＝troubleshooting #29）。
+- Codex のペインがあるウィンドウは、タブが 1 つでもタブバーを出す（2026-10-01。`Ctrl+Shift+N` の Codex は新しいウィンドウ＝1 タブなので）。
+- 旧方式（下端に 4 段の専用ペインを分割し、フックでセッションと結び付ける）は 2026-10-01 に削除した（backlog B17）。戻すときは git の履歴から `session-status.ps1`・`install-session-status.ps1`・`hooks.json`・`statusline.ps1` を取り出す。
 
-1. 5h/7d制限の使用率とリセットまでの時間
-2. 現在のディレクトリ
-3. Git ブランチ
-
-通常の `codex`、`codex resume`、`Ctrl+Shift+N` のいずれでも、各Codexペインの下端へ表示を自動追加する。後から分割しても対象の直下へ自動で配置を直す。同じcwdでもプロセスID・ペインID・thread UUIDで区別する。新規タブやウィンドウを表示用に追加せず、操作中のタブを切り替えない。
-
-セットアップ:
-
-```powershell
-pwsh -NoProfile -File .\Codex\install-session-status.ps1
-```
-
-このスクリプトは既存フックを保持して `~/.codex/hooks.json` のSessionStart/SessionEndを登録し、当該コマンド2個のハッシュだけを承認する。`[tui].terminal_title` と内蔵 `status_line = ["model-with-reasoning", "context-remaining", "thread-name"]` と `toggle_shortcuts = []` も設定する（`? for shortcuts` と `?` ヘルプを無効化、次回CLI起動時反映）。WezTermはタイトルから起動直後のセッションを捕捉し、最初のターンでSessionStartが完全なUUIDへ結び直す。再開時は同じ表示の対象を更新し、終了時は表示も終了する。`Ctrl+Shift+Y` は選択中の登録済みCodex表示を修復する。
-
-モデル・effort・context・セッション名はCodexが表示する。自作側はcontextを計算しない。cwd・制限は対象セッションのrollout、Gitはそのcwdから取得する。5h/7d制限は最後に取得したスナップショットなので、同一アカウントでも更新時刻に差がある。UUIDが曖昧、ログ未生成、制限未取得の場合は `limits: unavailable` と表示する。
-
-表示単独の診断には `statusline.ps1 -SessionId <thread UUID>` を使う。SessionIdなしの単発診断だけはcwdの最新ログを選ぶ。自動表示はこの推測経路を使わない。
-
-GUIを開かない回帰確認:
-
-```powershell
-python .\Codex\test-session-status.py
-```
+仕様の詳細は `statusline-spec.md`。
 
 Excelスキルのアイコン警告を再修復する場合は `pwsh -NoProfile -File .\Codex\repair-skill-icons.ps1`。プラグインキャッシュ更新後に再発した場合にも使える。
 
