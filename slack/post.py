@@ -241,6 +241,8 @@ def post(args) -> int:
         return 1
     for w in lint(text):
         print("[注意] " + w)
+    if args.post_at:
+        return schedule(args, text)
     payload = build_payload(args.channel, text, args.name, args.icon, args.thread_ts)
     if args.dry_run:
         shown = dict(payload)
@@ -256,6 +258,77 @@ def post(args) -> int:
         return 1
     print(res.get("ts", ""))
     print(f"[OK] 投稿しました（チャンネル {res.get('channel')}・番号 {res.get('ts')}）")
+    return 0
+
+
+def parse_post_at(value: str) -> int:
+    """「2026-10-02 18:00」（この PC の時刻＝日本時間）か、エポック秒を受け取り、エポック秒を返す。"""
+    import datetime as _dt
+    v = value.strip()
+    if v.isdigit():
+        return int(v)
+    for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M", "%Y/%m/%d %H:%M"):
+        try:
+            return int(_dt.datetime.strptime(v, fmt).timestamp())
+        except ValueError:
+            pass
+    raise ValueError(f"予約の時刻の書き方が違います: {value}（例: 2026-10-02 18:00）")
+
+
+def schedule(args, text: str) -> int:
+    # 予約投稿（chat.scheduleMessage）。送り主はアプリの名前で出る（予約では表示名を変えられない）。
+    import time as _time
+    try:
+        post_at = parse_post_at(args.post_at)
+    except ValueError as e:
+        print(f"[NG] {e}")
+        return 1
+    if post_at <= _time.time() + 60:
+        print("[NG] 予約の時刻は、いまより 1 分以上あとにしてください。")
+        return 1
+    payload = {"channel": args.channel, "text": text, "post_at": post_at,
+               "unfurl_links": False, "unfurl_media": False}
+    if args.thread_ts:
+        payload["thread_ts"] = args.thread_ts
+    if args.dry_run:
+        print("[下見] 予約しません。予約する中身:")
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return 0
+    res = api_call("chat.scheduleMessage", load_token(), payload)
+    if not res.get("ok"):
+        err = res.get("error", "?")
+        print(f"[NG] 予約できませんでした: {err}")
+        if err in HINTS:
+            print("     " + HINTS[err])
+        return 1
+    print(res.get("scheduled_message_id", ""))
+    print(f"[OK] 予約しました（チャンネル {res.get('channel')}・予約番号 {res.get('scheduled_message_id')}・"
+          f"時刻 {args.post_at}）")
+    return 0
+
+
+def list_scheduled(channel: str) -> int:
+    import datetime as _dt
+    res = api_call("chat.scheduledMessages.list", load_token(), {"channel": channel})
+    if not res.get("ok"):
+        print(f"[NG] 予約の一覧を読めませんでした: {res.get('error', '?')}")
+        return 1
+    items = res.get("scheduled_messages", [])
+    print(f"投稿役が予約している投稿: {len(items)} 件")
+    for m in items:
+        when = _dt.datetime.fromtimestamp(m.get("post_at", 0)).strftime("%Y-%m-%d %H:%M")
+        head = (m.get("text") or "").splitlines()[0][:40] if m.get("text") else ""
+        print(f"  {m.get('id')}  {when}  {head}")
+    return 0
+
+
+def delete_scheduled(channel: str, sid: str) -> int:
+    res = api_call("chat.deleteScheduledMessage", load_token(),
+                   {"channel": channel, "scheduled_message_id": sid})
+    if not res.get("ok"):
+        print(f"[NG] 予約を取り消せませんでした: {res.get('error', '?')}")
+        return 1
+    print(f"[OK] 予約を取り消しました（予約番号 {sid}）")
     return 0
 
 
@@ -314,6 +387,15 @@ def self_test() -> int:
     expect("長すぎる本文を知らせる", any("文字あります" in w for w in lint("あ" * 3600)))
     expect("鍵の伏せ字は頭と尻だけ見せる", mask("xoxb-FAKE-FOR-TEST-abcdef") == "xoxb-…cdef")
     expect("短い文字列は全部伏せる", mask("abc") == "***")
+    import datetime as _dt
+    expect("予約の時刻をこの PC の時刻で読む",
+           parse_post_at("2026-10-02 18:00") == int(_dt.datetime(2026, 10, 2, 18, 0).timestamp()))
+    expect("予約の時刻はエポック秒でも読める", parse_post_at("1790000000") == 1790000000)
+    try:
+        parse_post_at("10月2日")
+        expect("書き方の違う時刻を止める", False)
+    except ValueError:
+        expect("書き方の違う時刻を止める", True)
     if os.name == "nt":
         target = CRED_TARGET + "-selftest"
         secret = "xoxb-selftest-0000"
@@ -337,6 +419,9 @@ def main() -> int:
     ap.add_argument("--thread-ts", help="返信先の投稿の番号")
     ap.add_argument("--dry-run", action="store_true", help="送らずに中身を見せる")
     ap.add_argument("--delete-ts", help="投稿役が出したこの番号の投稿を消す（--channel と一緒に）")
+    ap.add_argument("--post-at", help="予約投稿の時刻（例 \"2026-10-02 18:00\"・この PC の時刻）。表示名は変えられずアプリの名前で出る")
+    ap.add_argument("--list-scheduled", action="store_true", help="投稿役がそのチャンネルに予約している投稿の一覧")
+    ap.add_argument("--delete-scheduled", help="この予約番号の予約を取り消す（--channel と一緒に）")
     ap.add_argument("--check", action="store_true", help="鍵とつながりを確かめる")
     ap.add_argument("--store-token-from-clipboard", action="store_true",
                     help="クリップボードの鍵を資格情報マネージャーへしまう")
@@ -356,6 +441,10 @@ def main() -> int:
         ap.error("--channel が要ります")
     if args.delete_ts:
         return delete(args.channel, args.delete_ts)
+    if args.list_scheduled:
+        return list_scheduled(args.channel)
+    if args.delete_scheduled:
+        return delete_scheduled(args.channel, args.delete_scheduled)
     return post(args)
 
 

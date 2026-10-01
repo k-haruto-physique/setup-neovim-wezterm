@@ -62,7 +62,17 @@ python slack\post.py --channel C0XXXXXXXXX --name "表示名" --file message.txt
 
 # 投稿役が出した投稿を消す（試しの投稿の片付けなど）
 python slack\post.py --channel C0XXXXXXXXX --delete-ts 1790000000.000000
+
+# 予約投稿（時刻はこの PC の時刻。予約では表示名を変えられず、アプリの名前で出る）
+python slack\post.py --channel C0XXXXXXXXX --file reminder.txt --post-at "2026-10-02 18:00"
+
+# 投稿役の予約の一覧と、取り消し
+python slack\post.py --channel C0XXXXXXXXX --list-scheduled
+python slack\post.py --channel C0XXXXXXXXX --delete-scheduled Q0XXXXXXXXX
 ```
+
+- 投稿役から出す投稿は、本人に通知が鳴る（本人名義のコネクタの投稿は、本人に通知が鳴らない）。**リマインダーは投稿役から出す**。
+- コネクタで本人名義に予約した投稿は、投稿役からは取り消せない。Slack の画面の「予約済み」から本人が取り消す。
 
 - コネクタで読むと、投稿役の投稿は「Message from <表示名> (B…)」のように、送り主が表示名で出る。本人の書き込みと見分けられる。
 
