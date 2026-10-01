@@ -2,6 +2,19 @@
 
 Windows 11 上の Neovim + LazyVim + WezTerm 環境を、シンボリックリンクで dotfiles 管理するリポジトリ。
 
+## PC が壊れたとき（復旧の入口）
+
+このリポは、PC 全体を立て直すときの入口です。新しい PC にあるのは、GitHub・Google ドライブ・自宅の外付け SSD だけ、という前提で書いています。
+
+1. 新しい PC にこのリポを clone し、Claude Code を開いて「PC を立て直したい」と頼む（決まりは `CLAUDE.md` の「このリポの役目」）。
+2. `gh auth login` で GitHub にログインする。
+3. 人生管理用の非公開リポを clone する（名前は `gh repo list` で確かめる）。
+4. その非公開リポの `.pc_backup/README.md` の順に戻す（設定・MCP・常駐タスク・memory）。鍵やパスワードは控えに入っていないので、パスワード管理ソフトから入れ直す。
+5. このリポの設定（nvim・WezTerm・PowerShell・statusline）は、下の「実体配置」の表どおりにリンクを張り直す。
+6. Slack の投稿役は、鍵を資格情報マネージャーにしまい直すだけで戻る（`slack/README.md`）。
+
+⚠️ 外付け SSD は、ドライブ文字だけで決めない。別の USB メモリが同じ文字になることがある。SSD にしか無いフォルダがあるかを見てから読み書きする。
+
 ## 結論
 
 - **リポジトリを正本、実体側 (`%LOCALAPPDATA%\nvim` 等) はシンボリックリンク**で運用する
@@ -59,6 +72,10 @@ setup-neovim-wezterm/
 │   ├── bridge-common.ps1       # Codex → Claude ブリッジの共通処理（受信箱 %LOCALAPPDATA%\Temp\codex-claude-bridge）
 │   ├── register-remote-control-task.ps1 # 自動起動タスクの登録
 │   └── README.md
+├── slack/                     # Slack へ投稿役（ボット）の名前で投稿する道具（鍵はリポ外）
+│   ├── post.py
+│   ├── bot-icon.png
+│   └── README.md               # 作り方と、PC を作り直したときの戻し方
 └── docs/
     ├── initial-prompt.md      # 初回依頼内容
     ├── nvim-manual.md         # Neovim/LazyVim 実用ガイド（VSCode 対応表つき）
