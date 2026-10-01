@@ -3,7 +3,7 @@
 セッション開始（`hi`）時に**必ず読む**未完タスク・仕様書の単一台帳。
 troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約点。**完了したら CLOSED へ落とし、起点ファイル（#番号 / memory）にも反映**する。
 
-最終更新: 2026-09-29（Claude ペインのコピー不調＝WezTerm 上流バグと確定・`Ctrl+Shift+Y` 追加・B18 実機確認で CLOSED。**OPEN 2 件**＝B16 実機確認・B17 旧 4 段機構の物理削除）。2026-10-01: **B19（PC が壊れても立て直せるように）を追加し、同日 README に復旧の入口を足して CLOSED＝OPEN 2 件**。同日、B16 実機確認・B17 旧 4 段の削除も CLOSED＝**OPEN 0 件**。⑦ ブランチ名は W7 へ。
+最終更新: 2026-09-29（Claude ペインのコピー不調＝WezTerm 上流バグと確定・`Ctrl+Shift+Y` 追加・B18 実機確認で CLOSED。**OPEN 2 件**＝B16 実機確認・B17 旧 4 段機構の物理削除）。2026-10-01: **B19（PC が壊れても立て直せるように）を追加し、同日 README に復旧の入口を足して CLOSED＝OPEN 2 件**。同日、B16 実機確認・B17 旧 4 段の削除も CLOSED＝**OPEN 0 件**。同日夜 B20（Slack のメンションの受け口）を追加し、稼働を確かめて CLOSED＝**OPEN 0 件**。⑦ ブランチ名は W7 へ。
 
 ---
 
@@ -11,7 +11,6 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | # | タスク | 状態 | 次の一手 | 起点 |
 |---|---|---|---|---|
-| B20 | **Slack のメンションの受け口（`slack/listen.py`）を動かす** | 2026-10-01 作成・push 済み。`listen.py --check` で対応表・投稿役の鍵・claude は OK、**アプリの鍵（xapp-）が無く NG**。自動起動のタスク `claude-slack-listen` も未登録 | 2026-10-01 夜に Claude がブラウザで Socket Mode を ON・`app_mentions:read`／`reactions:write` を追加・イベントを ON にして `app_mention` を追加（保存の反映は未確認）。**アプリの再インストール（権限の許可）と、アプリの鍵の発行は自動モードの安全装置に止められた＝本人が行う** → 鍵をコピー → `listen.py --store-app-token-from-clipboard` → `--check` が OK → `install-listen.ps1`。手順は `slack/README.md`「メンションで動かす」 | 本人 2026-10-01 |
 
 ---
 
@@ -33,6 +32,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | 日付 | タスク | 確定根拠 |
 |---|---|---|
+| 2026-10-01 | **B20 Slack のメンションの受け口（`slack/listen.py`）を動かす** | 本人が再インストール（許可）とアプリの鍵の発行 → 鍵を資格情報マネージャー `claude-slack-app` へ → `listen.py --check` が RESULT: OK（投稿役の権限 4 つ）→ `install-listen.ps1` でタスク `claude-slack-listen` 登録（Running・Interactive）→ 新設の家族チャンネルでのメンションに 23 秒で返事・👀 → ✅（20:56）。Event Subscriptions は当初 Off のままだった＝**Chrome の自動翻訳でイベント名 `app_mention` が日本語に置き換わり、保存が「Hmm, something's gone wrong」で落ちていた**（2 つのセッションの同時編集も重なった）。原文表示に戻して保存して通った。落とし穴は `slack/README.md`「困ったとき」へ（`4ed410d`）。後片付けは人生管理の非公開リポのセッション |
 | 2026-10-01 | **B16 Codex ステータスのタブバー表示を実機確認 / B17 旧 4 段ペインの仕組みを削除** | ②（古い 4 段ペインが作られない）④（0xc0000142 は 9/28 以降 0 件・System ログ ID 26）は Claude が確認。③⑤⑥①は本人が確認。① の確認中に「`Ctrl+Shift+N` の Codex は 1 タブなのでタブバーごと消え、使用制限が見えない」と分かり、本人が案 A を選んで Codex のあるウィンドウだけ 1 タブでもバーを出すようにした（`0ba66de`）。⑦ ブランチ名は出ない → W7。B17: `Codex/session-status.ps1`・`install-session-status.ps1`・`hooks.json`・`test-session-status.py`・`statusline.ps1` を git rm し、`Codex/README.md`・`statusline-spec.md`・`CHANGELOG.md`・`AGENTS.md`・`README.md` を整理。#29 |
 | 2026-10-01 | **B19 PC が壊れても立て直せるようにする** | 本人の判断で、普段の控え＝人生管理の非公開リポ／本当に大事な物＝自宅の外付け SSD にも。控えを取る仕組みと戻し方は、その非公開リポの `.pc_backup/README.md`（秘密は伏せ字）。このリポの `README.md` 冒頭に「PC が壊れたとき（復旧の入口）」を足し、`CLAUDE.md` のドキュメント map に `slack/`（投稿役の戻し方）を載せた。外付け SSD はドライブ文字だけで決めない旨も README に書いた |
 | 2026-09-29 | **B18 `Ctrl+Shift+Y`（ペインの写しを nvim で開く）** | ユーザーが実機で「nvim では問題なくコピーできた」と確認。作業中の Claude のペインでコピーモードが点滅・コピー不能になるのは WezTerm 本体のバグ（上流 #7984）で、Claude の再起動でも直らない。回避策は `/copy` と `Ctrl+Shift+Y`。上流の修正は W6 で見張る。#30 |
