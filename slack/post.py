@@ -29,6 +29,10 @@
     # 自己テスト（ネットにつながない）
     python post.py --self-test
 
+    # 別のワークスペースへ出す（鍵の置き場の名前に「-<名前>」が付く。例: --workspace work → claude-slack-bot-work）
+    python post.py --workspace work --store-token-from-clipboard
+    python post.py --workspace work --channel C0XXXXXXXXX --name "表示名" --file message.txt
+
 出力:
     投稿できたら、その投稿の番号（ts）を 1 行目に出す。スレッドに返信するときは、この番号を --thread-ts に渡す。
 
@@ -51,6 +55,21 @@ import urllib.request
 
 API = "https://slack.com/api/"
 CRED_TARGET = "claude-slack-bot"
+WORKSPACE = ""   # --workspace で選んだワークスペース（空＝いつものワークスペース）
+
+
+def set_workspace(name: str | None) -> None:
+    """鍵の置き場を、そのワークスペースのものに切り替える（2026-10-01 仕事用を分けたときに足した）。
+
+    空なら今までどおり「claude-slack-bot」。名前があれば「claude-slack-bot-<名前>」を読む。
+    名前を付けたときは環境変数 SLACK_BOT_TOKEN を見ない（いつものワークスペースの鍵で別の所へ出さないため）。
+    """
+    global CRED_TARGET, WORKSPACE
+    name = (name or "").strip()
+    if name and not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,30}", name):
+        raise SystemExit("--workspace の名前は英小文字・数字・ハイフンだけにしてください（例 work）。")
+    WORKSPACE = name
+    CRED_TARGET = f"claude-slack-bot-{name}" if name else "claude-slack-bot"
 TOKEN_PREFIX = "xoxb-"
 
 # Markdown の番号リスト（1. 2. …）は、Slack に送ると項目の間の空行が消える（2026-10-01 実測）。
@@ -137,7 +156,7 @@ def mask(token: str) -> str:
 
 
 def load_token() -> str:
-    token = os.environ.get("SLACK_BOT_TOKEN", "").strip()
+    token = "" if WORKSPACE else os.environ.get("SLACK_BOT_TOKEN", "").strip()
     if token:
         return token
     if os.name == "nt":
@@ -145,8 +164,8 @@ def load_token() -> str:
         if token:
             return token
     raise SystemExit(
-        "鍵（ボットのトークン）が見つかりません。README.md の手順で "
-        "`python post.py --store-token-from-clipboard` を実行してください。"
+        f"鍵（ボットのトークン・置き場「{CRED_TARGET}」）が見つかりません。README.md の手順で "
+        f"`python post.py {('--workspace ' + WORKSPACE + ' ') if WORKSPACE else ''}--store-token-from-clipboard` を実行してください。"
     )
 
 
@@ -426,7 +445,9 @@ def main() -> int:
     ap.add_argument("--store-token-from-clipboard", action="store_true",
                     help="クリップボードの鍵を資格情報マネージャーへしまう")
     ap.add_argument("--self-test", action="store_true")
+    ap.add_argument("--workspace", help="別のワークスペースの鍵を使う（例 work → 置き場 claude-slack-bot-work）。付けなければいつものワークスペース")
     args = ap.parse_args()
+    set_workspace(args.workspace)
 
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")

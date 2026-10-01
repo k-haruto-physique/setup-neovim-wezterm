@@ -117,6 +117,16 @@ Slack で投稿役をメンションすると、そのチャンネルに対応�
 - 記録: `%LOCALAPPDATA%\claude-slack-listen\listen.log`。止める: `schtasks /end /tn claude-slack-listen`。外す: `install-listen.ps1 -Uninstall`。
 - PC を作り直したとき: 手順 3・6・7 だけをやり直す（Slack 側の設定は残っている）。
 
+### ワークスペースを分けて使う（2026-10-01〜）
+
+仕事用など、別のワークスペースでも投稿役と受け口を使える。ワークスペースごとに Slack アプリを 1 つ作り、短い名前（英小文字・例 `work`）を決めて、すべての道具に `--workspace <名前>` を付ける。
+
+- 鍵の置き場: `claude-slack-bot-<名前>`（投稿役）・`claude-slack-app-<名前>`（受け口）
+- 対応表: `~/.claude/slack-routes-<名前>.json`（形は上と同じ）
+- 受け口: `install-listen.ps1 -Workspace <名前>` でタスク `claude-slack-listen-<名前>` を登録（ワークスペースごとに 1 つ動く）
+- 投稿: `python slack\post.py --workspace <名前> --channel … --file …`
+- アプリは manifest から作ると速い（「Create New App」→「From a manifest」）。権限は `chat:write`・`chat:write.customize`・`app_mentions:read`・`reactions:write`、`socket_mode_enabled: true`、bot event は `app_mention`。
+
 ## PC を作り直したとき（戻し方）
 
 鍵は PC の中にしか無いので、新しい PC では**しまい直す**だけです（投稿役そのものは Slack 側に残っています）。

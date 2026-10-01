@@ -30,6 +30,9 @@
     python listen.py --simulate C0XXXXXXXXX "依頼" --no-run    # Slack を通さずに 1 件流す（起動するコマンドを見るだけ）
     python listen.py --simulate C0XXXXXXXXX "依頼" --no-post   # 実際に起動し、返事は画面に出すだけ（Slack に貼らない）
     python listen.py --self-test                        # ネットにつながない自己テスト
+    python listen.py --workspace work …                 # 別のワークスペース用（鍵は claude-slack-app-work と
+                                                        # claude-slack-bot-work、対応表は ~/.claude/slack-routes-work.json、
+                                                        # 記録は %LOCALAPPDATA%/claude-slack-listen-work/）。ワークスペースごとに 1 つずつ動かす
 
 Slack アプリに要る設定（README.md の「メンションで動かす」）:
     Socket Mode を有効にし、アプリの鍵（connections:write）を作る
@@ -78,6 +81,20 @@ WORK_DENY = ["mcp__claude-in-chrome", "mcp__playwright"]
 
 # ---------------------------------------------------------------- 記録
 
+def set_workspace(name: str | None) -> None:
+    """鍵・対応表・記録・二重起動よけを、そのワークスペースのものに切り替える（2026-10-01 仕事用を分けたときに足した）。"""
+    global APP_CRED, ROUTES, STATE, LOG, LOCK_PORT
+    post.set_workspace(name)
+    name = post.WORKSPACE
+    if not name:
+        return
+    APP_CRED = f"claude-slack-app-{name}"
+    ROUTES = Path.home() / ".claude" / f"slack-routes-{name}.json"
+    STATE = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / f"claude-slack-listen-{name}"
+    LOG = STATE / "listen.log"
+    LOCK_PORT = 47321 + 1 + sum(name.encode()) % 50     # ワークスペースごとに別の番号＝同時に動かせる
+
+
 def log(msg: str) -> None:
     STATE.mkdir(parents=True, exist_ok=True)
     line = f"{dt.datetime.now():%Y-%m-%d %H:%M:%S} {msg}"
@@ -99,8 +116,9 @@ def load_app_token() -> str:
     if not tok and os.name == "nt":
         tok = (post.cred_read(APP_CRED) or "").strip()
     if not tok.startswith(APP_PREFIX):
-        raise SystemExit("アプリの鍵（xapp-…）が見つかりません。README.md の「メンションで動かす」の手順で "
-                         "`python listen.py --store-app-token-from-clipboard` を実行してください。")
+        ws = f"--workspace {post.WORKSPACE} " if post.WORKSPACE else ""
+        raise SystemExit(f"アプリの鍵（xapp-…・置き場「{APP_CRED}」）が見つかりません。README.md の「メンションで動かす」の手順で "
+                         f"`python listen.py {ws}--store-app-token-from-clipboard` を実行してください。")
     return tok
 
 
@@ -385,6 +403,10 @@ def self_test() -> int:
     assert "mcp__claude-in-chrome" not in claude_cmd("x", False)
     p = build_prompt({"label": "p02", "name": "表示名"}, "C0", "1.2", "本文", True)
     assert "勤務中" in p and "本文" in p and not any(post.NUMBERED_LIST.match(x) for x in p.splitlines())
+    set_workspace("work")
+    assert APP_CRED == "claude-slack-app-work" and post.CRED_TARGET == "claude-slack-bot-work"
+    assert ROUTES.name == "slack-routes-work.json" and LOCK_PORT != 47321
+    set_workspace(None)
     print("RESULT: OK — 自己テスト通過")
     return 0
 
@@ -397,7 +419,9 @@ def main() -> int:
     ap.add_argument("--simulate", nargs=2, metavar=("CHANNEL", "TEXT"))
     ap.add_argument("--no-run", action="store_true", help="--simulate で claude を起動しない")
     ap.add_argument("--no-post", action="store_true", help="--simulate で返事を Slack に貼らない")
+    ap.add_argument("--workspace", help="別のワークスペース用に動かす（例 work）。付けなければいつものワークスペース")
     a = ap.parse_args()
+    set_workspace(a.workspace)
     if a.store_app_token_from_clipboard:
         return store_app_token_from_clipboard()
     if a.self_test:
