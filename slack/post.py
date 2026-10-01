@@ -259,6 +259,19 @@ def post(args) -> int:
     return 0
 
 
+def delete(channel: str, ts: str) -> int:
+    # 投稿役が出した投稿だけ消せる（chat:write の範囲）。試しの投稿の片付けに使う。
+    res = api_call("chat.delete", load_token(), {"channel": channel, "ts": ts})
+    if not res.get("ok"):
+        err = res.get("error", "?")
+        print(f"[NG] 消せませんでした: {err}")
+        if err in HINTS:
+            print("     " + HINTS[err])
+        return 1
+    print(f"[OK] 消しました（チャンネル {channel}・番号 {ts}）")
+    return 0
+
+
 def check() -> int:
     token = load_token()
     res = api_call("auth.test", token, {})
@@ -323,6 +336,7 @@ def main() -> int:
     ap.add_argument("--text", help="本文（短いときだけ。長い本文は --file で）")
     ap.add_argument("--thread-ts", help="返信先の投稿の番号")
     ap.add_argument("--dry-run", action="store_true", help="送らずに中身を見せる")
+    ap.add_argument("--delete-ts", help="投稿役が出したこの番号の投稿を消す（--channel と一緒に）")
     ap.add_argument("--check", action="store_true", help="鍵とつながりを確かめる")
     ap.add_argument("--store-token-from-clipboard", action="store_true",
                     help="クリップボードの鍵を資格情報マネージャーへしまう")
@@ -340,6 +354,8 @@ def main() -> int:
         return check()
     if not args.channel:
         ap.error("--channel が要ります")
+    if args.delete_ts:
+        return delete(args.channel, args.delete_ts)
     return post(args)
 
 

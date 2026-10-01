@@ -43,6 +43,11 @@ Claude の Slack 接続（コネクタ）で投稿すると、送り主が本人
    python slack\post.py --check
    ```
 
+7. 名前とアイコンを整える（任意・公式の Claude アプリと見分けるため）。
+
+   - 「App Home」→「App Display Name」の「Edit」で、投稿役の名前と呼び名を変える。**投稿役の名前にはハイフンなどの記号が使えない**（使えるのはアポストロフィとピリオドだけ）。呼び名は小文字・数字・ピリオド・ハイフン・アンダースコア。App Manifest で名前にハイフンを入れても、投稿役の名前には反映されない。
+   - 「Basic Information」→「App icon & Preview」に、同じフォルダの `bot-icon.png`（512×512）を入れる。Claude を思わせる配色で新しく描いた絵で、公式ロゴの写しではない。
+
 ## 投稿のしかた
 
 ```powershell
@@ -54,7 +59,12 @@ python slack\post.py --channel C0XXXXXXXXX --name "表示名" --file reply.txt -
 
 # 送らずに中身を見る
 python slack\post.py --channel C0XXXXXXXXX --name "表示名" --file message.txt --dry-run
+
+# 投稿役が出した投稿を消す（試しの投稿の片付けなど）
+python slack\post.py --channel C0XXXXXXXXX --delete-ts 1790000000.000000
 ```
+
+- コネクタで読むと、投稿役の投稿は「Message from <表示名> (B…)」のように、送り主が表示名で出る。本人の書き込みと見分けられる。
 
 - **番号の箇条書き「1.」は使わない**。Slack に送ると項目の間の空行が消える。①② や ・ で書く（`post.py` が見つけて注意を出す）。
 - 段落の間・項目の間には空行を入れる。
