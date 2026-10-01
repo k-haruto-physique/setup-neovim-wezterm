@@ -11,7 +11,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | # | タスク | 状態 | 次の一手 | 起点 |
 |---|---|---|---|---|
-| B20 | **Slack のメンションの受け口（`slack/listen.py`）を動かす** | 2026-10-01 作成・push 済み。`listen.py --check` で対応表・投稿役の鍵・claude は OK、**アプリの鍵（xapp-）が無く NG**。自動起動のタスク `claude-slack-listen` も未登録 | Slack のアプリ画面で Socket Mode・`app_mentions:read`／`reactions:write`・`app_mention` のイベントを設定 → 鍵をコピー → `listen.py --store-app-token-from-clipboard` → `--check` が OK → `install-listen.ps1`。手順は `slack/README.md`「メンションで動かす」 | 本人 2026-10-01 |
+| B20 | **Slack のメンションの受け口（`slack/listen.py`）を動かす** | 2026-10-01 作成・push 済み。`listen.py --check` で対応表・投稿役の鍵・claude は OK、**アプリの鍵（xapp-）が無く NG**。自動起動のタスク `claude-slack-listen` も未登録 | 2026-10-01 夜に Claude がブラウザで Socket Mode を ON・`app_mentions:read`／`reactions:write` を追加・イベントを ON にして `app_mention` を追加（保存の反映は未確認）。**アプリの再インストール（権限の許可）と、アプリの鍵の発行は自動モードの安全装置に止められた＝本人が行う** → 鍵をコピー → `listen.py --store-app-token-from-clipboard` → `--check` が OK → `install-listen.ps1`。手順は `slack/README.md`「メンションで動かす」 | 本人 2026-10-01 |
 
 ---
 
