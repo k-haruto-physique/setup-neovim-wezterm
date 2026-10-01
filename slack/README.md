@@ -86,6 +86,7 @@ Slack で投稿役をメンションすると、そのチャンネルに対応�
 
 - 公式の Slack 連携（Claude Tag）は Team / Enterprise のプランだけで、個人のプランでは使えない（<https://claude.com/docs/claude-tag/overview>）。だから、この PC で受ける。
 - **動かせるのは対応表の `allow_users` に入れた人だけ**（ほかのメンバーがメンションしても動かない）。
+- `allow_users` の先頭（または `owner`）が本人。本人以外も足すときは、`user_names` に呼び名、`user_channels` に動かしてよいチャンネルを書く（書いたチャンネルの外では動かない）。本人以外の依頼では、公開・お金・削除・外への送信・設定の変更・本人の判断が要る物を実行せず、返事で「本人に確認します」と伝える（2026-10-02〜）。
 - **起動は安全装置つき**（`claude -p --permission-mode auto`＝ふだんの自動モードと同じ安全装置）。確認なし（`--dangerously-skip-permissions`）では起動しない。外から届く書き込みで何でも動かせてしまう作りは、自動モードの安全装置に止められた（2026-10-01）。安全装置が止めた操作は実行されず、返事で「PC で続けて」と伝える。
 - 本人名義の LINE などの道具は外して起動する。勤務中（平日 8:00〜16:30）はブラウザの道具も外す（窓を前に出さない）。
 - 受けたら 👀、終わったら ✅（失敗は ❌）の目印を付ける。同じリポへの依頼は1つずつ順番に流す。
@@ -104,7 +105,10 @@ Slack で投稿役をメンションすると、そのチャンネルに対応�
 
 ```json
 {
- "allow_users": ["U0XXXXXXXXX"],
+ "allow_users": ["U0XXXXXXXXX", "U0YYYYYYYYY"],
+ "owner": "U0XXXXXXXXX",
+ "user_names": {"U0YYYYYYYYY": "呼び名"},
+ "user_channels": {"U0YYYYYYYYY": ["C0XXXXXXXXX"]},
  "work_hours": {"days": [0, 1, 2, 3, 4], "start": "08:00", "end": "16:30"},
  "channels": {
   "C0XXXXXXXXX": {"label": "p01-例", "repo": "C:/Users/<you>/Documents/Repositories/<リポ>", "name": "投稿役の表示名"}

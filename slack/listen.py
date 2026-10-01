@@ -11,6 +11,10 @@
        外から入ってくる受け口は作らない＝ルーターやファイアウォールの設定は要らない）
     2. 送り主が対応表の allow_users にいて、チャンネルが対応表にあれば、目印に 👀 を付ける
        （ほかの人のメンションは何もしない＝ほかのメンバーが書いても Claude は動かない）
+       allow_users の先頭（または "owner"）が本人。本人以外を足すときは、"user_names" に呼び名、
+       "user_channels" に動かしてよいチャンネルを書く（書いたチャンネルの外では動かない）。本人以外の依頼は、
+       公開・お金・削除・外への送信・設定の変更・本人の判断が要る物を実行せず「本人に確認します」と返す
+       （2026-10-02 本人「メンションされたら動けよ」＝本人が許したメンバーのメンションでも動かす）
     3. そのチャンネルのリポで `claude -p` を 1 回起動する（同じリポは 1 つずつ順番に。窓は出さない）
        🔒 確認なし（--dangerously-skip-permissions）では起動しない。ふだんの自動モードと同じ安全装置
        （--permission-mode auto）をかける。安全装置が止めた操作は実行されず、返事で「PC で続けて」と伝える
@@ -206,13 +210,28 @@ def clean_text(text: str) -> str:
     return MENTION_RE.sub("", text or "").strip()
 
 
-def build_prompt(route: dict, channel: str, thread_ts: str, text: str, work: bool) -> str:
+def owner_of(cfg: dict) -> str:
+    return cfg.get("owner") or cfg["allow_users"][0]
+
+
+def may_run(cfg: dict, user: str, channel: str) -> bool:
+    """この人のメンションで、このチャンネルで動いてよいか。本人はどこでも・ほかの人は user_channels に書いた所だけ。"""
+    if user not in cfg.get("allow_users", []):
+        return False
+    if user == owner_of(cfg):
+        return True
+    return channel in cfg.get("user_channels", {}).get(user, [])
+
+
+def build_prompt(route: dict, channel: str, thread_ts: str, text: str, work: bool,
+                 who: str = "本人", is_owner: bool = True) -> str:
     now = dt.datetime.now()
     wd = "月火水木金土日"[now.weekday()]
+    asker = "本人" if is_owner else f"{who}（本人ではない・本人が許したメンバー）"
     lines = [
         "これは Slack からの依頼です（全リポ共通の受け口 setup-neovim-wezterm/slack/listen.py が起動した、1 回きりの無人の実行）。",
         f"- 今: {now:%Y-%m-%d}（{wd}）{now:%H:%M}",
-        f"- 依頼した人: 本人。Slack のチャンネル「{route.get('label', channel)}」（{channel}）で、投稿役「{route.get('name', DEFAULT_NAME)}」をメンションした",
+        f"- 依頼した人: {asker}。Slack のチャンネル「{route.get('label', channel)}」（{channel}）で、投稿役「{route.get('name', DEFAULT_NAME)}」をメンションした",
         f"- 前の流れ: Slack コネクタの slack_read_thread(channel_id=\"{channel}\", message_ts=\"{thread_ts}\") で読める（前後をつかむときだけ読む）",
         "- 依頼の本文（ここから）",
         text,
@@ -229,6 +248,9 @@ def build_prompt(route: dict, channel: str, thread_ts: str, text: str, work: boo
     ]
     if work:
         lines.append("⑦ 今は本人の勤務中（平日 8:00〜16:30）。画面を前に出さない＝ブラウザを開かない・アプリを起動しない。画面が要る作業は、返答で「16:30 以降にやる」と伝える。")
+    if not is_owner:
+        lines.append(f"⑧ 依頼した人は本人ではない（{who}）。本人が許したメンバーの依頼として、やさしい言葉で受ける。直す・調べる・作り直すなど、そのリポの決まりの中の作業はしてよい。"
+                     "公開・お金・削除・外への送信・設定の変更・本人の判断が要る物は実行せず、返答で「本人に確認します」と書いて終える。本人の名前で何かを約束しない。")
     return "\n".join(lines)
 
 
@@ -278,9 +300,11 @@ def handle_mention(cfg: dict, bot: str, ev: dict) -> None:
     thread_ts = ev.get("thread_ts") or ts
     if ev.get("bot_id") or not user:
         return
-    if user not in cfg["allow_users"]:
-        log(f"許可していない人のメンション（{user}・{channel}）＝何もしない")
+    if not may_run(cfg, user, channel):
+        log(f"許可していない人・チャンネルのメンション（{user}・{channel}）＝何もしない")
         return
+    is_owner = user == owner_of(cfg)
+    who = "本人" if is_owner else cfg.get("user_names", {}).get(user, "本人以外のメンバー")
     route = cfg.get("channels", {}).get(channel)
     if not route:
         log(f"対応表に無いチャンネル {channel} のメンション")
@@ -292,7 +316,7 @@ def handle_mention(cfg: dict, bot: str, ev: dict) -> None:
 
     def job() -> None:
         work = in_work_hours(cfg)
-        cmd = claude_cmd(build_prompt(route, channel, thread_ts, text, work), work)
+        cmd = claude_cmd(build_prompt(route, channel, thread_ts, text, work, who, is_owner), work)
         t0 = time.time()
         code, out = run_claude(cmd, route["repo"])
         log(f"終わった {route.get('label', channel)} exit={code} {time.time() - t0:.0f}秒 返事{len(out)}字")
@@ -403,6 +427,11 @@ def self_test() -> int:
     assert "mcp__claude-in-chrome" not in claude_cmd("x", False)
     p = build_prompt({"label": "p02", "name": "表示名"}, "C0", "1.2", "本文", True)
     assert "勤務中" in p and "本文" in p and not any(post.NUMBERED_LIST.match(x) for x in p.splitlines())
+    q = build_prompt({"label": "f", "name": "n"}, "C1", "1.2", "直して", False, "メンバー", False)
+    assert "本人ではない" in q and "本人に確認します" in q and "勤務中" not in q
+    rc = {"allow_users": ["U1", "U2"], "user_channels": {"U2": ["C1"]}}
+    assert may_run(rc, "U1", "C9") and may_run(rc, "U2", "C1")
+    assert not may_run(rc, "U2", "C9") and not may_run(rc, "U3", "C1")
     set_workspace("work")
     assert APP_CRED == "claude-slack-app-work" and post.CRED_TARGET == "claude-slack-bot-work"
     assert ROUTES.name == "slack-routes-work.json" and LOCK_PORT != 47321
