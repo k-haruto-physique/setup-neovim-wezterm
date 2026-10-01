@@ -80,6 +80,43 @@ python slack\post.py --channel C0XXXXXXXXX --delete-scheduled Q0XXXXXXXXX
 - 段落の間・項目の間には空行を入れる。
 - **太字（`*…*`）の中に「12:57・12:58」のように `:` を2つ以上入れない**。間の `:57・12:` が絵文字の記号（`:名前:`）と読まれて、太字が崩れる（2026-10-01 にコネクタで読み返して確認）。時刻は「12時57分」と書くか、太字の外に出す。
 
+## メンションで動かす（受け口・2026-10-01〜）
+
+Slack で投稿役をメンションすると、そのチャンネルに対応するリポで Claude Code が1回起動し、スレッドに返事を貼る。本体は `listen.py`。
+
+- 公式の Slack 連携（Claude Tag）は Team / Enterprise のプランだけで、個人のプランでは使えない（<https://claude.com/docs/claude-tag/overview>）。だから、この PC で受ける。
+- **動かせるのは対応表の `allow_users` に入れた人だけ**（家族や同僚がメンションしても動かない）。
+- **起動は安全装置つき**（`claude -p --permission-mode auto`＝ふだんの自動モードと同じ安全装置）。確認なし（`--dangerously-skip-permissions`）では起動しない。外から届く書き込みで何でも動かせてしまう作りは、自動モードの安全装置に止められた（2026-10-01）。安全装置が止めた操作は実行されず、返事で「PC で続けて」と伝える。
+- 本人名義の LINE などの道具は外して起動する。勤務中（平日 8:00〜16:30）はブラウザの道具も外す（窓を前に出さない）。
+- 受けたら 👀、終わったら ✅（失敗は ❌）の目印を付ける。同じリポへの依頼は1つずつ順番に流す。
+
+### 初めて作るとき（本人が Slack の画面で行う・5 分ほど）
+
+1. <https://api.slack.com/apps> で投稿役のアプリを開く。
+2. 左の「Socket Mode」を開き、「Enable Socket Mode」を入れる。鍵の名前を聞かれたら `listen` などと付け、権限は `connections:write` のまま「Generate」。出てきた鍵（`xapp-` で始まる）をコピーする。
+3. PC で `python slack\listen.py --store-app-token-from-clipboard`（鍵は画面に出さず、資格情報マネージャーの `claude-slack-app` にしまう）。
+4. 左の「OAuth & Permissions」の「Bot Token Scopes」に `app_mentions:read` と `reactions:write` を足し、上の「Reinstall to Workspace」を押す。
+5. 左の「Event Subscriptions」を開き、「Enable Events」を入れ、「Subscribe to bot events」に `app_mention` を足して「Save Changes」（Socket Mode なので Request URL は要らない）。
+6. 対応表 `~/.claude/slack-routes.json` を置く（形は下）。個人の情報なのでこのリポには置かない＝人生管理の非公開リポの PC 控えから戻す。
+7. `python slack\listen.py --check` が `RESULT: OK` になったら、`powershell -ExecutionPolicy Bypass -File slack\install-listen.ps1` で、ログオン時に自動で起動するよう登録する。
+
+対応表の形（番号は例）:
+
+```json
+{
+ "allow_users": ["U0XXXXXXXXX"],
+ "work_hours": {"days": [0, 1, 2, 3, 4], "start": "08:00", "end": "16:30"},
+ "channels": {
+  "C0XXXXXXXXX": {"label": "p01-例", "repo": "C:/Users/<you>/Documents/Repositories/<リポ>", "name": "投稿役の表示名"}
+ }
+}
+```
+
+- 対応表は、メンションのたびに読み直す（足しても受け口の再起動は要らない）。
+- 試す: `python slack\listen.py --simulate <チャンネル番号> "依頼" --no-run`（起動内容を見るだけ）／`--no-post`（実際に起動し、返事は画面に出すだけ）。
+- 記録: `%LOCALAPPDATA%\claude-slack-listen\listen.log`。止める: `schtasks /end /tn claude-slack-listen`。外す: `install-listen.ps1 -Uninstall`。
+- PC を作り直したとき: 手順 3・6・7 だけをやり直す（Slack 側の設定は残っている）。
+
 ## PC を作り直したとき（戻し方）
 
 鍵は PC の中にしか無いので、新しい PC では**しまい直す**だけです（投稿役そのものは Slack 側に残っています）。
