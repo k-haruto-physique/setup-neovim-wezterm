@@ -42,6 +42,10 @@ Slack アプリに要る設定（README.md の「メンションで動かす」�
     Socket Mode を有効にし、アプリの鍵（connections:write）を作る
     Bot Token Scopes に app_mentions:read と reactions:write を足して入れ直す
     Event Subscriptions で bot の app_mention を受ける
+    @channel・@here・ボットの番号（<@B…>）でも動かすなら（2026-10-04〜）:
+        Event Subscriptions の bot events に message.channels と message.groups を足す
+        （Bot Token Scopes に channels:history と groups:history が入る）→ Reinstall to Workspace
+        足さないと、その形の投稿は届かない（受け口はこれまでどおり直接のメンションだけで動く）
 """
 
 from __future__ import annotations
@@ -203,11 +207,26 @@ def reply(token: str, channel: str, thread_ts: str, text: str, name: str) -> lis
 
 # ---------------------------------------------------------------- 1 件の仕事
 
-MENTION_RE = re.compile(r"<@[A-Z0-9]+>")
+MENTION_RE = re.compile(r"<@[A-Z0-9]+>|<!(?:channel|here|everyone)(?:\|[^>]*)?>")
+BROADCAST_RE = re.compile(r"<!(?:channel|here|everyone)(?:\|[^>]*)?>")
 
 
 def clean_text(text: str) -> str:
     return MENTION_RE.sub("", text or "").strip()
+
+
+def is_call(ev: dict, bot_user: str, bot_id: str) -> bool:
+    """ふつうの投稿（message）のうち、受け口が動くべき物か。
+    ① @channel・@here・@everyone の投稿（2026-10-04 本人「@channelでも動くようにして」「他のチャンネルも同様にして」）
+    ② 投稿役のボットの番号（<@B…>）でのメンション（投稿役の投稿の名前を押すと、この形になることがある＝app_mention が来ない）
+    投稿役を直接メンションした投稿（<@U…>）は app_mention でも届くので、ここでは数えない（二重に動かさない）。
+    編集・削除・参加などの印（subtype）が付いた投稿と、ボットの投稿は数えない。"""
+    if ev.get("type") != "message" or ev.get("subtype") or ev.get("bot_id") or not ev.get("user"):
+        return False
+    text = ev.get("text") or ""
+    if bot_user and f"<@{bot_user}>" in text:
+        return False
+    return bool(BROADCAST_RE.search(text)) or bool(bot_id and f"<@{bot_id}>" in text)
 
 
 def owner_of(cfg: dict) -> str:
@@ -336,6 +355,8 @@ def serve(cfg: dict) -> None:
     import websocket  # websocket-client（pip install websocket-client）
 
     app, bot = load_app_token(), post.load_token()
+    me = post.api_call("auth.test", bot, {})
+    bot_user, bot_id = me.get("user_id", ""), me.get("bot_id", "")     # 投稿役の U… と B…（@channel などを見分けるのに使う）
     seen: list[str] = []
     backoff = 5
     while True:
@@ -367,7 +388,7 @@ def serve(cfg: dict) -> None:
                 seen.append(eid)
                 del seen[:-500]
                 ev = payload.get("event", {})
-                if ev.get("type") == "app_mention":
+                if ev.get("type") == "app_mention" or is_call(ev, bot_user, bot_id):
                     cfg = load_routes()          # 対応表は毎回読み直す（足したら再起動しなくてよい）
                     handle_mention(cfg, bot, ev)
             try:
@@ -415,6 +436,16 @@ def check() -> int:
 
 def self_test() -> int:
     assert clean_text("<@U0XXXXXXXXX> 直して") == "直して"
+    assert clean_text("<!channel> 公開したよ") == "公開したよ" and clean_text("<!here|here> 見て") == "見て"
+    m = {"type": "message", "user": "U1", "channel": "C1", "ts": "1.2"}
+    assert is_call(dict(m, text="<!channel> 公開したよ"), "UBOT", "BBOT")                 # @channel
+    assert is_call(dict(m, text="<!here> 見て"), "UBOT", "BBOT")                          # @here
+    assert is_call(dict(m, text="<@BBOT> サムネは？"), "UBOT", "BBOT")                    # ボットの番号でのメンション
+    assert not is_call(dict(m, text="<@UBOT> <!channel> 両方"), "UBOT", "BBOT")           # app_mention が受ける＝二重にしない
+    assert not is_call(dict(m, text="ふつうの投稿"), "UBOT", "BBOT")
+    assert not is_call(dict(m, text="<!channel> x", subtype="message_changed"), "UBOT", "BBOT")
+    assert not is_call(dict(m, text="<!channel> x", bot_id="BOTHER"), "UBOT", "BBOT")
+    assert not is_call({"type": "app_mention", "user": "U1", "text": "<!channel>"}, "UBOT", "BBOT")
     parts = split_reply("あ" * 8000)
     assert len(parts) == 3 and all(len(x) <= CHUNK for x in parts), [len(x) for x in parts]
     cfg = {"work_hours": {"days": [0, 1, 2, 3, 4], "start": "08:00", "end": "16:30"}}

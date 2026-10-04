@@ -90,6 +90,7 @@ Slack で投稿役をメンションすると、そのチャンネルに対応�
 - **起動は安全装置つき**（`claude -p --permission-mode auto`＝ふだんの自動モードと同じ安全装置）。確認なし（`--dangerously-skip-permissions`）では起動しない。外から届く書き込みで何でも動かせてしまう作りは、自動モードの安全装置に止められた（2026-10-01）。安全装置が止めた操作は実行されず、返事で「PC で続けて」と伝える。
 - 本人名義の LINE などの道具は外して起動する。勤務中（平日 8:00〜16:30）はブラウザの道具も外す（窓を前に出さない）。
 - 受けたら 👀、終わったら ✅（失敗は ❌）の目印を付ける。同じリポへの依頼は1つずつ順番に流す。
+- **@channel・@here・@everyone の投稿と、投稿役のボットの番号（`<@B…>`）でのメンションでも動く**（2026-10-04〜・本人「@channelでも動くようにして」「他のチャンネルも同様にして」）。動かせる人とチャンネルの決まりは同じ（`allow_users`・`user_channels`）。投稿役を直接メンションした投稿は、@channel が付いていても1回だけ動く。⚠️ Slack 側で、下の手順 5 に `message.channels` と `message.groups` を足しておく必要がある（足さないと、その形の投稿は届かない）。
 
 ### 初めて作るとき（本人が Slack の画面で行う・5 分ほど）
 
@@ -97,7 +98,7 @@ Slack で投稿役をメンションすると、そのチャンネルに対応�
 2. 左の「Socket Mode」を開き、「Enable Socket Mode」を入れる。鍵の名前を聞かれたら `listen` などと付け、権限は `connections:write` のまま「Generate」。出てきた鍵（`xapp-` で始まる）をコピーする。
 3. PC で `python slack\listen.py --store-app-token-from-clipboard`（鍵は画面に出さず、資格情報マネージャーの `claude-slack-app` にしまう）。
 4. 左の「OAuth & Permissions」の「Bot Token Scopes」に `app_mentions:read` と `reactions:write` を足し、上の「Reinstall to Workspace」を押す。
-5. 左の「Event Subscriptions」を開き、「Enable Events」を入れ、「Subscribe to bot events」に `app_mention` を足して「Save Changes」（Socket Mode なので Request URL は要らない）。
+5. 左の「Event Subscriptions」を開き、「Enable Events」を入れ、「Subscribe to bot events」に `app_mention` を足して「Save Changes」（Socket Mode なので Request URL は要らない）。@channel などでも動かすなら、同じ所に `message.channels`（公開チャンネル）と `message.groups`（非公開チャンネル）も足す（Bot Token Scopes に `channels:history`・`groups:history` が入る）→ 上に出る「reinstall your app」で入れ直す。
 6. 対応表 `~/.claude/slack-routes.json` を置く（形は下）。個人の情報なのでこのリポには置かない＝人生管理の非公開リポの PC 控えから戻す。
 7. `python slack\listen.py --check` が `RESULT: OK` になったら、`powershell -ExecutionPolicy Bypass -File slack\install-listen.ps1` で、ログオン時に自動で起動するよう登録する。
 
