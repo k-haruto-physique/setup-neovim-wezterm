@@ -174,3 +174,7 @@ setup-neovim-wezterm/
 - パッケージ管理: winget
 - Claude Code: ネイティブ版 2.1.211（`C:\Users\81809\.local\bin\claude.exe`・自動更新有効）
   - **全対話セッションが既定で Remote Control**。正本は `~/.claude/settings.json` の `"remoteControlAtStartup": true`（毎回 `--remote-control` を付けるのと等価・起動経路に非依存）。素で起動したい時だけ設定を切るか `disableRemoteControl`。セッション名に当日日付を付けたい時は `remote [name]` → `20260716-…`（troubleshooting #16）
+- Antigravity CLI（`agy`・Google の Gemini を端末から使う道具。旧 Gemini CLI の後継）: **2026-10-05 時点で未導入（本人のインストール待ち・backlog B21）**
+  - 個人の Google アカウントでの Gemini CLI は 2026-06-18 に終了した。`gemini` は `IneligibleTierError` で止まり、入れ直しても戻らない（troubleshooting #31）。
+  - 入れ方: 自分の pwsh で `irm https://antigravity.google/cli/install.ps1 | iex`（`%LOCALAPPDATA%\agy\bin\agy.exe`・管理者不要・以後は自分で更新する）。続けて新しいターミナルで `agy` を起動し、ブラウザで Google アカウントにログインする（鍵は Windows 資格情報マネージャー）。Claude の自動モードはこのインストールを止めるので、本人が打つ。
+  - 使い方: 頭出しなしは `agy -p "..."`（旧 `gemini -p`）。全体の決まり `~/.gemini/GEMINI.md` はそのまま読まれる。設定は `~/.gemini/antigravity-cli/settings.json`。

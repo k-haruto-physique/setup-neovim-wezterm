@@ -957,3 +957,49 @@ WezTerm のソース（インストール済みの `20260117-154428-05343b38` �
 
 - 「選択が消える・点滅する」は、まず**そのペインが出力し続けていないか**を見る。`wezterm cli get-text` の画面を少し間を空けて 2 回取り、差分の行を見れば分かる。
 - 設定を疑う前に、WezTerm の版と同じコミットのソースを読む。今回は `overlay/copy.rs` の `update_search()` を読んで決着した。
+
+## 31. Gemini CLI が `IneligibleTierError` で起動しない → 個人向けは終了。後継は Antigravity CLI（`agy`）（2026-10-05）
+
+### 症状
+
+`gemini -p "..."` が起動時に止まる（gemini-cli 0.38.1・npm のグローバル導入・個人の Google アカウントでログイン）。
+
+```
+IneligibleTierError: This client is no longer supported for Gemini Code Assist for individuals.
+To continue using Gemini, please migrate to the Antigravity suite of products: https://antigravity.google
+```
+
+### 原因（壊れたのではなく、提供の終了）
+
+Google が 2026-05-19 に告知し、**2026-06-18 に、個人向け（無料・Google AI Pro・Ultra）の Gemini CLI への応答を止めた**（[公式ブログ](https://developers.googleblog.com/an-important-update-transitioning-gemini-cli-to-antigravity-cli/)）。今も使えるのは、有料の Gemini API キーと、企業向けの契約（Code Assist Standard／Enterprise）だけ。
+
+- **入れ直し・最新版（0.62.0）への更新・設定の削除・別の個人アカウントでのログインでは戻らない**。個人向けは全員が同じ日に止まった。
+- 有料の API キーにすれば Gemini CLI のまま使えるが、従量課金になる（本人の判断が要る）。
+
+### 対処: Antigravity CLI（`agy`）へ移る
+
+| 道 | 費用 | 判定 |
+|---|---|---|
+| **Antigravity CLI（`agy`）** | 無料の個人アカウントでも使える（週ごとに戻る枠・週の上限あり。[Plans](https://antigravity.google/docs/plans/)） | ◎ 採用 |
+| Gemini CLI ＋ 有料の API キー | 従量課金 | △ 課金の判断が要る |
+| Gemini CLI のまま入れ直す | — | × 個人向けは終了済み |
+
+入れ方（[公式の手順](https://antigravity.google/docs/cli/install/)）:
+
+```powershell
+irm https://antigravity.google/cli/install.ps1 | iex
+```
+
+- インストーラは、本体を公式サーバーから落とし、**SHA512 で照合してから** `%LOCALAPPDATA%\agy\bin\agy.exe` に置き、`agy install` で環境を整える（2026-10-05 に中身を読んで確認）。管理者は要らない。以後は**自分で裏で更新する**。
+- 最初の 1 回は、対話の `agy` でログインする（ブラウザで Google アカウント）。鍵は Windows 資格情報マネージャーに入る。初回の起動で、Gemini CLI の設定を移すかの一覧が出る。
+- 頭出しなしの実行（`gemini -p` の代わり）は **`agy -p "..."`**（`--print`）。出力は `--output-format text|json|stream-json`。**ログイン済みの資格情報を使う**ので、先に対話で 1 回ログインしておく（していないと `authentication required` で終わる）。確認が要る道具は既定で黙って断られ、exit 0 のまま stderr に出る（[headless](https://antigravity.google/docs/cli/headless/)）。
+- 設定は `~/.gemini/antigravity-cli/settings.json`。`~/.gemini/GEMINI.md`（全体の決まり）はそのまま読まれる。MCP は `~/.gemini/config/mcp_config.json`。スキルは `~/.gemini/antigravity-cli/skills/`（[移行の手順](https://antigravity.google/docs/cli/gcli-migration/)）。
+- ⚠️ Claude Code の自動モードは、`irm … | iex` もダウンロード済みのインストーラの実行も「外から取ってきたコードの実行」として止める（2026-10-05 実測）。**インストールは本人が自分のターミナルで行う**。
+
+### ステータス
+
+- 2026-10-05: 原因を公式で確認し、`agy` へ移ると決めた（backlog **B21**）。インストーラは読んで確認済み。インストールとログインは本人の作業待ち。画像を見せる相談（ほかのリポのセッションの用途）が `agy -p` でできるかは、ログイン後に確かめる。
+
+### 教訓
+
+- CLI が「この客は対象外」系のエラーで止まったら、入れ直す前に**提供元の告知**を探す。今回はエラー文が移行先の URL まで示していた。

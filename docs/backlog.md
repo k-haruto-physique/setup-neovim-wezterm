@@ -3,7 +3,7 @@
 セッション開始（`hi`）時に**必ず読む**未完タスク・仕様書の単一台帳。
 troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約点。**完了したら CLOSED へ落とし、起点ファイル（#番号 / memory）にも反映**する。
 
-最終更新: 2026-09-29（Claude ペインのコピー不調＝WezTerm 上流バグと確定・`Ctrl+Shift+Y` 追加・B18 実機確認で CLOSED。**OPEN 2 件**＝B16 実機確認・B17 旧 4 段機構の物理削除）。2026-10-01: **B19（PC が壊れても立て直せるように）を追加し、同日 README に復旧の入口を足して CLOSED＝OPEN 2 件**。同日、B16 実機確認・B17 旧 4 段の削除も CLOSED＝**OPEN 0 件**。同日夜 B20（Slack のメンションの受け口）を追加し、稼働を確かめて CLOSED＝**OPEN 0 件**。⑦ ブランチ名は W7 へ。
+最終更新: 2026-09-29（Claude ペインのコピー不調＝WezTerm 上流バグと確定・`Ctrl+Shift+Y` 追加・B18 実機確認で CLOSED。**OPEN 2 件**＝B16 実機確認・B17 旧 4 段機構の物理削除）。2026-10-01: **B19（PC が壊れても立て直せるように）を追加し、同日 README に復旧の入口を足して CLOSED＝OPEN 2 件**。同日、B16 実機確認・B17 旧 4 段の削除も CLOSED＝**OPEN 0 件**。同日夜 B20（Slack のメンションの受け口）を追加し、稼働を確かめて CLOSED＝**OPEN 0 件**。⑦ ブランチ名は W7 へ。2026-10-05: **B21（Gemini CLI が個人向け終了で止まった → Antigravity CLI へ移る）を追加＝OPEN 1 件**（インストールとログインの本人作業待ち）。
 
 ---
 
@@ -11,6 +11,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | # | タスク | 状態 | 次の一手 | 起点 |
 |---|---|---|---|---|
+| B21 | **Gemini CLI のセットアップをやり直す → Antigravity CLI（`agy`）へ移る** | 2026-10-05 朝、別のリポのセッションが `gemini -p` を回したら起動時に止まった: `IneligibleTierError: This client is no longer supported for Gemini Code Assist for individuals. …`（gemini-cli 0.38.1・npm のグローバル導入・個人の Google アカウントで OAuth）。本人「setup のセッションに Gemini CLI のセットアップやり直しさせよう」。**同日調べた結果: 個人向けの Gemini CLI は 2026-06-18 に終了＝入れ直しでは戻らない。** 残る道は有料の API キー（課金）か、後継の Antigravity CLI（無料の個人アカウントでも週ごとの枠あり）→ 本人「全部よろ」を受けて `agy` に決めた。インストーラ（公式・SHA512 照合）は中身を読んで確認済み。**実行は自動モードの安全装置が「外から取ってきたコード」として止めた**＝本人の作業 | ① 本人が自分の pwsh で `irm https://antigravity.google/cli/install.ps1 \| iex`（勤務中でも可。ブラウザが開くのは ② だけ）② 新しいターミナルで `agy` を起動して Google でログイン（Gemini CLI の設定を移すか聞かれたら移す）③ Claude が `agy -p "hello"` と画像を見せる相談ができるかを確かめる → 古い gemini-cli を `npm uninstall -g @google/gemini-cli` で消す（本人に一言）→ README の「Antigravity CLI」の状態を書き換えて CLOSED。ほかのリポのセッションへは「`gemini -p` → `agy -p`」と伝える | 別のリポのセッション（2026-10-05）・troubleshooting **#31** |
 
 ---
 
