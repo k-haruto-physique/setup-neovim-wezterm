@@ -3,7 +3,7 @@
 セッション開始（`hi`）時に**必ず読む**未完タスク・仕様書の単一台帳。
 troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約点。**完了したら CLOSED へ落とし、起点ファイル（#番号 / memory）にも反映**する。
 
-最終更新: 2026-09-29（Claude ペインのコピー不調＝WezTerm 上流バグと確定・`Ctrl+Shift+Y` 追加・B18 実機確認で CLOSED。**OPEN 2 件**＝B16 実機確認・B17 旧 4 段機構の物理削除）。2026-10-01: **B19（PC が壊れても立て直せるように）を追加し、同日 README に復旧の入口を足して CLOSED＝OPEN 2 件**。同日、B16 実機確認・B17 旧 4 段の削除も CLOSED＝**OPEN 0 件**。同日夜 B20（Slack のメンションの受け口）を追加し、稼働を確かめて CLOSED＝**OPEN 0 件**。⑦ ブランチ名は W7 へ。2026-10-05: **B21（Gemini CLI が個人向け終了で止まった → Antigravity CLI へ移る）を追加＝OPEN 1 件**（インストールとログインの本人作業待ち）。
+最終更新: 2026-09-29（Claude ペインのコピー不調＝WezTerm 上流バグと確定・`Ctrl+Shift+Y` 追加・B18 実機確認で CLOSED。**OPEN 2 件**＝B16 実機確認・B17 旧 4 段機構の物理削除）。2026-10-01: **B19（PC が壊れても立て直せるように）を追加し、同日 README に復旧の入口を足して CLOSED＝OPEN 2 件**。同日、B16 実機確認・B17 旧 4 段の削除も CLOSED＝**OPEN 0 件**。同日夜 B20（Slack のメンションの受け口）を追加し、稼働を確かめて CLOSED＝**OPEN 0 件**。⑦ ブランチ名は W7 へ。2026-10-05: **B21（Gemini CLI が個人向け終了で止まった → Antigravity CLI へ移る）を追加し、同日 `agy` の導入・ログイン・画像の相談まで確かめて CLOSED＝OPEN 0 件**。
 
 ---
 
@@ -11,7 +11,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | # | タスク | 状態 | 次の一手 | 起点 |
 |---|---|---|---|---|
-| B21 | **Gemini CLI のセットアップをやり直す → Antigravity CLI（`agy`）へ移る** | 2026-10-05 朝、別のリポのセッションが `gemini -p` を回したら起動時に止まった: `IneligibleTierError: This client is no longer supported for Gemini Code Assist for individuals. …`（gemini-cli 0.38.1・npm のグローバル導入・個人の Google アカウントで OAuth）。本人「setup のセッションに Gemini CLI のセットアップやり直しさせよう」。**同日調べた結果: 個人向けの Gemini CLI は 2026-06-18 に終了＝入れ直しでは戻らない。** 残る道は有料の API キー（課金）か、後継の Antigravity CLI（無料の個人アカウントでも週ごとの枠あり）→ 本人「全部よろ」を受けて `agy` に決めた。インストーラ（公式・SHA512 照合）は中身を読んで確認済み。**実行は自動モードの安全装置が「外から取ってきたコード」として止めた**＝本人の作業 | ① 本人が自分の pwsh で `irm https://antigravity.google/cli/install.ps1 \| iex`（勤務中でも可。ブラウザが開くのは ② だけ）② 新しいターミナルで `agy` を起動して Google でログイン（Gemini CLI の設定を移すか聞かれたら移す）③ Claude が `agy -p "hello"` と画像を見せる相談ができるかを確かめる → 古い gemini-cli を `npm uninstall -g @google/gemini-cli` で消す（本人に一言）→ README の「Antigravity CLI」の状態を書き換えて CLOSED。ほかのリポのセッションへは「`gemini -p` → `agy -p`」と伝える | 別のリポのセッション（2026-10-05）・troubleshooting **#31** |
+（なし）
 
 ---
 
@@ -33,6 +33,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | 日付 | タスク | 確定根拠 |
 |---|---|---|
+| 2026-10-05 | **B21 Gemini CLI のセットアップをやり直す → Antigravity CLI（`agy`）へ移った** | 別のリポのセッションの `gemini -p` が `IneligibleTierError` で停止。公式ブログで、**個人向けの Gemini CLI は 2026-06-18 に終了**（入れ直しでは戻らない）と確認し、無料の個人アカウントでも枠のある後継 `agy` に決めた（本人「全部よろ」）。インストーラは中身を読んで確認したが、実行は自動モードが「外から取ってきたコード」として止めた → **本人が `!` で実行**して `agy` 1.2.16 を導入（ユーザーの PATH にも追加）→ 本人が `agy` で Google にログイン（ブラウザに出たコードをターミナルへ貼る）→ Claude が `agy -p` で返事（11.6 秒・Gemini 3.8 Flash・`~/.gemini/GEMINI.md` が効く）と、`@bot-icon.png` で**画像の説明が正しい**ことを確認 → 本人の了解で `npm uninstall -g @google/gemini-cli`。全リポ共通の `~/.claude/CLAUDE.md` に「Gemini に相談するとき」を足した（`gemini -p` → `agy -p`・画像は `@ファイル名`）。#31 |
 | 2026-10-01 | **B20 Slack のメンションの受け口（`slack/listen.py`）を動かす** | 本人が再インストール（許可）とアプリの鍵の発行 → 鍵を資格情報マネージャー `claude-slack-app` へ → `listen.py --check` が RESULT: OK（投稿役の権限 4 つ）→ `install-listen.ps1` でタスク `claude-slack-listen` 登録（Running・Interactive）→ 新設のチャンネルでのメンションに 23 秒で返事・👀 → ✅（20:56）。Event Subscriptions は当初 Off のままだった＝**Chrome の自動翻訳でイベント名 `app_mention` が日本語に置き換わり、保存が「Hmm, something's gone wrong」で落ちていた**（2 つのセッションの同時編集も重なった）。原文表示に戻して保存して通った。落とし穴は `slack/README.md`「困ったとき」へ（`4ed410d`）。後片付けは人生管理の非公開リポのセッション |
 | 2026-10-01 | **B16 Codex ステータスのタブバー表示を実機確認 / B17 旧 4 段ペインの仕組みを削除** | ②（古い 4 段ペインが作られない）④（0xc0000142 は 9/28 以降 0 件・System ログ ID 26）は Claude が確認。③⑤⑥①は本人が確認。① の確認中に「`Ctrl+Shift+N` の Codex は 1 タブなのでタブバーごと消え、使用制限が見えない」と分かり、本人が案 A を選んで Codex のあるウィンドウだけ 1 タブでもバーを出すようにした（`0ba66de`）。⑦ ブランチ名は出ない → W7。B17: `Codex/session-status.ps1`・`install-session-status.ps1`・`hooks.json`・`test-session-status.py`・`statusline.ps1` を git rm し、`Codex/README.md`・`statusline-spec.md`・`CHANGELOG.md`・`AGENTS.md`・`README.md` を整理。#29 |
 | 2026-10-01 | **B19 PC が壊れても立て直せるようにする** | 本人の判断で、普段の控え＝人生管理の非公開リポ／本当に大事な物＝自宅の外付け SSD にも。控えを取る仕組みと戻し方は、その非公開リポの `.pc_backup/README.md`（秘密は伏せ字）。このリポの `README.md` 冒頭に「PC が壊れたとき（復旧の入口）」を足し、`CLAUDE.md` のドキュメント map に `slack/`（投稿役の戻し方）を載せた。外付け SSD はドライブ文字だけで決めない旨も README に書いた |

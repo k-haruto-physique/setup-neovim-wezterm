@@ -999,6 +999,7 @@ irm https://antigravity.google/cli/install.ps1 | iex
 ### ステータス
 
 - 2026-10-05: 原因を公式で確認し、`agy` へ移ると決めた（backlog **B21**）。インストーラは読んで確認済み。インストールとログインは本人の作業待ち。画像を見せる相談（ほかのリポのセッションの用途）が `agy -p` でできるかは、ログイン後に確かめる。
+- 2026-10-05（同日・解決・B21 CLOSED）: 本人が Claude Code の `!` でインストーラを実行 → `agy` 1.2.16。出力の `ERROR: logging before google.Init: I…` は Google の記録の決まり文句で、行頭が `I`（お知らせ）なので無害。ユーザーの PATH にも足されるが、**開いていたシェルには届かない**＝新しいターミナルで `agy` → ブラウザで Google にログイン → **ブラウザに出たコードを `agy` のターミナルへ貼る**。確認: `agy -p "…"` が 11.6 秒で返答（Gemini 3.8 Flash・`~/.gemini/GEMINI.md` の日本語の決まりが効く）。**画像はプロンプトに `@bot-icon.png` と書けば読む**（色と形の説明が実物と一致）。古い `@google/gemini-cli` は本人の了解で npm から削除。`~/.gemini/` は `agy` も使うので残した。
 
 ### 教訓
 
