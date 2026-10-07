@@ -149,10 +149,12 @@ Slack で投稿役をメンションすると、そのチャンネルに対応�
 | タスク名 | いつ | 登録し直す方法 |
 |---|---|---|
 | `game-channel-watch` | 毎週日曜 13:00（2026-10-01〜） | 動画用の非公開リポの作業ツリー（`gh repo list` で探す・ブランチ名は同リポのメモにある）で `powershell -ExecutionPolicy Bypass -File scripts\setup_game_watch_task.ps1` |
+| `game-sale-watch` | 毎週 水曜・土曜 18:00（2026-10-07〜） | 同じ作業ツリーで `powershell -ExecutionPolicy Bypass -File scripts\setup_sale_watch_task.ps1` |
 
 - 消すとき: `schtasks /delete /tn game-channel-watch /f`
 - `game-channel-watch` の中では Claude（`claude -p`）が調べて本文を返すだけで、Slack に書けるのは `post.py` だけ（Claude には投稿の道具を渡していない）。同じ週に2回は出さない印をリポ側に残す。
 - ログは `%LOCALAPPDATA%\game_watch\logs\`（`RESULT:` 行が無いログは失敗）。
+- `game-sale-watch` は Claude を使わない（公式ストアの値段を Python で読んで下書きを作り、`post.py` で出すだけ）。消すとき: `schtasks /delete /tn game-sale-watch /f`。ログは `%LOCALAPPDATA%\game_sale_watch\logs\`。
 
 ## 困ったとき
 
