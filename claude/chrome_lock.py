@@ -10,6 +10,8 @@ Studio の画面の操作）ので、使う前に印を書き、終わったら�
   python chrome_lock.py take <セッション名> <何を> <分> [<タブの題>]   # 印を書く（他の人の新しい印があれば書かずに止まる）
   python chrome_lock.py release <セッション名>                     # 自分の印を消す
   python chrome_lock.py take ... --force                         # 古い印（見込み＋15分を過ぎた）を、書いた人に一言送った後で上書き
+  python chrome_lock.py take ... --bg                            # タブを前に出さずに済む作業（例: Studio のアップロードが進むのを待つだけ）
+  ※ 2026-10-07 IG のセッションの提案で「前に出す必要があるか」を印に足した（--bg なら front=false）
 終了コード: 0＝空き・取れた・消せた／3＝使用中（待つ）／2＝使い方の誤り
 """
 from __future__ import annotations
@@ -45,15 +47,16 @@ def is_stale(d: dict) -> bool:
 def show(d: dict) -> str:
     since = dt.datetime.fromisoformat(d["since"]).strftime("%H:%M")
     return (f"使用中: {d.get('who')}（{d.get('what')}・{since} から {d.get('minutes')} 分の見込み"
-            + (f"・タブ「{d['tab']}」" if d.get("tab") else "") + ("・古い印＝見込み＋15分を過ぎた" if is_stale(d) else "") + "）")
+            + (f"・タブ「{d['tab']}」" if d.get("tab") else "") + ("・前に出す" if d.get("front", True) else "・前に出さない")
+            + ("・古い印＝見込み＋15分を過ぎた" if is_stale(d) else "") + "）")
 
 
 def main(argv: list[str]) -> int:
     if not argv:
         print(__doc__)
         return 2
-    cmd, args = argv[0], [a for a in argv[1:] if a != "--force"]
-    force = "--force" in argv
+    cmd, args = argv[0], [a for a in argv[1:] if a not in ("--force", "--bg")]
+    force, bg = "--force" in argv, "--bg" in argv
     d = read()
     if cmd == "status":
         print(show(d) if d else "空き")
@@ -68,8 +71,9 @@ def main(argv: list[str]) -> int:
             print(show(d) + " ＝ 書いたセッションに SendMessage で一言送って待つ" + ("（古い印なので、一言送った後なら --force で上書きしてよい）" if is_stale(d) else ""))
             return 3
         LOCK.parent.mkdir(parents=True, exist_ok=True)
-        LOCK.write_text(json.dumps({"who": who, "what": what, "tab": tab, "since": now().isoformat(timespec="seconds"),
-                                    "minutes": minutes}, ensure_ascii=False, indent=1), encoding="utf-8")
+        LOCK.write_text(json.dumps({"who": who, "what": what, "tab": tab, "front": not bg,
+                                    "since": now().isoformat(timespec="seconds"), "minutes": minutes},
+                                   ensure_ascii=False, indent=1), encoding="utf-8")
         print(f"取った: {who}（{what}・{minutes} 分の見込み）")
         return 0
     if cmd == "release":
