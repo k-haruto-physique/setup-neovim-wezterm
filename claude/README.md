@@ -10,6 +10,7 @@ Claude Code 入力欄の真上に出る 2 段ステータスラインの**正本
 | `statusline.ps1` | **正本スクリプト**（`statusLine.command` から呼ばれる）。`~/.claude/statusline.ps1` へ配置（現状は symlink 切れの実体コピー＝ハッシュ一致。次に編集したら再リンク要 → backlog W1） |
 | `statusline-spec.md` | **設計仕様**（カラーパレット / アイコン / 数値セマンティクス / データソース / 既知の罠 / 変遷ログ / 技術的負債） |
 | `CHANGELOG.md` | 修正履歴（2026-06-15 stdin StreamReader 化バグ修正ほか） |
+| `chrome_lock.py` | **Chrome の順番の印**（2026-10-07〜）。同じ Chrome をいくつもの Claude／Codex のセッションと本人が使うため、使う前に `take`・終わったら `release`（印＝`~/.claude/chrome_lock.json`）。決まりは `~/.claude/CLAUDE.md`「Chrome を複数のセッションで使うとき」と `~/.codex/AGENTS.md` の同じ節。PC を作り直しても、このリポを clone すれば同じ場所で動く（置くだけ・登録は要らない） |
 
 ## アーキテクチャ
 
