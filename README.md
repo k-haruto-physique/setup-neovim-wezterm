@@ -26,7 +26,7 @@ Windows 11 上の Neovim + LazyVim + WezTerm 環境を、シンボリックリ�
    Claude Code が開いたら、ブラウザで claude.ai にログインする。
 1. Claude に「PC が壊れたので、README の『PC が壊れたとき』の手順で立て直したい」と頼む。以下は Claude が順に進める（決まりは `CLAUDE.md` の「このリポの役目」）。
 2. `gh auth login` で GitHub にログインする。
-3. 人生管理用の非公開リポを clone する（名前は `gh repo list` で確かめる）。
+3. 人生管理用の非公開リポを clone する（名前は `gh repo list` で確かめる）。続けて、その中の `harness/` に、Claude のセッション運用の非公開ハブのリポを clone する（別のリポ・名前は同じく `gh repo list`。人生管理のリポはこのフォルダを無視する設定なので、clone しないと中身が無い）。
 4. その非公開リポの `.pc_backup/README.md` の順に戻す（設定・MCP・常駐タスク・memory）。鍵やパスワードは控えに入っていないので、パスワード管理ソフトから入れ直す。
 5. このリポの設定（nvim・WezTerm・PowerShell・statusline）は、下の「実体配置」の表どおりにリンクを張り直す。
 6. Slack の投稿役は、鍵を資格情報マネージャーにしまい直すだけで戻る。メンションで Claude を動かす受け口（`slack/listen.py`）は、アプリの鍵をしまい直し、対応表を人生管理の非公開リポの控えから戻し、自動起動を登録し直す（`slack/README.md` の「メンションで動かす」手順 3・6・7。Slack 側の設定は残っている）。
