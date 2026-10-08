@@ -7,6 +7,7 @@
   ② このリポのチャンネルで、受け口が落とした返事（claims.py の failed）
   ③ このリポへの他リポからの依頼（ハブ inbox の未返事）
   ④ 本人待ちの件数（ハブ board/本人待ち.md）と、今日が休みか（~/.claude/state/today.json）
+  ⑤ 期日（brief.json の checkpoints＝期日の正本）＝私用のリポだけ（ハブ repos.json の section が f/p）。仕事のリポには出さない（私用の中身＝家計・保険などが入るため）
 設定（PC の中だけ・公開リポに書かない）: ~/.claude/state/brief.json {"hub": "<ハブのフォルダ>", "routes": ["<slack-routes.json>", ...]}
   python session_brief.py            # 出す（何があっても exit 0＝起動を止めない）
 """
@@ -95,6 +96,39 @@ def section_waiting(hub: Path) -> list[str]:
     return [f"=== 🙋 本人待ち（ハブ）＝開いている {len(rows)} 件（{', '.join(l.split('|')[1].strip() for l in rows[:6])}）==="] if rows else []
 
 
+ROW = re.compile(r"^\|\s*(\d{4}-\d{2}-\d{2})\s*\|\s*(\d+)\s*\|\s*(.*?)\s*\|\s*$")
+
+
+def repo_section(hub: Path, repo: Path) -> str:
+    for v in (read_json(hub / "repos.json", {}).get("repos") or {}).values():
+        try:
+            if Path(v.get("path", "")).resolve() == repo:
+                return v.get("section", "")
+        except OSError:
+            pass
+    return ""
+
+
+def section_checkpoints(path: Path) -> list[str]:
+    """期日の正本の固定書式 | YYYY-MM-DD | 事前通知(日) | 内容 | だけを読む（変更履歴など地の文は拾わない）。✅ の行は出さない"""
+    try:
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return []
+    today, hits = dt.date.today(), []
+    for l in lines:
+        m = ROW.match(l)
+        if not m or m.group(3).startswith("✅"):
+            continue
+        d = dt.date.fromisoformat(m.group(1))
+        lead = int(m.group(2))
+        if d - dt.timedelta(days=lead) <= today and (today - d).days <= 7:
+            tag = "今日" if d == today else (f"{(today - d).days}日超過" if d < today else f"あと{(d - today).days}日")
+            body = re.sub(r"[*`~]", "", m.group(3))
+            hits.append(f"  [{d.strftime('%m/%d')} {tag}] {body[:110]}{'…' if len(body) > 110 else ''}")
+    return [f"=== 📎 期日（{len(hits)} 件・正本＝{path.name}）==="] + hits[:6] if hits else []
+
+
 def section_today() -> list[str]:
     t = read_json(STATE / "today.json", {})
     if not t:
@@ -116,7 +150,10 @@ def main() -> int:
         out += section_claims(my_channels(repo, cfg.get("routes", [])))
         if hub:
             out += section_inbox(hub, repo)
-            out += section_waiting(hub)
+            if repo_section(hub, repo) in ("f", "p"):            # 私用のリポだけ（仕事のリポに私用の本人待ち・期日を出さない）
+                out += section_waiting(hub)
+                if cfg.get("checkpoints"):
+                    out += section_checkpoints(Path(cfg["checkpoints"]).expanduser())
     except Exception as e:  # noqa: BLE001
         out.append(f"（session_brief の途中で止まった: {e}）")
     if out:
