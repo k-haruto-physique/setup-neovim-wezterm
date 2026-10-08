@@ -148,8 +148,8 @@ Slack で投稿役をメンションすると、そのチャンネルに対応�
 
 | タスク名 | いつ | 登録し直す方法 |
 |---|---|---|
-| `game-channel-watch` | 毎週日曜 13:00（2026-10-01〜） | 動画用の非公開リポの作業ツリー（`gh repo list` で探す・ブランチ名は同リポのメモにある）で `powershell -ExecutionPolicy Bypass -File scripts\setup_game_watch_task.ps1` |
-| `game-sale-watch` | 毎週 水曜・土曜 18:00（2026-10-07〜） | 同じ作業ツリーで `powershell -ExecutionPolicy Bypass -File scripts\setup_sale_watch_task.ps1` |
+| `game-channel-watch` | 毎週日曜 13:00（2026-10-01〜） | ゲーム実況用の非公開リポ（`gh repo list` で探す・2026-10-08 に動画のリポから独立した）で `powershell -ExecutionPolicy Bypass -File scripts\setup_game_watch_task.ps1` |
+| `game-sale-watch` | 毎週 水曜・土曜 18:00（2026-10-07〜） | 同じリポで `powershell -ExecutionPolicy Bypass -File scripts\setup_sale_watch_task.ps1` |
 
 - 消すとき: `schtasks /delete /tn game-channel-watch /f`
 - `game-channel-watch` の中では Claude（`claude -p`）が調べて本文を返すだけで、Slack に書けるのは `post.py` だけ（Claude には投稿の道具を渡していない）。同じ週に2回は出さない印をリポ側に残す。
