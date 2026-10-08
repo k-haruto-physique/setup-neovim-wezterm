@@ -67,6 +67,11 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import post  # noqa: E402  鍵の読み書き・Slack API・本文の検査を共用する
+sys.path.insert(0, str(HERE.parent / "claude"))
+try:                                   # 返事の担当印（2026-10-08 ADR-HAR-002）＝無ければ印なしで今まで通り動く
+    import claims  # noqa: E402
+except Exception:  # noqa: BLE001
+    claims = None
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -330,21 +335,46 @@ def handle_mention(cfg: dict, bot: str, ev: dict) -> None:
         reply(bot, channel, thread_ts, f"このチャンネルは、まだ受け口の対応表にありません（{ROUTES} に足すと動きます）。", cfg.get("default_name", DEFAULT_NAME))
         return
     text = clean_text(ev.get("text", ""))
+    # 返事の担当印＝親の投稿（スレッドならその親・直下ならこのメッセージ）で取る。PC のセッションが先に取っていれば動かない
+    ws, me = post.WORKSPACE or "private", f"listen:{Path(route['repo']).name}"
+    if claims is not None:
+        try:
+            ok, rec = claims.take(ws, channel, thread_ts, me, reply=ts)
+        except Exception as e:  # noqa: BLE001  印が書けなくても受け口は止めない
+            ok, rec = True, {}
+            log(f"担当印を書けなかった（そのまま動く）: {e!r}")
+        if not ok:
+            log(f"担当印あり＝動かない {route.get('label', channel)} ts={ts}（{rec.get('who')} が {rec.get('since', '')[11:16]} から）")
+            reply(bot, channel, thread_ts, f"PC のセッション（{rec.get('who')}）がこの件を進めているので、受け口は動きません。そちらで受けます。",
+                  route.get("name", DEFAULT_NAME))
+            return
     react(bot, channel, ts, "eyes")
     log(f"受けた {route.get('label', channel)} ts={ts} 本文={text[:60]!r}")
 
+    def finish(state: str, note: str) -> None:
+        if claims is not None:
+            try:
+                claims.finish(ws, channel, thread_ts, me, state, note)
+            except Exception as e:  # noqa: BLE001
+                log(f"担当印の終わりを書けなかった: {e!r}")
+
     def job() -> None:
-        work = in_work_hours(cfg)
-        cmd = claude_cmd(build_prompt(route, channel, thread_ts, text, work, who, is_owner), work)
-        t0 = time.time()
-        code, out = run_claude(cmd, route["repo"])
-        log(f"終わった {route.get('label', channel)} exit={code} {time.time() - t0:.0f}秒 返事{len(out)}字")
-        body = out or "（返事が空でした。PC の記録を見てください。）"
-        if code != 0:
-            body = f":x: うまく終わりませんでした（exit={code}）。\n\n{body}"
-        reply(bot, channel, thread_ts, body, route.get("name", DEFAULT_NAME))
-        react(bot, channel, ts, "eyes", remove=True)
-        react(bot, channel, ts, "white_check_mark" if code == 0 else "x")
+        try:
+            work = in_work_hours(cfg)
+            cmd = claude_cmd(build_prompt(route, channel, thread_ts, text, work, who, is_owner), work)
+            t0 = time.time()
+            code, out = run_claude(cmd, route["repo"])
+            log(f"終わった {route.get('label', channel)} exit={code} {time.time() - t0:.0f}秒 返事{len(out)}字")
+            body = out or "（返事が空でした。PC の記録を見てください。）"
+            if code != 0:
+                body = f":x: うまく終わりませんでした（exit={code}）。\n\n{body}"
+            reply(bot, channel, thread_ts, body, route.get("name", DEFAULT_NAME))
+            react(bot, channel, ts, "eyes", remove=True)
+            react(bot, channel, ts, "white_check_mark" if code == 0 else "x")
+            finish("done" if code == 0 else "failed", f"exit={code}")
+        except Exception as e:
+            finish("failed", f"受け口の途中で落ちた: {e!r}"[:200])
+            raise
 
     WORKERS.setdefault(route["repo"], Worker(route["repo"])).q.put(job)
 
