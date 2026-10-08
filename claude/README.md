@@ -10,7 +10,14 @@ Claude Code 入力欄の真上に出る 2 段ステータスラインの**正本
 | `statusline.ps1` | **正本スクリプト**（`statusLine.command` から呼ばれる）。`~/.claude/statusline.ps1` へ配置（現状は symlink 切れの実体コピー＝ハッシュ一致。次に編集したら再リンク要 → backlog W1） |
 | `statusline-spec.md` | **設計仕様**（カラーパレット / アイコン / 数値セマンティクス / データソース / 既知の罠 / 変遷ログ / 技術的負債） |
 | `CHANGELOG.md` | 修正履歴（2026-06-15 stdin StreamReader 化バグ修正ほか） |
-| `chrome_lock.py` | **Chrome の順番の印**（2026-10-07〜）。同じ Chrome をいくつもの Claude／Codex のセッションと本人が使うため、使う前に `take`・終わったら `release`（印＝`~/.claude/chrome_lock.json`）。決まりは `~/.claude/CLAUDE.md`「Chrome を複数のセッションで使うとき」と `~/.codex/AGENTS.md` の同じ節。PC を作り直しても、このリポを clone すれば同じ場所で動く（置くだけ・登録は要らない） |
+| `chrome_lock.py` | **Chrome の順番の印**（2026-10-07〜）。🔁 2026-10-08 から `lock.py` の鍵 `chrome` の呼び名（使い方は同じ・札は `~/.claude/state/locks/chrome.json`・古い札＝見込み＋5分） |
+| `lock.py` | **印（ロック）の一般形**（2026-10-08〜・セッション運用の見直し）。1つしか無い物（Chrome・Studio のチャンネル・X のアカウント・QGIS・USB への書き込み・作品の版）を順番に使う。`take`／`release`／`status`／`request --urgent`。札＝`~/.claude/state/locks/<鍵>.json` |
+| `board.py` | **状態板**（2026-10-08〜）。全セッションに効く「今の状態」（D: の正体・本人のタブ・Studio のチャンネルなど）を値・時刻・書いた人つきで1か所に。`show`／`get`／`set --by`。中身＝`~/.claude/state/board.json` |
+| `claims.py` | **返事の担当印**（2026-10-08〜）。本人の返事（スレッド・直下・リアクション・チャット）に動く前に、その返事が指す親の投稿で印を取る＝受け口と端末が二重に動かない。受け口が落とした物（`failed`）だけを端末が拾う。中身＝`~/.claude/state/claims.json` |
+| `drive_identity.py` | **D: の見分け**（2026-10-08〜）。家の SSD（`D:/YouTube` と `D:/Videos` の両方）／仕事の USB（ボリューム名＝`~/.claude/state/drives.json`）／無い。結果を状態板の `drive_d` に書く。道具からは `identify()` |
+| `_state.py`・`test_state_tools.py` | 上の4本の共通部品（排他つきの読み書き）と確かめ（2つのプロセスが同時に取りに来たら片方だけ取れる・`python claude/test_state_tools.py`） |
+
+`~/.claude/state/` は PC の中だけの機械の一時情報（git に入れない・控え不要）。`drives.json`・`defaults.json`（Studio・X の既定）は個人の名前が入るので、このリポには書かず PC を作り直したら手で置く（中身の形は各スクリプトの説明）。決まり（いつ使うか）は `~/.claude/rules/core-shared.md`・`core-slack.md`。
 
 ## アーキテクチャ
 
