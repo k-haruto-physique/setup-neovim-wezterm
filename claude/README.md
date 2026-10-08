@@ -17,6 +17,8 @@ Claude Code 入力欄の真上に出る 2 段ステータスラインの**正本
 | `drive_identity.py` | **D: の見分け**（2026-10-08〜）。家の SSD（`D:/YouTube` と `D:/Videos` の両方）／仕事の USB（ボリューム名＝`~/.claude/state/drives.json`）／無い。結果を状態板の `drive_d` に書く。道具からは `identify()` |
 | `_state.py`・`test_state_tools.py` | 上の4本の共通部品（排他つきの読み書き）と確かめ（2つのプロセスが同時に取りに来たら片方だけ取れる・`python claude/test_state_tools.py`） |
 
+**起動時の1画面の配線**（2026-10-08〜・本人 OK）: `~/.claude/settings.json` の `hooks.SessionStart` に1本＝`{"matcher": "startup|resume|compact", "hooks": [{"type": "command", "command": "python \"<このリポ>/claude/session_brief.py\""}]}`。全リポ（受け口の `claude -p` も）で起動時に状態板・印・受け口が落とした返事・他リポの依頼・本人待ちが出る。設定は `~/.claude/state/brief.json`（`{"hub": "<ハブのフォルダ>", "routes": ["~/.claude/slack-routes.json", …]}`）。PC を作り直したら、この1本を足して brief.json を置く。
+
 `~/.claude/state/` は PC の中だけの機械の一時情報（git に入れない・控え不要）。`drives.json`・`defaults.json`（Studio・X の既定）は個人の名前が入るので、このリポには書かず PC を作り直したら手で置く（中身の形は各スクリプトの説明）。決まり（いつ使うか）は `~/.claude/rules/core-shared.md`・`core-slack.md`。
 
 ## アーキテクチャ
