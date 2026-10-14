@@ -76,12 +76,14 @@ function Get-LiveClaudeSessions {
                 name      = [string]$d.name
                 startedAt = [int64]$d.startedAt
                 updatedAt = [int64]$d.updatedAt
+                status    = [string]$d.status  # idle（待機中）・busy（作業中）など。restore -Continue が使う
                 pids      = @()
             }
         }
         $s = $byId[$key]
         $s.pids += [pscustomobject]@{ pid = [int]$d.pid; procStart = [string]$d.procStart }
         if ([int64]$d.updatedAt -gt $s.updatedAt) { $s.updatedAt = [int64]$d.updatedAt }
+        if ($d.status -and $d.status -ne 'idle') { $s.status = [string]$d.status }
     }
     return @($byId.Values)
 }

@@ -1050,7 +1050,7 @@ irm https://antigravity.google/cli/install.ps1 | iex
 | 物 | 中身 |
 |---|---|
 | `claude/session-snapshot.ps1`（ログオンタスク `Claude Session Snapshot`。登録は `claude/register-session-snapshot-task.ps1`） | 2 分おきに、生きている対話セッション（`kind` が `interactive`・PID とプロセスの開始時刻 `procStart` が一致）の会話 ID・フォルダ・名前を `~/.claude/state/open-sessions.json` に書く。起動して最初の 1 回だけ、前の控えのプロセスが 1 つも生きていなければ `open-sessions.prev.json` へ移す。`session-history.json` にはフォルダごと・呼び名ごとの最後の対話セッション |
-| `restore`（`claude/restore-sessions.ps1`） | prev を一覧にして、Enter で全部 `claude --resume <会話 ID>` で開き直す。1 タブを 2×2 に割って 4 つずつ（`-Tabs` で 1 つ 1 タブ・`-PerTab 2` で左右）。外したい番号を打ってから Enter・`q` でやめる。`-Skip`・`-Again`・`-DryRun` |
+| `restore`（`claude/restore-sessions.ps1`） | prev を一覧にして、Enter で全部 `claude --resume <会話 ID>` で開き直す。1 タブを 2×2 に割って 4 つずつ（`-Tabs` で 1 つ 1 タブ・`-PerTab 2` で左右）。外したい番号を打ってから Enter・`q` でやめる。`-Skip`・`-Again`・`-DryRun`。**続きを頼む**: 一覧で `c` も打つか `restore -Continue` で、再起動の直前の写しで作業中（`status` が `idle` 以外）だった会話（一覧の ●）にだけ、最初に「再起動で止まった。状態を確かめて続きを。終わっていたら一言」と送る（`claude --resume <ID> '<一言>'`）。待機中だった会話には送らない（要らない作業を始めるため）。既定はオフ（本人 10/14） |
 | 知らせ（`powershell/profile.ps1`） | 再起動の後に開いた PowerShell に「↺ 再起動の前に開いていた Claude の会話が N 個 → restore」と 1 行。`restore` か `restore -Skip` をするか、3 日たつと消える |
 | `cc [リポ]`／`cn [リポ] [名前]`（`powershell/profile.ps1`） | `cc`＝前回の続き（`session-history.json` のそのフォルダの最後の対話セッションを `--resume`）。`cn`＝新しく（`--name yyyyMMdd_<名前>`。名前を省くと [リポ] に打った字）。[リポ] はフォルダ名の一部か、会話の名前の日付を外した部分（`20261005_life` → `life`）。省くと今のフォルダ。リポの一覧は持たない（公開リポ） |
 
@@ -1062,6 +1062,8 @@ irm https://antigravity.google/cli/install.ps1 | iex
 - **`cc` は `claude --continue` に頼らない**。夜の自動タスクの `claude -p` も同じフォルダに会話の記録を残す（実測: 2〜3 時に `entrypoint` が `sdk-cli` の記録が 4 本）ので、`--continue` がそちらを拾うおそれがある。控えに無いフォルダの時だけ `--continue` にし、そのフォルダで今セッションが開いていれば開かない。
 - 読むのは `~/.claude/sessions/<pid>.json` の会話 ID・フォルダ・名前・開始時刻だけ。隣の `.key`（セッション間の通信の鍵）には触らない。控えは `~/.claude/state/`（PC の中だけ・git の外）。
 - `wezterm.lua` からは何も起動しない（#29）。ペインを開くのは、本人が WezTerm の中で打った `restore` が呼ぶ `wezterm cli spawn`／`split-pane`。
+
+直したら: `pwsh -File claude/register-session-snapshot-task.ps1` で登録し直す。**`Stop-ScheduledTask` は conhost だけを止め、中の pwsh は残る**（2026-10-14 実測）。残った古い版が印（Mutex）を持ったままだと新しい版はすぐ終わり、古い版が書き続ける。登録の道具は、古い版の pwsh を止めてから起動する。
 
 外し方: `Unregister-ScheduledTask -TaskName 'Claude Session Snapshot' -Confirm:$false`。外しても `cc`／`cn` は動く（控えが無いフォルダの扱いになる）。
 

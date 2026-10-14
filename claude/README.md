@@ -16,7 +16,7 @@ Claude Code 入力欄の真上に出る 2 段ステータスラインの**正本
 | `claims.py` | **返事の担当印**（2026-10-08〜）。本人の返事（スレッド・直下・リアクション・チャット）に動く前に、その返事が指す親の投稿で印を取る＝受け口と端末が二重に動かない。受け口が落とした物（`failed`）だけを端末が拾う。中身＝`~/.claude/state/claims.json` |
 | `drive_identity.py` | **D: の見分け**（2026-10-08〜）。家の SSD（`D:/YouTube` と `D:/Videos` の両方）／仕事の USB（ボリューム名＝`~/.claude/state/drives.json`）／無い。結果を状態板の `drive_d` に書く。道具からは `identify()` |
 | `session-snapshot.ps1` | **開いている会話の控え**（2026-10-14〜）。ログオンタスク `Claude Session Snapshot`（登録＝`register-session-snapshot-task.ps1`・管理者不要・画面なし）が 2 分おきに、生きている対話セッションの会話 ID・フォルダ・名前を `~/.claude/state/open-sessions.json` に書く。再起動の後の最初の 1 回で前の控えを `open-sessions.prev.json` へ。フォルダごとの前回は `session-history.json`。troubleshooting #32 |
-| `restore-sessions.ps1` | **再起動の前の会話を開き直す**（`restore` の本体）。prev を一覧にして `claude --resume` を 1 タブ 2×2 で開く。もう開いている会話は飛ばす |
+| `restore-sessions.ps1` | **再起動の前の会話を開き直す**（`restore` の本体）。prev を一覧にして `claude --resume` を 1 タブ 2×2 で開く。もう開いている会話は飛ばす。`c`／`-Continue` で、作業中だった会話にだけ続きを頼む |
 | `session-common.ps1` | 上の 2 本と `powershell/profile.ps1` の `cc`／`cn`／知らせ が使う共通部品（`.key` には触らない・pwsh 7 と 5.1 の両方で読める） |
 | `_state.py`・`test_state_tools.py` | 上の4本の共通部品（排他つきの読み書き）と確かめ（2つのプロセスが同時に取りに来たら片方だけ取れる・`python claude/test_state_tools.py`） |
 

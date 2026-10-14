@@ -57,6 +57,7 @@ function ConvertTo-SnapshotEntry($s) {
         name      = [string]$s.name
         startedAt = [int64]$s.startedAt
         updatedAt = [int64]$s.updatedAt
+        status    = [string]$s.status
         pids      = @(@($s.pids) | ForEach-Object { [ordered]@{ pid = [int]$_.pid; procStart = [string]$_.procStart } })
     }
 }

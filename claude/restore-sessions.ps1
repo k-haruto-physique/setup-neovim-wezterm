@@ -1,7 +1,8 @@
 ﻿# 再起動（Windows Update など）の前に開いていた Claude の会話を、WezTerm の新しいタブに開き直す。
 # 2026-10-14・troubleshooting #32。profile.ps1 の `restore` から呼ぶ。控えは session-snapshot.ps1 が書く。
 #
-#   restore            一覧を出す → Enter で全部（外したい番号を打ってから Enter・q でやめる）
+#   restore            一覧を出す → Enter で全部（外したい番号を打ってから Enter・c で続きも頼む・q でやめる）
+#   restore -Continue  開き直して、再起動の直前に作業中だった会話（一覧の ●）にだけ「続けて」と最初に送る（一覧で c と同じ）
 #   restore -Tabs      1 つの会話に 1 タブ（既定は 1 タブを 2×2 に割って 4 つずつ）
 #   restore -PerTab 2  1 タブに 2 つずつ（左右）。1〜4
 #   restore -Skip      開き直さずに、PowerShell を開くたびに出る知らせだけ消す
@@ -12,6 +13,7 @@
 # 開き直すのは claude --resume <会話の ID>。もう開いている会話は飛ばす（同じ会話を 2 つで開くと履歴が枝分かれする）。
 [CmdletBinding()]
 param(
+    [switch]$Continue,
     [switch]$Tabs,
     [ValidateRange(1, 4)][int]$PerTab = 4,
     [switch]$Skip,
@@ -64,23 +66,30 @@ if ($items.Count -eq 0) {
     return
 }
 
-Write-Host ('再起動の前（{0} の控え）に開いていた Claude の会話:' -f $when)
+# 控えの最後の写し（再起動の 2 分以内）で作業中だった会話。続きを頼むのはこれだけ（待機中の会話に頼むと要らない作業を始める）
+function Test-WasWorking($s) { return ($s.status -and $s.status -ne 'idle') }
+$workingCount = @($items | Where-Object { Test-WasWorking $_ }).Count
+
+Write-Host ('再起動の前（{0} の控え）に開いていた Claude の会話（● は作業中だった）:' -f $when)
 for ($i = 0; $i -lt $items.Count; $i++) {
     $s = $items[$i]
     $label = if ($s.name) { $s.name } else { '（名前なし）' }
-    Write-Host ('  {0,2}  {1,-34} {2}' -f ($i + 1), $label, (Split-Path $s.cwd -Leaf))
+    $mark = if (Test-WasWorking $s) { '●' } else { ' ' }
+    Write-Host ('  {0,2} {1} {2,-34} {3}' -f ($i + 1), $mark, $label, (Split-Path $s.cwd -Leaf))
 }
 if ($alreadyOpen.Count -gt 0) { Write-Host ('  （ほかの {0} 個は、もう開いているので飛ばします）' -f $alreadyOpen.Count) -ForegroundColor DarkGray }
 foreach ($s in $noDir) { Write-Host ('  （{0} はフォルダ {1} が無いので飛ばします）' -f $s.name, $s.cwd) -ForegroundColor DarkGray }
 
 $chosen = $items
 if (-not $Yes) {
-    $ans = (Read-Host 'Enter＝全部開く ／ 外す番号を空白で区切って打つ（例: 2 5）→ Enter ／ q＝やめる').Trim()
+    $askContinue = if ($workingCount -gt 0 -and -not $Continue) { ' ／ c も打つ＝● に続きも頼む' } else { '' }
+    $ans = (Read-Host ('Enter＝全部開く ／ 外す番号を空白で区切って打つ（例: 2 5）{0} ／ q＝やめる' -f $askContinue)).Trim()
     if ($ans -eq 'q') { Write-Host 'やめました（知らせは残します）'; return }
     if ($ans) {
         $drop = @()
         foreach ($tok in ($ans -split '[\s,、]+')) {
             if (-not $tok) { continue }
+            if ($tok -eq 'c') { $Continue = $true; continue }
             $n = 0
             if (-not [int]::TryParse($tok, [ref]$n) -or $n -lt 1 -or $n -gt $items.Count) {
                 Write-Host "「$tok」は一覧の番号ではありません。もう一度 restore から" -ForegroundColor Yellow
@@ -114,8 +123,14 @@ function Invoke-Wez([string[]]$WezArgs) {
     return ([string]$out).Trim()
 }
 
+# 続きを頼む時の最初の一言。控えは最大 2 分古いので、もう終わっていた場合の返し方も書く。
+# -Command の中で '…' に入れるので、この文に ' を入れない。
+$ContinuePrompt = 'PC の再起動で、この会話の作業が途中で止まりました。止まる前にしていたことと、今の状態（ファイル・git など）を確かめてから続きを進めてください。もう終わっていたら、そう一言だけ返してください。'
+
 function Get-PaneProgram($s) {
-    @('--cwd', [string]$s.cwd, '--', $pwshExe, '-NoLogo', '-NoExit', '-Command', ('claude --resume {0}' -f $s.sessionId))
+    $cmd = 'claude --resume {0}' -f $s.sessionId
+    if ($Continue -and (Test-WasWorking $s)) { $cmd += " '$ContinuePrompt'" }
+    @('--cwd', [string]$s.cwd, '--', $pwshExe, '-NoLogo', '-NoExit', '-Command', $cmd)
 }
 
 # 開く前に「使った」と書く（開いたペインの PowerShell に、また知らせが出ないように）
@@ -132,4 +147,9 @@ for ($g = 0; $g -lt $chosen.Count; $g += $per) {
     if ($group.Count -ge 4) { [void](Invoke-Wez (@('cli', 'split-pane', '--pane-id', $p2, '--bottom', '--percent', '50') + (Get-PaneProgram $group[3]))) }
 }
 $tabsMade = [Math]::Ceiling($chosen.Count / $per)
-Write-Host ('{0} 個を {1} タブに開き直しました（会話の中身はそのまま。途中だった作業は「続けて」と頼む）' -f $chosen.Count, $tabsMade)
+$asked = if ($Continue) { @($chosen | Where-Object { Test-WasWorking $_ }).Count } else { 0 }
+if ($asked -gt 0) {
+    Write-Host ('{0} 個を {1} タブに開き直し、作業中だった {2} 個に続きを頼みました' -f $chosen.Count, $tabsMade, $asked)
+} else {
+    Write-Host ('{0} 個を {1} タブに開き直しました（会話の中身はそのまま。途中だった作業は「続けて」と頼むか、次から restore -Continue）' -f $chosen.Count, $tabsMade)
+}

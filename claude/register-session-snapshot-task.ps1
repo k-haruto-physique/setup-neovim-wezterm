@@ -41,5 +41,11 @@ Register-ScheduledTask `
     -RunLevel Limited `
     -Force | Out-Null
 
+# 古い版がまだ動いていれば止めてから起動する。Stop-ScheduledTask は conhost だけを止め、中の pwsh は残る
+# （2026-10-14 実測）。残った古い版が印（Mutex）を持ったままだと、新しい版はすぐ終わり、古い版が書き続ける。
+Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+Get-CimInstance Win32_Process -Filter "Name='pwsh.exe'" |
+    Where-Object { $_.CommandLine -and $_.CommandLine.Contains($script) } |
+    ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 Start-ScheduledTask -TaskName $taskName
-Write-Output "登録して起動しました: $taskName"
+Write-Output "登録して起動しました: $taskName（登録し直した時は、古い版を止めてから）"
