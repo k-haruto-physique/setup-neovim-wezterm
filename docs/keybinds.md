@@ -430,6 +430,9 @@ Vim 未経験者が **最初に詰む最大ポイント**。
 | `kanro` | kanro_db へ psql 接続（pgpass 無人認証） |
 | `remote [name]` | 名前付きで Remote Control 起動（`remote fix-bug` → `20260716-fix-bug`）。**素の `claude` も既定で Remote Control になる**（`settings.json` の `remoteControlAtStartup: true`）。この関数は「アプリ/web 側で名前を見て識別したい」時だけ使う（既定の接頭辞は hostname） |
 | `usage [daily\|session]` | 使用量の従量換算表示（USD+円。既定は月別） |
+| **`cc [リポ]`** | **Claude を前回の続きで開く**（そのリポで最後に使った会話。`cc life`）。[リポ] はフォルダ名の一部か、会話の名前の日付を外した部分（`20261005_yt` → `cc yt`）。省くと今のフォルダ。その会話がもう別のペインで開いていれば開かない |
+| **`cn [リポ] [名前]`** | **Claude を新しく始める**（`cn life` → 名前 `20261014_life`、`cn life 家計` → `20261014_家計`） |
+| **`restore`** | **再起動の前に開いていた会話を全部開き直す**（Enter＝全部・番号で外す・`q` でやめる。1 タブを 2×2 に割って 4 つずつ。`-Tabs` で 1 つ 1 タブ、`-Skip` で知らせだけ消す）。再起動の後の PowerShell に「↺ … restore」と出たら打つ。troubleshooting #32 |
 
 ---
 

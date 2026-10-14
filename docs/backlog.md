@@ -3,7 +3,7 @@
 セッション開始（`hi`）時に**必ず読む**未完タスク・仕様書の単一台帳。
 troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約点。**完了したら CLOSED へ落とし、起点ファイル（#番号 / memory）にも反映**する。
 
-最終更新: 2026-09-29（Claude ペインのコピー不調＝WezTerm 上流バグと確定・`Ctrl+Shift+Y` 追加・B18 実機確認で CLOSED。**OPEN 2 件**＝B16 実機確認・B17 旧 4 段機構の物理削除）。2026-10-01: **B19（PC が壊れても立て直せるように）を追加し、同日 README に復旧の入口を足して CLOSED＝OPEN 2 件**。同日、B16 実機確認・B17 旧 4 段の削除も CLOSED＝**OPEN 0 件**。同日夜 B20（Slack のメンションの受け口）を追加し、稼働を確かめて CLOSED＝**OPEN 0 件**。⑦ ブランチ名は W7 へ。2026-10-05: **B21（Gemini CLI が個人向け終了で止まった → Antigravity CLI へ移る）を追加し、同日 `agy` の導入・ログイン・画像の相談まで確かめて CLOSED＝OPEN 0 件**。
+最終更新: 2026-09-29（Claude ペインのコピー不調＝WezTerm 上流バグと確定・`Ctrl+Shift+Y` 追加・B18 実機確認で CLOSED。**OPEN 2 件**＝B16 実機確認・B17 旧 4 段機構の物理削除）。2026-10-01: **B19（PC が壊れても立て直せるように）を追加し、同日 README に復旧の入口を足して CLOSED＝OPEN 2 件**。同日、B16 実機確認・B17 旧 4 段の削除も CLOSED＝**OPEN 0 件**。同日夜 B20（Slack のメンションの受け口）を追加し、稼働を確かめて CLOSED＝**OPEN 0 件**。⑦ ブランチ名は W7 へ。2026-10-05: **B21（Gemini CLI が個人向け終了で止まった → Antigravity CLI へ移る）を追加し、同日 `agy` の導入・ログイン・画像の相談まで確かめて CLOSED＝OPEN 0 件**。2026-10-14: **B22（Windows Update の再起動とセッションの開き直し）を追加＝OPEN 1 件**。
 
 ---
 
@@ -11,7 +11,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | # | タスク | 状態 | 次の一手 | 起点 |
 |---|---|---|---|---|
-（なし）
+| B22 | **Windows Update の再起動で Claude のセッションが全部閉じる → 設定 2 か所＋`restore`／`cc`／`cn`** | 2026-10-14: 原因（`IsExpedited`＝使用時間を無視する再起動・プレビュー更新の自動導入）を実測。控えのタスク `Claude Session Snapshot` を登録（Running）、`restore`・`cc`・`cn` を画面なしで確かめた | ① 本人: 設定 → Windows Update →「利用可能になったらすぐに…」をオフ、詳細オプション →「最新の状態にする」をオフ（自動サインインはお好みで）→ Claude が `IsExpedited`／`IsContinuousInnovationOptedIn` が 0 か確かめる ② 平日 16:30 以降: `restore -Again` で試しの控えから実際に 2×2 のペインが開くか（または次の再起動の後に本番で）③ 本人: 10/14 に手で戻した時に二重に開いた会話の片方を `/exit` | troubleshooting #32 |
 
 ---
 

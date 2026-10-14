@@ -33,6 +33,13 @@ Windows 11 上の Neovim + LazyVim + WezTerm 環境を、シンボリックリ�
 
 ⚠️ 外付け SSD は、ドライブ文字だけで決めない。別の USB メモリが同じ文字になることがある。SSD にしか無いフォルダがあるかを見てから読み書きする。
 
+## Windows Update で再起動されたとき
+
+- WezTerm の中の PowerShell に「↺ 再起動の前に開いていた Claude の会話が N 個…」と出たら、`restore` → Enter。前に開いていた会話が、その会話のまま 2×2 のペインで開き直る（外したい番号を打ってから Enter・`q` でやめる）。
+- 毎日の起動は `cc <リポ>`（前回の続き）と `cn <リポ>`（新しく）。`docs/keybinds.md` の PowerShell の節。
+- 昼間に再起動されないように、設定 → Windows Update の「利用可能になったらすぐに最新の更新プログラムを入手する」と、詳細オプションの「最新の状態にする」をオフにする（2026-10-14〜。新しい PC でも同じにする）。
+- 控えを取る常駐タスク `Claude Session Snapshot` は `pwsh -File claude/register-session-snapshot-task.ps1` で登録する（管理者不要）。理由・中身・外し方は `docs/troubleshooting.md` #32。
+
 ## 結論
 
 - **リポジトリを正本、実体側 (`%LOCALAPPDATA%\nvim` 等) はシンボリックリンク**で運用する
@@ -73,6 +80,10 @@ setup-neovim-wezterm/
 │   ├── statusline.ps1         # 正本（%USERPROFILE%\.claude\statusline.ps1 へ反映）
 │   ├── statusline-spec.md     # 設計仕様
 │   ├── CHANGELOG.md
+│   ├── session-snapshot.ps1   # 開いている会話の控え（ログオンタスク Claude Session Snapshot）
+│   ├── register-session-snapshot-task.ps1 # 上の登録
+│   ├── restore-sessions.ps1   # 再起動の前の会話を開き直す（restore）
+│   ├── session-common.ps1     # 上と profile.ps1 の cc／cn の共通部品
 │   └── README.md
 ├── Codex/                     # Codex 用（タブバーのステータス・Remote Control・Claude ⇄ Codex ブリッジ）
 │   ├── tabbar-status.ps1       # タブバー用ステータス書き出し（全Codexを1プロセスで担当）

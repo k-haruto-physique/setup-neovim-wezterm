@@ -36,6 +36,77 @@ function remote {
     else { claude --remote-control --remote-control-session-name-prefix $p }
 }
 
+# --- Claude の会話を開く・開き直す（2026-10-14・troubleshooting #32）---
+#   cc  [リポ]          前回の続き（そのリポで最後に使った対話セッションを --resume。控えに無ければ --continue）
+#   cn  [リポ] [名前]   新しく始める（--name yyyyMMdd_<名前>。名前を省くと [リポ] に打った字）
+#   restore            再起動の前に開いていた会話を、全部その会話のまま開き直す（claude/restore-sessions.ps1）
+# [リポ] は Documents\Repositories の下のフォルダ名の一部か、会話の名前の日付を外した部分（20261005_life → life）。
+# 省くと今のフォルダ。リポの一覧はここに持たない（公開リポ）。控えは ~/.claude/state/ にだけある。
+# 控えを書くのはログオンタスク「Claude Session Snapshot」（claude/register-session-snapshot-task.ps1）。
+$ClaudeToolsDir = Join-Path (Split-Path $PSScriptRoot -Parent) 'claude'
+$ClaudeReposRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+. (Join-Path $ClaudeToolsDir 'session-common.ps1')
+
+function cc {
+    param([string]$Repo, [switch]$DryRun)
+    $t = Find-ClaudeTarget $Repo $ClaudeReposRoot
+    if (-not $t) { return }
+    $id = $t.SessionId; $label = $t.Name
+    if (-not $id) {
+        $hist = Read-ClaudeJson (Join-Path (Get-ClaudeStateDirectory) 'session-history.json')
+        if ($hist -and $hist.byDir) {
+            $e = $hist.byDir.PSObject.Properties[(Get-ClaudeDirKey $t.Dir)]
+            if ($e) { $id = [string]$e.Value.sessionId; $label = [string]$e.Value.name }
+        }
+    }
+    $live = @(Get-LiveClaudeSessions)
+    if ($id -and (@($live | ForEach-Object { $_.sessionId }) -contains $id)) {
+        Write-Host "その会話（$label）は、もう別のペインで開いています。同じ会話を 2 つで開くと履歴が枝分かれするので開きません。新しく始めるなら cn" -ForegroundColor Yellow
+        return
+    }
+    if ($id) {
+        $cmd = @('--resume', $id)
+    } else {
+        $here = @($live | Where-Object { (Get-ClaudeDirKey $_.cwd) -eq (Get-ClaudeDirKey $t.Dir) })
+        if ($here.Count -gt 0) {
+            Write-Host ('このフォルダでは今 {0} 個開いていて、控えにまだ載っていません（2 分おきに書く）。選んで開くなら claude --resume、新しくなら cn' -f $here.Count) -ForegroundColor Yellow
+            return
+        }
+        Write-Host '（控えに無いフォルダなので claude --continue）' -ForegroundColor DarkGray
+        $cmd = @('--continue')
+    }
+    if ($DryRun) { 'claude {0}   @ {1}' -f ($cmd -join ' '), $t.Dir; return }
+    Set-Location -LiteralPath $t.Dir
+    claude @cmd
+}
+
+function cn {
+    param([string]$Repo, [string]$Name, [switch]$DryRun)
+    $t = Find-ClaudeTarget $Repo $ClaudeReposRoot
+    if (-not $t) { return }
+    if (-not $Name) {
+        if ($Repo -and $Repo -notmatch '[\\/:]' -and $Repo -ne '.' -and $Repo -ne '..') { $Name = $Repo }
+        else { $Name = Split-Path $t.Dir -Leaf }
+    }
+    $full = '{0}_{1}' -f (Get-Date -Format 'yyyyMMdd'), $Name
+    if ($DryRun) { 'claude --name {0}   @ {1}' -f $full, $t.Dir; return }
+    Set-Location -LiteralPath $t.Dir
+    claude --name $full
+}
+
+function restore { & (Join-Path $ClaudeToolsDir 'restore-sessions.ps1') @args }
+
+# 再起動の後に開いた PowerShell に 1 行だけ知らせる（restore か restore -Skip で消える・3 日で消える）
+if ($Host.Name -eq 'ConsoleHost' -and -not ([Environment]::GetCommandLineArgs() -contains '-NonInteractive')) {
+    try {
+        $pendingRestore = @(Get-ClaudeRestorePending)
+        if ($pendingRestore.Count -gt 0) {
+            Write-Host ('↺ 再起動の前に開いていた Claude の会話が {0} 個あります → restore で開き直す（要らなければ restore -Skip）' -f $pendingRestore.Count) -ForegroundColor Yellow
+        }
+        Remove-Variable pendingRestore -ErrorAction SilentlyContinue
+    } catch {}
+}
+
 # --- Claude Code 使用量を「API 従量課金だった場合」の額で表示（USD + 円換算）---
 #   usage          月別（既定）
 #   usage daily    日別
