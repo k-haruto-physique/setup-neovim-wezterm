@@ -1110,3 +1110,39 @@ irm https://antigravity.google/cli/install.ps1 | iex
 
 - 小さい GPU でローカル LLM を選ぶ時は、賢さより先に「全部 GPU に載るか」を `llama-fit-params` で見る。RAM が足りない PC では、一部を CPU に回すと遅いだけでなく PC 全体を詰まらせる。
 - llama-server の既定のキャッシュ（`--cache-ram` 8GiB）は、RAM の少ない PC では切る。
+
+## 34. メモリ不足: MCP サーバーが全リポで全部起動していた → 使うリポだけに／常駐のデスクトップアプリを止めた（2026-10-14）
+
+### 症状（別のセッションが 10/14 22 時に測った）
+
+- メモリ 16GB に対してコミット 27〜29GB。Claude Code のセッション 9 個に、MCP サーバーの node・python が約 70 個・約 4.5GB ぶら下がっていた。
+- ChatGPT（中身は OpenAI.Codex のパッケージのデスクトップアプリ・実行ファイル名は `ChatGPT.exe`）が 14 プロセス・約 1.6GB。
+
+### 原因
+
+- MCP サーバー 8 個を `~/.claude.json` の全リポ共通（ユーザー全体・`mcpServers`）に置いていた。全リポ共通の物は、どのリポのセッションでも（Slack の受け口や夜のタスクの `claude -p` でも）全部起動する。各リポの `disabledMcpServers` で一部を止めていたのは 3 リポだけだった。
+- デスクトップアプリはパッケージのスタートアップ タスク（表示名「ChatGPT」・`TaskId="App"`）が有効で、サインインのたびに起動していた。紛らわしいが、古い方のパッケージ OpenAI.ChatGPT-Desktop（表示名「ChatGPT Classic」）は自動起動が元から無効で、動いていなかった。
+
+### 対処（本人 10/14「1やる　2とめる」）
+
+| 何を | どうした | 戻し方 |
+|---|---|---|
+| MCP の置き場 | `claude/mcp_scope.py --apply` で、全リポ共通から外し、使うリポの登録（`projects[<パス>].mcpServers`＝`claude mcp add -s local` と同じ所）へ移した。どのサーバーをどのリポに置くかは、各リポのセッションに取ったアンケートの答えと、過去 30 日の会話の記録で呼んだ回数で決め、計画は `~/.claude/state/mcp-plan.json`（リポの名前が入るので公開リポに置かない）。使っていない物は消さず、持ち主のリポに「止めた状態」（`disabledMcpServers`）で置いた | `python claude/mcp_scope.py --revert`（移した記録 `~/.claude/state/mcp-scope-applied.json` を見て全リポ共通に戻す。前から止めてあった印は残す）。当てる前の `~/.claude.json` は、`--apply` が同じ所に `.claude.json.bak-mcpscope-<日付>` として控える |
+| あるリポで MCP が要る | そのリポで `/mcp` から入れる（止めた状態で置いた物）か、計画に足して `--apply` | — |
+| デスクトップアプリ | 起動していた物を終わらせ、設定 → アプリ → スタートアップ の「ChatGPT」をオフ（本人） | スタートアップをオンに戻し、スタート メニューから開く |
+
+- 当てるのは `~/.claude.json`（Claude Code 自身の設定）を書き換えるので、Claude の自動モードは止める（Self-Modification）。本人がプロンプトで `! python claude/mcp_scope.py --apply` と打つ。
+- スタートアップ タスクの状態は `HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\SystemAppData\<パッケージ ファミリー名>\App` の `State`（2＝有効・1＝ユーザーが無効）。Claude が書こうとすると自動モードが止める（Unauthorized Persistence）ので、設定の画面で本人が切る。
+- 効くのは、変えた後に起動したセッションから。開いているセッションは開き直すまで前の MCP を持ったまま。
+- 夜のタスクと受け口（`claude -p`）は local の MCP に頼っていない（`--disallowedTools` で止める側の指定だけ）＝外しても壊れない（10/14 確認）。
+- 会話の記録で MCP を呼んだ回数を数える時は、ファイルの更新日でなく呼んだ日を見る（開いたままの会話の記録は更新日が今日になる。10/14 にこれで「10/14 まで使っている」と読み違えかけた）。
+
+### ステータス
+
+- 2026-10-14: 道具と計画を作り、`~/.claude.json` の写しで「移す → 戻す」が元どおりになるのを確かめた。デスクトップアプリは終わらせた。`--apply` とスタートアップのオフは本人の操作待ち。
+- 人生管理の非公開リポの控えの道具は全リポ共通の `mcpServers` しか控えないので、リポごとの登録も控えるよう、そのリポの受信箱へ頼んだ。
+
+### 教訓
+
+- MCP は「全リポ共通に置いて、要らないリポで止める」ではなく「使うリポにだけ置く」。新しいフォルダ・受け口・夜のタスクのセッションまで全部起動する。
+- タスク マネージャーの名前だけでアプリを決めない。実行ファイルのパス（どのパッケージか）を見る。

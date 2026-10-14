@@ -85,6 +85,7 @@ setup-neovim-wezterm/
 │   ├── register-session-snapshot-task.ps1 # 上の登録
 │   ├── restore-sessions.ps1   # 再起動の前の会話を開き直す（restore）
 │   ├── session-common.ps1     # 上と profile.ps1 の cc／cn の共通部品
+│   ├── mcp_scope.py           # MCP サーバーを使うリポだけに置く・戻す（troubleshooting #34）
 │   └── README.md
 ├── Codex/                     # Codex 用（タブバーのステータス・Remote Control・Claude ⇄ Codex ブリッジ）
 │   ├── tabbar-status.ps1       # タブバー用ステータス書き出し（全Codexを1プロセスで担当）
