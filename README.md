@@ -30,6 +30,7 @@ Windows 11 上の Neovim + LazyVim + WezTerm 環境を、シンボリックリ�
 4. その非公開リポの `.pc_backup/README.md` の順に戻す（設定・MCP・常駐タスク・memory）。鍵やパスワードは控えに入っていないので、パスワード管理ソフトから入れ直す。
 5. このリポの設定（nvim・WezTerm・PowerShell・statusline）は、下の「実体配置」の表どおりにリンクを張り直す。
 6. Slack の投稿役は、鍵を資格情報マネージャーにしまい直すだけで戻る。メンションで Claude を動かす受け口（`slack/listen.py`）は、アプリの鍵をしまい直し、対応表を人生管理の非公開リポの控えから戻し、自動起動を登録し直す（`slack/README.md` の「メンションで動かす」手順 3・6・7。Slack 側の設定は残っている）。
+7. ローカル LLM を使うなら `python llm/llm.py --install`（llama.cpp とモデルを落としてチェックサムを確かめる。NVIDIA のドライバと Python が要る）。`llm/README.md`。
 
 ⚠️ 外付け SSD は、ドライブ文字だけで決めない。別の USB メモリが同じ文字になることがある。SSD にしか無いフォルダがあるかを見てから読み書きする。
 
@@ -100,6 +101,9 @@ setup-neovim-wezterm/
 │   ├── bridge-common.ps1       # Codex → Claude ブリッジの共通処理（受信箱 %LOCALAPPDATA%\Temp\codex-claude-bridge）
 │   ├── register-remote-control-task.ps1 # 自動起動タスクの登録
 │   └── README.md
+├── llm/                       # ローカル LLM を Bash から呼ぶ道具（本体とモデルは %LOCALAPPDATA%\llm）
+│   ├── llm.py
+│   └── README.md               # 使い方・モデルの選び方（実測）・入れ方と消し方
 ├── slack/                     # Slack へ投稿役（ボット）の名前で投稿する道具（鍵はリポ外）
 │   ├── post.py
 │   ├── bot-icon.png

@@ -39,7 +39,7 @@ Windows 11 上の Neovim + LazyVim + WezTerm 環境を symlink で dotfiles 管�
   - `setup-neovim-wezterm/nvim/...`
   - `setup-neovim-wezterm/wezterm/wezterm.lua`
   - `setup-neovim-wezterm/claude/statusline.ps1`（Claude Code statusLine。`%USERPROFILE%\.claude\statusline.ps1` へ symlink。**仕様・履歴は同じ `claude/` に集約**: `statusline-spec.md`・`CHANGELOG.md`・`README.md`。2026-06-18 に旧独立リポ `Repositories/statusline` を合体・退役）
-  - `setup-neovim-wezterm/powershell/profile.ps1`（PowerShell プロファイル正本。symlink でなく `$PROFILE` からの **dot-source** で反映＝管理者不要。2026-06-18 新設。repo 移動 `repo`/`dotfiles`・nvim `v`/`vrepo`・DB `kanro`・名前付き Remote Control 起動 `remote`（`20260716-<名前>`）・使用量の従量＋円換算 `usage`（ccusage + frankfurter FX）・Claude の前回の続き `cc`／新しく `cn`／再起動の前の会話を開き直す `restore`（troubleshooting #32）を定義）
+  - `setup-neovim-wezterm/powershell/profile.ps1`（PowerShell プロファイル正本。symlink でなく `$PROFILE` からの **dot-source** で反映＝管理者不要。2026-06-18 新設。repo 移動 `repo`/`dotfiles`・nvim `v`/`vrepo`・DB `kanro`・名前付き Remote Control 起動 `remote`（`20260716-<名前>`）・使用量の従量＋円換算 `usage`（ccusage + frankfurter FX）・Claude の前回の続き `cc`／新しく `cn`／再起動の前の会話を開き直す `restore`（troubleshooting #32）・ローカル LLM に聞く `llm`（`llm/README.md`）を定義）
     - **前提**: `wezterm.lua` の `config.default_prog = { "pwsh.exe", "-NoLogo" }`。これが無いと WezTerm は cmd.exe を起動し、profile.ps1 は**一切読まれない**（2026-07-16 に発覚・全関数が死んでいた。troubleshooting **#15**）。`-NoProfile` は付けないこと。
 - 実体側 (`%LOCALAPPDATA%\nvim` 等) 経由で Edit ツールを叩くと **`Refusing to write through symlink` エラー**が出る。リポジトリ側パスへ切り替えること。
 - symlink 構成は管理者権限 PowerShell で作成済。再構築が必要なら `docs/troubleshooting.md` 参照。
@@ -78,7 +78,7 @@ Windows 11 上の Neovim + LazyVim + WezTerm 環境を symlink で dotfiles 管�
 - `docs/troubleshooting.md` — 遭遇問題と対処の永久記録（新規問題は追記必須）
 - `docs/backlog.md` — 未完タスク・仕様書の集約台帳（`hi` の GO ゲートで回収。残タスクが出たら troubleshooting/memory と同時に 1 行追加）
 - `claude/` — Claude Code statusLine 一式: `statusline.ps1`(正本) + `statusline-spec.md`(設計仕様: 色/アイコン/数値セマンティクス/eff/reset/編集行数/データソース) + `CHANGELOG.md` + `README.md`。`%USERPROFILE%\.claude\statusline.ps1` へ反映
-- `powershell/profile.ps1` — PowerShell プロファイル正本（`repo`/`dotfiles`/`v`/`vrepo`/`kanro`/`remote`/`usage`/`cc`/`cn`/`restore` 関数）。`cc`/`cn`/`restore` の本体と、控えを取るログオンタスク `Claude Session Snapshot` は `claude/`（`session-*.ps1`・`restore-sessions.ps1`。troubleshooting #32）。`$PROFILE` から **dot-source**（pwsh7・5.1 両対応＝UTF-8 BOM）。管理者不要。**WezTerm の `default_prog` が pwsh であることが前提**（#15）
+- `powershell/profile.ps1` — PowerShell プロファイル正本（`repo`/`dotfiles`/`v`/`vrepo`/`kanro`/`remote`/`usage`/`cc`/`cn`/`restore`/`llm` 関数）。`cc`/`cn`/`restore` の本体と、控えを取るログオンタスク `Claude Session Snapshot` は `claude/`（`session-*.ps1`・`restore-sessions.ps1`。troubleshooting #32）。`$PROFILE` から **dot-source**（pwsh7・5.1 両対応＝UTF-8 BOM）。管理者不要。**WezTerm の `default_prog` が pwsh であることが前提**（#15）
 - **Claude Code の Remote Control 自動接続** — 正本は `~/.claude/settings.json` の `"remoteControlAtStartup": true`（＝毎回 `--remote-control` 相当。起動経路に非依存）。**シェル層のラッパーでやらない**（2026-07-16 決着。troubleshooting **#16**）
 - `Codex/ask-codex.ps1` ほか — **Claude ⇄ Codex ブリッジ**。詳細 `Codex/README.md`。他リポジトリ向けの案内は、全リポジトリ共通の `~/.claude/CLAUDE.md`・`~/.codex/AGENTS.md`（リポジトリ外。運用を変えたらこちらも直す）
   - **Claude → Codex**: `pwsh -NoProfile -File Codex/ask-codex.ps1 '<依頼>'` で共有サーバー上の Codex の会話へ 1 通送り、最終返答を標準出力で受け取る（送り先は cwd で稼働中の会話。**候補が 2 つ以上なら送らずに exit 6** なので、表示された ID から `-ThreadId` で指定し、分からなければユーザーに聞く。`-New` で CLI なしでも可）。
@@ -92,6 +92,7 @@ Windows 11 上の Neovim + LazyVim + WezTerm 環境を symlink で dotfiles 管�
     - Codex が作業中だと exit 5。Codex が私の返事を待っているなら、`claude-reply.ps1` で返す。
     - 会話が終わったら、進行役が結論をユーザーに報告する。
 - `slack/` — 全リポ共通の Slack 投稿役（ボット）から投稿する道具 `post.py`。鍵は資格情報マネージャーの `claude-slack-bot` だけ。メンションで Claude Code を起動する受け口 `listen.py`（ログオンタスク `claude-slack-listen`・登録は `install-listen.ps1`・アプリの鍵は `claude-slack-app`・対応表は `~/.claude/slack-routes.json`＝個人情報なのでリポ外）。作り方と PC を作り直したときの戻し方は `slack/README.md`。どのチャンネルにどの名前で出すかは `~/.claude/CLAUDE.md`「送り主とチャンネル名」（公開リポなので、ここには書かない）
+- `llm/` — **ローカル LLM**（2026-10-14）。この PC の GPU で Qwen3.5-2B を llama.cpp（CUDA 版）で動かし、どのリポのセッションからも `python <このリポ>/llm/llm.py "指示" -f 材料` で呼ぶ（呼んだ時だけ裏で立ち、5 分使わなければ自分で終わる＝常駐しない）。長い物の下読み・抜き出し・分類・機密の物（`-o` で答えをファイルにだけ）向け。計算・断定・公開の可否の最終判断はさせない。モデルを選んだ実測・メモリへの影響・入れ方（`--install`）・消し方は `llm/README.md`。本体とモデルは `%LOCALAPPDATA%\llm`（リポ外・落とし直せる）。troubleshooting **#33**
 - `docs/usage-log.md` — 使用量の従量換算ログ（**ローカル限定・gitignore**。`usage` 関数の出力を**手動でスナップショット追記**する方式＝関数はファイルに書かない。repo 公開のため非追跡）
 - `docs/cheatsheet.html` — 印刷用 1 枚（md が正本。PDF は陳腐化のため廃止・`*.pdf` は gitignore）
 - `docs/legacy-nvim/` — 旧 lazy.nvim 設定の参照保全

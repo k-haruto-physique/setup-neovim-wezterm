@@ -96,6 +96,12 @@ function cn {
 
 function restore { & (Join-Path $ClaudeToolsDir 'restore-sessions.ps1') @args }
 
+# --- ローカル LLM（この PC の GPU・llm/README.md）---
+#   llm "3行で要約して" -f memo.txt     答えを画面に（機密の物を Claude に見せずに扱う時は、ここで直に）
+#   llm --status / llm --stop
+# 呼んだ時だけ裏でサーバーが立ち、5 分使わなければ自分で終わる。
+function llm { python (Join-Path (Split-Path $PSScriptRoot -Parent) 'llm\llm.py') @args }
+
 # 再起動の後に開いた PowerShell に 1 行だけ知らせる（restore か restore -Skip で消える・3 日で消える）
 if ($Host.Name -eq 'ConsoleHost' -and -not ([Environment]::GetCommandLineArgs() -contains '-NonInteractive')) {
     try {
