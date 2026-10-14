@@ -37,7 +37,7 @@ Windows 11 上の Neovim + LazyVim + WezTerm 環境を、シンボリックリ�
 
 - WezTerm の中の PowerShell に「↺ 再起動の前に開いていた Claude の会話が N 個…」と出たら、`restore` → Enter。前に開いていた会話が、その会話のまま 2×2 のペインで開き直る（外したい番号を打ってから Enter・`q` でやめる）。
 - 毎日の起動は `cc <リポ>`（前回の続き）と `cn <リポ>`（新しく）。`docs/keybinds.md` の PowerShell の節。
-- 昼間に再起動されないように、設定 → Windows Update の「利用可能になったらすぐに最新の更新プログラムを入手する」と、詳細オプションの「最新の状態にする」をオフにする（2026-10-14〜。新しい PC でも同じにする）。
+- 昼間に再起動されないように、設定 → Windows Update の「利用可能になったらすぐに最新の更新プログラムを入手する」と「更新プログラムのインストール後に自動的に再起動する」をオフにする（2026-10-14〜。新しい PC でも同じにする。画面で見つからなければレジストリへ直接＝troubleshooting #32）。
 - 控えを取る常駐タスク `Claude Session Snapshot` は `pwsh -File claude/register-session-snapshot-task.ps1` で登録する（管理者不要）。理由・中身・外し方は `docs/troubleshooting.md` #32。
 
 ## 結論

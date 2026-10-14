@@ -11,7 +11,7 @@ troubleshooting / memory に「残タスク」が散らばるのを防ぐ集約�
 
 | # | タスク | 状態 | 次の一手 | 起点 |
 |---|---|---|---|---|
-| B22 | **Windows Update の再起動で Claude のセッションが全部閉じる → 設定 2 か所＋`restore`／`cc`／`cn`** | 2026-10-14: 原因（`IsExpedited`＝使用時間を無視する再起動・プレビュー更新の自動導入）を実測。控えのタスク `Claude Session Snapshot` を登録（Running）、`restore`・`cc`・`cn` を画面なしで確かめた | ① 本人: 設定 → Windows Update →「利用可能になったらすぐに…」をオフ、詳細オプション →「最新の状態にする」をオフ（自動サインインはお好みで）→ Claude が `IsExpedited`／`IsContinuousInnovationOptedIn` が 0 か確かめる ② 平日 16:30 以降: `restore -Again` で試しの控えから実際に 2×2 のペインが開くか（または次の再起動の後に本番で）③ 本人: 10/14 に手で戻した時に二重に開いた会話の片方を `/exit` | troubleshooting #32 |
+| B22 | **Windows Update の再起動で Claude のセッションが全部閉じる → 設定 2 か所＋`restore`／`cc`／`cn`** | 2026-10-14: 原因（`IsExpedited`＝使用時間を無視する再起動・プレビュー更新の自動導入）を実測。控えのタスク `Claude Session Snapshot` を登録（Running）、`restore`・`cc`・`cn` を画面なしで確かめた | ① 本人: 「利用可能になったらすぐに最新の更新プログラムを入手する」と「更新プログラムのインストール後に自動的に再起動する」をオフ（画面で見つからなければ #32 のレジストリの 1 行。自動サインインはお好みで）→ Claude が `IsExpedited`／`IsContinuousInnovationOptedIn` が 0 か確かめる ② 平日 16:30 以降: `restore -Again` で試しの控えから実際に 2×2 のペインが開くか（または次の再起動の後に本番で）③ 本人: 10/14 に手で戻した時に二重に開いた会話の片方を `/exit` | troubleshooting #32 |
 
 ---
 

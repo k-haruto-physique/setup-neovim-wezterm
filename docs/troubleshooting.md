@@ -1018,7 +1018,7 @@ irm https://antigravity.google/cli/install.ps1 | iex
 
 | 見た所 | 値 | 意味 |
 |---|---|---|
-| `HKLM\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings` の `IsExpedited` | `1` | 設定 → Windows Update → 詳細オプション →「最新の状態にする」（説明に「アクティブ時間中でも、できるだけ早く再起動」とある項目）がオン。再起動の 15 分前に知らせて、使用時間を無視する。上の 15 分の間隔と一致 |
+| `HKLM\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings` の `IsExpedited` | `1` | 「更新プログラムのインストール後に自動的に再起動する」がオン（26H2 の名前。説明は「すべての更新プログラムをインストールすると、デバイスが自動的に再起動されます。できるだけ早く最新の状態に保ってください。作業内容を保存するための 15 分間のリマインダーを受け取ります。」。旧版の「最新の状態にする」）。再起動の 15 分前に知らせて、使用時間を無視する。上の 15 分の間隔と一致 |
 | 同じ所の `IsContinuousInnovationOptedIn` | `1` | 「利用可能になったらすぐに最新の更新プログラムを入手する」がオン。入れなくてよいプレビュー更新まで自動で入る。7/29・8/28・9/23 のプレビュー更新が、それぞれ再起動を連れてきた（直近 3 か月の更新による再起動 7 回のうち 3 回） |
 | 常駐タスクの `Principal.LogonType` | 全部 `Interactive` | サインインしている間しか動かない。更新後の自動サインインも効いていない（9/10 1:46 の再起動の後、最初のサインインは 7:41） |
 | `~/.claude/sessions/<pid>.json` | 再起動の前の物が 1 つも残っていない | Claude は終わる時にこれを消す。何が開いていたかを後から知る手段が無かった |
@@ -1029,8 +1029,11 @@ irm https://antigravity.google/cli/install.ps1 | iex
 
 | 設定 | 推奨 | 確かめ（上のレジストリ） | 戻し方 |
 |---|---|---|---|
-| 詳細オプション →「最新の状態にする」 | **オフ** | `IsExpedited` = 0 | オンに戻す |
-| 「利用可能になったらすぐに最新の更新プログラムを入手する」 | **オフ** | `IsContinuousInnovationOptedIn` = 0 | オンに戻す |
+| 「更新プログラムのインストール後に自動的に再起動する」 | **オフ** | `IsExpedited` = 0 | オンに戻す |
+| 「利用可能になったらすぐに最新の更新プログラムを入手する」（説明「セキュリティ以外の最新の更新プログラム、修正、機能強化がロールアウトされたら、いち早く入手しましょう。」） | **オフ** | `IsContinuousInnovationOptedIn` = 0 | オンに戻す |
+
+- 項目の名前は版で変わる。26H2 の文言は `C:\Windows\System32\ja-JP\MusUpdateHandlers1.dll.mui`（UTF-16）にある。2026-10-14 は、本人が設定アプリで 2 つとも見つけられなかった。
+- 画面で見つからない時は、レジストリへ直接書けば同じになる（このキーは管理者でなくても書ける＝`BUILTIN\Users` に SetValue）: `Set-ItemProperty 'HKLM:\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings' -Name IsExpedited -Value 0` と、同じく `-Name IsContinuousInnovationOptedIn -Value 0`。戻すなら `-Value 1`。
 | アクティブ時間 | 6〜22 時のまま | `ActiveHoursStart`／`ActiveHoursEnd` | — |
 | アカウント → サインイン オプション →「更新後にサインイン情報を使って自動でセットアップを完了する」系の項目 | 本人が決める | — | オフに戻す |
 
