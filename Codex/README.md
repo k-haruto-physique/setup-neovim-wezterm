@@ -1,5 +1,22 @@
 # Codex ステータス表示
 
+## 休眠と再開（2026-10-15〜休眠中）
+
+ChatGPT Plus は 2026-10-10 で終了し、本人が 10/08 に「Codex は 10/10 の後に外していい」と決めた。10/15 に「codexはまたいつか使う可能性もなくはない」とあり、**消さずに止めた**。このフォルダの道具と設定は全部残っている。
+
+| 止めた物 | どう止めたか | 再開する時 |
+|---|---|---|
+| ログオンタスク `Codex Remote Control`（`remote-control.ps1` → `codex.exe app-server`） | `Disable-ScheduledTask`（登録は残す）＋動いていた pwsh・codex を終了 | `Enable-ScheduledTask -TaskName 'Codex Remote Control'; Start-ScheduledTask -TaskName 'Codex Remote Control'` |
+| ログオンタスク `Codex Tab Bar Status`（`tabbar-status.ps1`） | 同上。止まっていても `wezterm.lua` は表示を黙って隠すだけ | `Enable-ScheduledTask -TaskName 'Codex Tab Bar Status'; Start-ScheduledTask -TaskName 'Codex Tab Bar Status'` |
+| デスクトップアプリ（パッケージ OpenAI.Codex・表示名「ChatGPT」） | 10/14 に終了・スタートアップをオフ（troubleshooting #34） | 設定 → アプリ → スタートアップ でオン |
+| `hi` の手順 9（Codex → Claude の待ち受け `claude-listen.ps1`） | `CLAUDE.md` の手順 9 を「休眠中＝起動しない」に | 手順 9 を元の「バックグラウンドで起動」に戻す |
+| 全リポ共通の決まり（ハブの `rules/core-cross.md` 8・入口の skill の一覧） | 「Codex は休眠中＝頼まない」に | ハブの正本を「Codex に頼む時は…」に戻して `gen_rules.py --apply --user`（skill codex-bridge の実体は無い） |
+
+- 残した物: `Codex/` の全部・`codex.exe` 隣のシム（`install-codex-shim.ps1`）・`~/.codex/AGENTS.md`・`~/.codex/config.toml`。Codex を手で起動すれば、そのまま使える（アカウントの枠は別）。
+- 再開は本人の一言のあとで。
+
+## 表示の置き場所
+
 表示は 2 か所に分けている（2026-09-16〜。置き場所は値の性質で決める）。
 
 | 値 | 性質 | 置き場所 |

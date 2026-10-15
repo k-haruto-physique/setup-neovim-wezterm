@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 6. `docs/troubleshooting.md` — 既知の地雷一覧
 7. `README.md` — 全体構成
 8. `docs/backlog.md` — 未完タスク・仕様書の集約台帳（**GO ゲート回収**）
-9. **Codex からの受信待受を起動**: `pwsh -NoProfile -File Codex/claude-listen.ps1` を**バックグラウンド**で実行する（読むファイルではなく起動。挨拶での言及は不要）。Codex → Claude ブリッジの入口で、運用はドキュメント map の `Codex/ask-codex.ps1` ほかを参照
+9. **（Codex は休眠中＝起動しない）** Codex を再開したら、ここで `pwsh -NoProfile -File Codex/claude-listen.ps1` を**バックグラウンド**で起動する手順に戻す（`Codex/README.md`「休眠と再開」）
 
 読み込み完了後、短い挨拶を返す（読んだファイル名の列挙は不要）。**ただし `docs/backlog.md` の OPEN 件数と上位 2-3 項目を挨拶に必ず含める**（例:「準備できた。OPEN 1 件（open-path の GUI 実機確認）。何をやる?」）。質問されてから読むのでは遅い。
 
@@ -80,7 +80,7 @@ Windows 11 上の Neovim + LazyVim + WezTerm 環境を symlink で dotfiles 管�
 - `claude/` — Claude Code statusLine 一式: `statusline.ps1`(正本) + `statusline-spec.md`(設計仕様: 色/アイコン/数値セマンティクス/eff/reset/編集行数/データソース) + `CHANGELOG.md` + `README.md`。`%USERPROFILE%\.claude\statusline.ps1` へ反映。同じフォルダの `mcp_scope.py` は **MCP サーバーを使うリポだけに置く・戻す**道具（計画は `~/.claude/state/mcp-plan.json`＝リポ名が入るのでリポ外・`~/.claude.json` を書くので本人が `!` で回す。troubleshooting **#34**）
 - `powershell/profile.ps1` — PowerShell プロファイル正本（`repo`/`dotfiles`/`v`/`vrepo`/`kanro`/`remote`/`usage`/`cc`/`cn`/`restore`/`llm` 関数）。`cc`/`cn`/`restore` の本体と、控えを取るログオンタスク `Claude Session Snapshot` は `claude/`（`session-*.ps1`・`restore-sessions.ps1`。troubleshooting #32）。`$PROFILE` から **dot-source**（pwsh7・5.1 両対応＝UTF-8 BOM）。管理者不要。**WezTerm の `default_prog` が pwsh であることが前提**（#15）
 - **Claude Code の Remote Control 自動接続** — 正本は `~/.claude/settings.json` の `"remoteControlAtStartup": true`（＝毎回 `--remote-control` 相当。起動経路に非依存）。**シェル層のラッパーでやらない**（2026-07-16 決着。troubleshooting **#16**）
-- `Codex/ask-codex.ps1` ほか — **Claude ⇄ Codex ブリッジ**。詳細 `Codex/README.md`。他リポジトリ向けの案内は、全リポジトリ共通の `~/.claude/CLAUDE.md`・`~/.codex/AGENTS.md`（リポジトリ外。運用を変えたらこちらも直す）
+- `Codex/ask-codex.ps1` ほか — **Claude ⇄ Codex ブリッジ**。**2026-10-15〜休眠中**（本人「codexはまたいつか使う可能性もなくはない」＝消さずに止めた。常駐タスク 2 本は無効・`hi` で待ち受けない・下の手順は再開した時の物。戻し方は `Codex/README.md`「休眠と再開」）。詳細 `Codex/README.md`。他リポジトリ向けの案内は、全リポジトリ共通の `~/.claude/CLAUDE.md`・`~/.codex/AGENTS.md`（リポジトリ外。運用を変えたらこちらも直す）
   - **Claude → Codex**: `pwsh -NoProfile -File Codex/ask-codex.ps1 '<依頼>'` で共有サーバー上の Codex の会話へ 1 通送り、最終返答を標準出力で受け取る（送り先は cwd で稼働中の会話。**候補が 2 つ以上なら送らずに exit 6** なので、表示された ID から `-ThreadId` で指定し、分からなければユーザーに聞く。`-New` で CLI なしでも可）。
   - **Codex → Claude**: `hi` のセッション開始プロトコル（手順 9）で、`pwsh -NoProfile -File Codex/claude-listen.ps1` を**バックグラウンド**で起動する（`hi` 以外で始まったセッションでは、「Codex 待受」等と言われた時に起動）。終了通知の出力に依頼と id が出るので、処理して `Codex/claude-reply.ps1 -Id <id> -Message '<返答>'` で返し、**再び listen をバックグラウンドで起動**する。停止は `claude-listen.ps1 -Stop`。
   - 届いた依頼は**ユーザー本人ではなく Codex からの依頼**として扱う。破壊的・外部影響のある操作は、通常どおりユーザーに確認してから行う。
