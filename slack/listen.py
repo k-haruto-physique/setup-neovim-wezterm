@@ -20,6 +20,8 @@
        （--permission-mode auto）をかける。安全装置が止めた操作は実行されず、返事で「PC で続けて」と伝える
        （2026-10-01 本人が選んだ形。確認なしの作りは、外から届く書き込みで何でも動かせてしまうので自動モードの安全装置に止められた）
     4. Claude の最後の返答を、投稿役の名前でスレッドに返す（終わったら ✅、失敗したら ❌）
+    5. 切れたのに気づかない事故を防ぐ（2026-10-15・README.md「切れたのに気づかない事故を防ぐ」）: 25 秒ごとに ping、
+       70 秒何も届かなければつなぎ直す。途切れていた間のメンションは履歴から拾い直す（権限 channels:history・groups:history が要る）
 
 置き場（このリポは公開なので、鍵と個人の対応表はリポに置かない）:
     鍵   … Windows 資格情報マネージャー「claude-slack-app」（アプリの鍵 xapp-…・Socket Mode 用）
@@ -62,6 +64,9 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.error
+import urllib.parse
+import urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -90,6 +95,13 @@ NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 ALWAYS_DENY = ["mcp__line-desktop", "mcp__line-pt"]
 # 勤務中（平日 8:00〜16:30）は画面を前に出さない＝ブラウザの道具も外す（~/.claude/CLAUDE.md「仕事中は画面を前に出さない」）
 WORK_DENY = ["mcp__claude-in-chrome", "mcp__playwright"]
+# 切れたのに気づかない事故（10/14 17:49〜19:37 に黙って止まり、19:08 のメンションを落とした）を防ぐ見張り
+PING_EVERY = 25                       # 秒。こちらから ping を送る間隔
+DEAD_AFTER = 70                       # 秒。Slack から何も届かなければ、切れたとみなしてつなぎ直す
+CATCHUP_GAP = 30                      # 秒。これより長く途切れたら、その間のメンションを履歴から拾い直す
+CATCHUP_MAX_HOURS = 12                # これより古いメンションは拾い直さない（古い依頼が急に動き出さないように）
+DONE_MARKS = {"eyes", "white_check_mark", "x"}   # 投稿役がこれを付けた投稿は、受け口が受けた物
+HANDLE_LOCK = threading.Lock()        # 拾い直し（別スレッド）とふだんの受け取りが同時に同じ件を受けないように
 
 
 # ---------------------------------------------------------------- 記録
@@ -248,7 +260,7 @@ def may_run(cfg: dict, user: str, channel: str) -> bool:
 
 
 def build_prompt(route: dict, channel: str, thread_ts: str, text: str, work: bool,
-                 who: str = "本人", is_owner: bool = True) -> str:
+                 who: str = "本人", is_owner: bool = True, late: str = "") -> str:
     now = dt.datetime.now()
     wd = "月火水木金土日"[now.weekday()]
     asker = "本人" if is_owner else f"{who}（本人ではない・本人が許したメンバー）"
@@ -257,6 +269,8 @@ def build_prompt(route: dict, channel: str, thread_ts: str, text: str, work: boo
         f"- 今: {now:%Y-%m-%d}（{wd}）{now:%H:%M}",
         f"- 依頼した人: {asker}。Slack のチャンネル「{route.get('label', channel)}」（{channel}）で、投稿役「{route.get('name', DEFAULT_NAME)}」をメンションした",
         f"- 前の流れ: Slack コネクタの slack_read_thread(channel_id=\"{channel}\", message_ts=\"{thread_ts}\") で読める（前後をつかむときだけ読む）",
+        *([f"- このメンションは {late} に届いた物。受け口が Slack から切れていた間に来たので、つなぎ直した時に履歴から拾い直した。"
+            "時間がたっているので、スレッドを読んで、もう済んでいないか・今の状況と合っているかを確かめてから動く"] if late else []),
         "- 依頼の本文（ここから）",
         text,
         "- 依頼の本文（ここまで）",
@@ -318,11 +332,43 @@ class Worker:
 WORKERS: dict[str, Worker] = {}
 
 
-def handle_mention(cfg: dict, bot: str, ev: dict) -> None:
+def handled_path() -> Path:
+    return STATE / "handled.json"
+
+
+def load_handled() -> dict[str, float]:
+    try:
+        return json.loads(handled_path().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def mark_handled(channel: str, ts: str) -> None:
+    """受けたメンション（チャンネル:ts）を残す＝拾い直しと Slack の送り直しで二重に動かさない。12 時間より古い物は捨てる。"""
+    data = load_handled()
+    now = time.time()
+    data = {k: v for k, v in data.items() if now - v < CATCHUP_MAX_HOURS * 3600 + 3600}
+    data[f"{channel}:{ts}"] = now
+    try:
+        STATE.mkdir(parents=True, exist_ok=True)
+        handled_path().write_text(json.dumps(data), encoding="utf-8")
+    except OSError as e:
+        log(f"受けた記録を書けなかった: {e!r}")
+
+
+def handle_mention(cfg: dict, bot: str, ev: dict, late: str = "", quiet: bool = False) -> None:
+    with HANDLE_LOCK:
+        _handle_mention(cfg, bot, ev, late, quiet)
+
+
+def _handle_mention(cfg: dict, bot: str, ev: dict, late: str, quiet: bool) -> None:
     user, channel = ev.get("user", ""), ev.get("channel", "")
     ts = ev.get("ts", "")
     thread_ts = ev.get("thread_ts") or ts
     if ev.get("bot_id") or not user:
+        return
+    if f"{channel}:{ts}" in load_handled():
+        log(f"もう受けた（二重にしない）ts={ts}")
         return
     if not may_run(cfg, user, channel):
         log(f"許可していない人・チャンネルのメンション（{user}・{channel}）＝何もしない")
@@ -345,11 +391,13 @@ def handle_mention(cfg: dict, bot: str, ev: dict) -> None:
             log(f"担当印を書けなかった（そのまま動く）: {e!r}")
         if not ok:
             log(f"担当印あり＝動かない {route.get('label', channel)} ts={ts}（{rec.get('who')} が {rec.get('since', '')[11:16]} から）")
-            reply(bot, channel, thread_ts, f"PC のセッション（{rec.get('who')}）がこの件を進めているので、受け口は動きません。そちらで受けます。",
-                  route.get("name", DEFAULT_NAME))
+            if not quiet:
+                reply(bot, channel, thread_ts, f"PC のセッション（{rec.get('who')}）がこの件を進めているので、受け口は動きません。そちらで受けます。",
+                      route.get("name", DEFAULT_NAME))
             return
+    mark_handled(channel, ts)
     react(bot, channel, ts, "eyes")
-    log(f"受けた {route.get('label', channel)} ts={ts} 本文={text[:60]!r}")
+    log(f"{'拾い直して受けた（' + late + ' の物）' if late else '受けた'} {route.get('label', channel)} ts={ts} 本文={text[:60]!r}")
 
     def finish(state: str, note: str) -> None:
         if claims is not None:
@@ -361,7 +409,7 @@ def handle_mention(cfg: dict, bot: str, ev: dict) -> None:
     def job() -> None:
         try:
             work = in_work_hours(cfg)
-            cmd = claude_cmd(build_prompt(route, channel, thread_ts, text, work, who, is_owner), work)
+            cmd = claude_cmd(build_prompt(route, channel, thread_ts, text, work, who, is_owner, late), work)
             t0 = time.time()
             code, out = run_claude(cmd, route["repo"])
             log(f"終わった {route.get('label', channel)} exit={code} {time.time() - t0:.0f}秒 返事{len(out)}字")
@@ -379,35 +427,188 @@ def handle_mention(cfg: dict, bot: str, ev: dict) -> None:
     WORKERS.setdefault(route["repo"], Worker(route["repo"])).q.put(job)
 
 
+# ---------------------------------------------------------------- 取りこぼしの拾い直し
+
+def api_form(method: str, token: str, params: dict) -> dict:
+    """読む API（conversations.history など）は JSON の本文を受けない物があるので、フォームで送る。"""
+    req = urllib.request.Request(post.API + method, data=urllib.parse.urlencode(params).encode("utf-8"),
+                                 headers={"Authorization": f"Bearer {token}",
+                                          "Content-Type": "application/x-www-form-urlencoded"})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as res:
+            return json.loads(res.read().decode("utf-8"))
+    except urllib.error.URLError as e:
+        return {"ok": False, "error": f"network: {e.reason}"}
+
+
+def alive_path() -> Path:
+    return STATE / "alive.json"
+
+
+def read_alive() -> float:
+    """最後に Slack から何か届いた時刻（受け口の再起動・PC の再起動をまたいで途切れを測る）。無ければ 0。"""
+    try:
+        return float(json.loads(alive_path().read_text(encoding="utf-8"))["at"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return 0.0
+
+
+def write_alive(at: float) -> None:
+    try:
+        STATE.mkdir(parents=True, exist_ok=True)
+        alive_path().write_text(json.dumps({"at": at}), encoding="utf-8")
+    except OSError:
+        pass
+
+
+def pick_missed(ch: str, msgs: list[dict], bot_user: str, bot_id: str, oldest: float,
+                handled: dict | set, claimed: set[str]) -> list[dict]:
+    """履歴の投稿から、まだだれも受けていないメンションを古い順に選ぶ。
+    飛ばす物: 受け口が受けた記録がある／担当印に載っている（PC のセッションが受けた）／投稿役が 👀✅❌ を付けた／
+    同じスレッドで、そのメンションより後に投稿役が書いている（PC のセッションが post.py で返した）。"""
+    bot_last: dict[str, float] = {}
+    for m in msgs:
+        if bot_id and m.get("bot_id") == bot_id:
+            th = m.get("thread_ts") or m["ts"]
+            bot_last[th] = max(bot_last.get(th, 0.0), float(m["ts"]))
+    out, seen = [], set()
+    for m in sorted(msgs, key=lambda x: float(x["ts"])):
+        ts = m["ts"]
+        if ts in seen or float(ts) <= oldest:
+            continue
+        seen.add(ts)
+        if m.get("subtype") or m.get("bot_id") or not m.get("user"):
+            continue
+        text = m.get("text") or ""
+        if not ((bot_user and f"<@{bot_user}>" in text) or is_call(dict(m, type="message"), bot_user, bot_id)):
+            continue
+        if f"{ch}:{ts}" in handled or ts in claimed:
+            continue
+        if any(r.get("name") in DONE_MARKS and bot_user in r.get("users", []) for r in m.get("reactions", [])):
+            continue
+        if bot_last.get(m.get("thread_ts") or ts, 0.0) > float(ts):
+            continue
+        out.append(m)
+    return out
+
+
+def claimed_ts(ch: str) -> set[str]:
+    """担当印に載っている、そのチャンネルの親と返事の ts（PC のセッションが受けた物）。"""
+    if claims is None:
+        return set()
+    ws = post.WORKSPACE or "private"
+    try:
+        rows = claims.listing(chans=[ch])
+    except Exception:  # noqa: BLE001
+        return set()
+    out: set[str] = set()
+    for r in rows:
+        if r.get("ws", ws) == ws:
+            out.add(r.get("ts", ""))
+            out.update(r.get("replies", []))
+    return out
+
+
+def channel_messages(bot: str, ch: str, oldest: float) -> list[dict]:
+    """そのチャンネルの、oldest より後の投稿（スレッドの中も）。古いスレッドへの新しい返事も拾う（親の latest_reply を見る）。"""
+    r = api_form("conversations.history", bot, {"channel": ch, "limit": 100})
+    if not r.get("ok"):
+        if r.get("error") == "missing_scope":
+            raise PermissionError("投稿役に channels:history と groups:history が無い＝README の「取りこぼしの拾い直し」")
+        log(f"拾い直し: {ch} の履歴を読めない（{r.get('error')}）")
+        return []
+    msgs = []
+    for m in r.get("messages", []):
+        if float(m["ts"]) > oldest:
+            msgs.append(m)
+        if m.get("reply_count") and float(m.get("latest_reply", "0")) > oldest:
+            rr = api_form("conversations.replies", bot, {"channel": ch, "ts": m["ts"], "oldest": f"{oldest:.6f}", "limit": 200})
+            if rr.get("ok"):
+                msgs.extend(rr.get("messages", []))
+            else:
+                log(f"拾い直し: {ch} のスレッド {m['ts']} を読めない（{rr.get('error')}）")
+    return msgs
+
+
+def catch_up(bot: str, bot_user: str, bot_id: str, since: float, act: bool = True) -> list[tuple[str, dict]]:
+    """途切れていた間（since から）のメンションを履歴から拾い直す。act=False なら選ぶだけ（--catch-up-dry）。"""
+    oldest = max(since - 60, time.time() - CATCHUP_MAX_HOURS * 3600) if act else since
+    cfg = load_routes()
+    handled = load_handled()
+    picked: list[tuple[str, dict]] = []
+    for ch in cfg.get("channels", {}):
+        try:
+            for m in pick_missed(ch, channel_messages(bot, ch, oldest), bot_user, bot_id, oldest, handled, claimed_ts(ch)):
+                picked.append((ch, m))
+                if act:
+                    late = dt.datetime.fromtimestamp(float(m["ts"])).strftime("%m/%d %H:%M")
+                    handle_mention(load_routes(), bot, dict(m, channel=ch), late=late, quiet=True)
+        except PermissionError as e:   # 権限が無い＝どのチャンネルも読めない。1 回だけ書いてやめる
+            log(f"拾い直しができない: {e}")
+            return picked
+        except Exception as e:  # noqa: BLE001  1 つのチャンネルの失敗で止めない
+            log(f"拾い直しの途中で落ちた（{ch}）: {e!r}")
+    if act:
+        log(f"途切れ（{dt.datetime.fromtimestamp(since):%m/%d %H:%M:%S} から）の間のメンションを見直した: 拾い直し {len(picked)} 件")
+    return picked
+
+
 # ---------------------------------------------------------------- Socket Mode
 
 def serve(cfg: dict) -> None:
     import websocket  # websocket-client（pip install websocket-client）
+    from websocket import ABNF
 
     app, bot = load_app_token(), post.load_token()
     me = post.api_call("auth.test", bot, {})
     bot_user, bot_id = me.get("user_id", ""), me.get("bot_id", "")     # 投稿役の U… と B…（@channel などを見分けるのに使う）
     seen: list[str] = []
     backoff = 5
+    abnormal = False                   # 前のつながりが、合図なしに切れたか（切れた間を拾い直す）
     while True:
+        ws = None
         try:
             r = post.api_call("apps.connections.open", app, {})
             if not r.get("ok"):
                 raise RuntimeError(f"apps.connections.open: {r.get('error')}")
             ws = websocket.create_connection(r["url"], timeout=30)
-            ws.settimeout(None)
+            ws.settimeout(5)               # 無期限に待たない（10/14 は切れたまま recv が 1 時間 48 分戻らなかった）
             log("Slack につながった（受付中）")
             backoff = 5
+            prev, now = read_alive(), time.time()
+            write_alive(now)
+            if prev and (abnormal or now - prev > CATCHUP_GAP):
+                threading.Thread(target=catch_up, args=(bot, bot_user, bot_id, prev), name="catch-up", daemon=True).start()
+            abnormal = False
+            last_rx = last_ping = last_mark = now
             while True:
-                raw = ws.recv()
-                if not raw:
+                now = time.time()
+                if now - last_ping >= PING_EVERY:
+                    ws.ping("alive")
+                    last_ping = now
+                if now - last_rx > DEAD_AFTER:
+                    raise ConnectionError(f"{DEAD_AFTER} 秒 Slack から何も届かない＝切れたとみなす")
+                try:
+                    op, data = ws.recv_data(control_frame=True)     # ping・pong も受ける＝生きているかが分かる
+                except websocket.WebSocketTimeoutException:
+                    continue
+                last_rx = time.time()
+                if last_rx - last_mark >= 30:
+                    write_alive(last_rx)
+                    last_mark = last_rx
+                if op == ABNF.OPCODE_CLOSE:
+                    log("Slack が閉じた（合図なし）＝つなぎ直して、その間を拾い直す")
+                    abnormal = True
                     break
-                env = json.loads(raw)
+                if op != ABNF.OPCODE_TEXT or not data:
+                    continue
+                env = json.loads(data.decode("utf-8") if isinstance(data, bytes) else data)
                 if env.get("envelope_id"):
                     ws.send(json.dumps({"envelope_id": env["envelope_id"]}))   # 先に受け取りを返す（遅れると Slack が送り直す）
                 kind = env.get("type")
                 if kind == "disconnect":
                     log(f"Slack から切り替えの合図（{env.get('reason')}）＝つなぎ直す")
+                    write_alive(time.time())   # 合図つきの切り替え＝落とした物は無い（拾い直さない）
                     break
                 if kind != "events_api":
                     continue
@@ -426,6 +627,11 @@ def serve(cfg: dict) -> None:
             except Exception:  # noqa: BLE001
                 pass
         except Exception as e:  # noqa: BLE001
+            abnormal = True
+            try:
+                ws.close(timeout=2)            # 死んだつながりを残さない（残ると too_many_websockets の元）
+            except Exception:  # noqa: BLE001
+                pass
             log(f"つながらない・切れた: {e!r}（{backoff} 秒後にやり直す）")
             time.sleep(backoff)
             backoff = min(backoff * 2, 300)
@@ -493,6 +699,23 @@ def self_test() -> int:
     rc = {"allow_users": ["U1", "U2"], "user_channels": {"U2": ["C1"]}}
     assert may_run(rc, "U1", "C9") and may_run(rc, "U2", "C1")
     assert not may_run(rc, "U2", "C9") and not may_run(rc, "U3", "C1")
+    late = build_prompt({"label": "f", "name": "n"}, "C1", "1.2", "直して", False, late="10/14 19:08")
+    assert "10/14 19:08 に届いた物" in late and "拾い直した" not in p
+    u = {"user": "U1", "type": "message"}
+    msgs = [
+        dict(u, ts="100.0", text="<@UBOT> 古い"),                                   # oldest より前＝拾わない
+        dict(u, ts="200.0", text="<@UBOT> 落ちた"),                                 # 拾う
+        dict(u, ts="300.0", text="<@UBOT> 受け口が受けた", reactions=[{"name": "white_check_mark", "users": ["UBOT"]}]),
+        dict(u, ts="400.0", text="<@UBOT> PC が受けた（担当印）"),
+        dict(u, ts="500.0", text="<@UBOT> PC が post.py で返した", thread_ts="490.0"),
+        {"ts": "510.0", "bot_id": "BBOT", "thread_ts": "490.0", "text": "返事"},
+        dict(u, ts="600.0", text="ふつうの投稿"),
+        dict(u, ts="700.0", text="<!channel> 公開した"),                            # @channel も拾う
+        dict(u, ts="800.0", text="<@UBOT> 記録あり"),
+        dict(u, ts="200.0", text="<@UBOT> 落ちた"),                                 # 親と返事で 2 回出ても 1 回
+    ]
+    got = [m["ts"] for m in pick_missed("C1", msgs, "UBOT", "BBOT", 150.0, {"C1:800.0": 1.0}, {"400.0"})]
+    assert got == ["200.0", "700.0"], got
     set_workspace("work")
     assert APP_CRED == "claude-slack-app-work" and post.CRED_TARGET == "claude-slack-bot-work"
     assert ROUTES.name == "slack-routes-work.json" and LOCK_PORT != 47321
@@ -510,6 +733,8 @@ def main() -> int:
     ap.add_argument("--no-run", action="store_true", help="--simulate で claude を起動しない")
     ap.add_argument("--no-post", action="store_true", help="--simulate で返事を Slack に貼らない")
     ap.add_argument("--workspace", help="別のワークスペース用に動かす（例 work）。付けなければいつものワークスペース")
+    ap.add_argument("--catch-up-dry", type=float, metavar="HOURS",
+                    help="この時間の間に、だれも受けていないメンションを並べるだけ（受けない・Slack に何も書かない）")
     a = ap.parse_args()
     set_workspace(a.workspace)
     if a.store_app_token_from_clipboard:
@@ -518,6 +743,15 @@ def main() -> int:
         return self_test()
     if a.check:
         return check()
+    if a.catch_up_dry:
+        bot = post.load_token()
+        me = post.api_call("auth.test", bot, {})
+        found = catch_up(bot, me.get("user_id", ""), me.get("bot_id", ""), time.time() - a.catch_up_dry * 3600, act=False)
+        labels = {c: r.get("label", c) for c, r in load_routes().get("channels", {}).items()}
+        for ch, m in found:
+            print(f"{dt.datetime.fromtimestamp(float(m['ts'])):%m/%d %H:%M} {labels.get(ch, ch)} ts={m['ts']} {clean_text(m.get('text', ''))[:40]!r}")
+        print(f"だれも受けていないメンション: {len(found)} 件（直近 {a.catch_up_dry:g} 時間）")
+        return 0
     if a.simulate:
         cfg = load_routes()
         channel, text = a.simulate
