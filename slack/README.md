@@ -19,6 +19,8 @@ Claude の Slack 接続（コネクタ）で投稿すると、送り主が本人
    - `chat:write.customize`（チャンネルごとに表示名を変える）
    - `pins:write`（ピン止めする＝`--pin`・`--pin-ts`。使わないなら要らない）
 
+   いつものワークスペースの投稿役は、受け口の分も含めて次の 13 個（2026-10-19〜）: `app_mentions:read`・`channels:history`・`channels:read`・`chat:write`・`chat:write.customize`・`files:read`・`files:write`・`groups:history`・`groups:read`・`pins:read`・`pins:write`・`reactions:write`・`users:read`。足すのは「**Bot Token Scopes**」の欄だけ。下の「User Token Scopes」には何も入れない（入れると本人として動く鍵ができる。`admin` はボットには付けられない）。
+
 3. 同じ画面の上の「Install to Workspace」を押し、「許可する」を押す。
 
 4. 「Bot User OAuth Token」（`xoxb-` で始まる）の横の「Copy」を押す。
@@ -133,7 +135,7 @@ Slack で投稿役をメンションすると、そのチャンネルに対応�
 
 - **見張り**: 25 秒ごとに ping を送り、Slack から 70 秒何も届かなければ（pong も含む）切れたとみなしてつなぎ直す。
 - **拾い直し**: 合図なしに切れた時と、30 秒より長く途切れていた時（受け口や PC の再起動を含む・最後に届いた時刻は `%LOCALAPPDATA%\claude-slack-listen\alive.json`）に、対応表のチャンネルの履歴（スレッドの中も）から、途切れの間のメンションを拾い直す。12 時間より古い物は拾わない。だれかがもう受けた物は飛ばす＝受け口が受けた記録（`handled.json`）・担当印（`claims.py`）・投稿役の 👀✅❌・同じスレッドでその後に投稿役が書いた返事。拾い直した依頼には「○時○分に届いた物」と添えて Claude に渡す。
-- **拾い直しには、投稿役の権限が 2 つ要る**（本人が Slack の画面で）: <https://api.slack.com/apps> → アプリ → OAuth & Permissions → Bot Token Scopes に `channels:history` と `groups:history` を足す → 上の黄色い帯の **Reinstall to Workspace**。無いと記録に「拾い直しができない」と 1 行出て、見張り（つなぎ直し）だけが効く。2026-10-15 時点で仕事用には入っており、いつものワークスペースには無い。
+- **拾い直しには、投稿役の権限が 2 つ要る**（本人が Slack の画面で）: <https://api.slack.com/apps> → アプリ → OAuth & Permissions → Bot Token Scopes に `channels:history` と `groups:history` を足す → 上の黄色い帯の **Reinstall to Workspace**。無いと記録に「拾い直しができない」と 1 行出て、見張り（つなぎ直し）だけが効く。仕事用は 2026-10-15、いつものワークスペースは 2026-10-19 から入っている。
 - 確かめる: `python slack\listen.py --catch-up-dry 18`（直近 18 時間で、だれも受けていないメンションを並べるだけ。受けない・Slack に何も書かない）。
 
 ### ワークスペースを分けて使う（2026-10-01〜）
