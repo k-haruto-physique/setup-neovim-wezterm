@@ -26,6 +26,10 @@
     # 送らずに中身だけ確かめる
     python post.py --channel C0XXXXXXXXX --name "表示名" --file message.txt --dry-run
 
+    # ピン止めする（投稿してすぐ／もう出した投稿を番号で。pins:write が要る）
+    python post.py --channel C0XXXXXXXXX --name "表示名" --file message.txt --pin
+    python post.py --channel C0XXXXXXXXX --pin-ts 1790000000.000000
+
     # 自己テスト（ネットにつながない）
     python post.py --self-test
 
@@ -39,6 +43,7 @@
 Slack アプリに要る権限（Bot Token Scopes）:
     chat:write            … 投稿する
     chat:write.customize  … チャンネルごとに表示名（--name）を変える
+    pins:write            … ピン止めする（--pin・--pin-ts を使うときだけ）
 非公開チャンネルには、先に投稿役を招く（チャンネルで /invite @投稿役の名前）。
 """
 
@@ -277,6 +282,8 @@ def post(args) -> int:
         return 1
     print(res.get("ts", ""))
     print(f"[OK] 投稿しました（チャンネル {res.get('channel')}・番号 {res.get('ts')}）")
+    if args.pin:
+        return pin(res.get("channel"), res.get("ts"))
     return 0
 
 
@@ -364,6 +371,21 @@ def delete(channel: str, ts: str) -> int:
     return 0
 
 
+def pin(channel: str, ts: str) -> int:
+    # pins:write が要る（本人が Slack の画面で足して Reinstall）。もう留まっている物は成功として扱う。
+    res = api_call("pins.add", load_token(), {"channel": channel, "timestamp": ts})
+    if not res.get("ok") and res.get("error") != "already_pinned":
+        err = res.get("error", "?")
+        print(f"[NG] ピン止めできませんでした: {err}")
+        if err == "missing_scope":
+            print("     Slack アプリに pins:write がありません。README.md の手順 2 で足し、「Reinstall to Workspace」を押してください。")
+        elif err in HINTS:
+            print("     " + HINTS[err])
+        return 1
+    print(f"[OK] ピン止めしました（チャンネル {channel}・番号 {ts}）")
+    return 0
+
+
 def check() -> int:
     token = load_token()
     res = api_call("auth.test", token, {})
@@ -438,6 +460,8 @@ def main() -> int:
     ap.add_argument("--thread-ts", help="返信先の投稿の番号")
     ap.add_argument("--dry-run", action="store_true", help="送らずに中身を見せる")
     ap.add_argument("--delete-ts", help="投稿役が出したこの番号の投稿を消す（--channel と一緒に）")
+    ap.add_argument("--pin", action="store_true", help="投稿したらすぐピン止めする（pins:write が要る）")
+    ap.add_argument("--pin-ts", help="この番号の投稿をピン止めする（--channel と一緒に・pins:write が要る）")
     ap.add_argument("--post-at", help="予約投稿の時刻（例 \"2026-10-02 18:00\"・この PC の時刻）。表示名は変えられずアプリの名前で出る")
     ap.add_argument("--list-scheduled", action="store_true", help="投稿役がそのチャンネルに予約している投稿の一覧")
     ap.add_argument("--delete-scheduled", help="この予約番号の予約を取り消す（--channel と一緒に）")
@@ -462,6 +486,10 @@ def main() -> int:
         ap.error("--channel が要ります")
     if args.delete_ts:
         return delete(args.channel, args.delete_ts)
+    if args.pin_ts:
+        return pin(args.channel, args.pin_ts)
+    if args.pin and args.post_at:
+        ap.error("予約投稿はピン止めできません（出た後で --pin-ts を使う）")
     if args.list_scheduled:
         return list_scheduled(args.channel)
     if args.delete_scheduled:

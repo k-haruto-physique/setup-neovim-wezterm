@@ -13,10 +13,11 @@ Claude の Slack 接続（コネクタ）で投稿すると、送り主が本人
 1. ブラウザで <https://api.slack.com/apps> を開き、「Create New App」→「From scratch」を選ぶ。
    名前（例: `Claude`）を入れ、自分のワークスペースを選んで作る。
 
-2. 左の「OAuth & Permissions」を開き、「Bot Token Scopes」に次の 2 つを足す。
+2. 左の「OAuth & Permissions」を開き、「Bot Token Scopes」に次を足す。
 
    - `chat:write`（投稿する）
    - `chat:write.customize`（チャンネルごとに表示名を変える）
+   - `pins:write`（ピン止めする＝`--pin`・`--pin-ts`。使わないなら要らない）
 
 3. 同じ画面の上の「Install to Workspace」を押し、「許可する」を押す。
 
@@ -62,6 +63,10 @@ python slack\post.py --channel C0XXXXXXXXX --name "表示名" --file message.txt
 
 # 投稿役が出した投稿を消す（試しの投稿の片付けなど）
 python slack\post.py --channel C0XXXXXXXXX --delete-ts 1790000000.000000
+
+# ピン止め（投稿してすぐ／もう出した投稿を番号で。手順 2 の pins:write が要る）
+python slack\post.py --channel C0XXXXXXXXX --name "表示名" --file message.txt --pin
+python slack\post.py --channel C0XXXXXXXXX --pin-ts 1790000000.000000
 
 # 予約投稿（時刻はこの PC の時刻。予約では表示名を変えられず、アプリの名前で出る）
 python slack\post.py --channel C0XXXXXXXXX --file reminder.txt --post-at "2026-10-02 18:00"
