@@ -2,6 +2,28 @@
 
 > 旧独立リポ `Repositories/statusline` から 2026-06-18 に本リポへ合体。以降は `claude/statusline.ps1` が正本。
 
+## 2026-10-20 — eff に ultracode のオンオフを出す（2.1.284 の仕様変更に追従）
+
+### 背景
+- 本人「effの仕様が変わったので記載をかえてほしい　思考の深さのほかにultracodeがオンオフできるようになった　それがわかるようにして」。
+- 2.1.284 で ultracode は effort の一段（xhigh の別名）から、**effort とは別のセッション単位のオンオフ**に変わった（`/effort ultracode [on|off]`・スライダーの Tab。`Ultracode on (this session only): … Effort stays high.`）。claude.exe 2.1.304 で、payload には今も ultracode の欄が無く、transcript の `ultra_effort_enter`/`exit` が今も確実な足跡であることを確かめた。
+- 08-20 (2) の判定は新仕様で 3 か所外れていた: ① payload の段が xhigh の時しか読まない＝high のまま ON にしても出ない ② `Set effort level to …`・`Effort level set to auto`・`Cleared effort …` を OFF として扱う＝ローカルでは ultracode を保つので ON なのに消える ③ 新しい文言 `Ultracode on (this session only)`・`Ultracode off.` を拾わない（旧文言 `Set effort level to ultracode …` は 2.1.286 以降の本体に無い）。
+
+### 変更
+- **表示**: `◇ eff:<段>` の後ろに、効いている時だけ `+ultracode`（赤）を付ける。段の文字と色は変えない（旧: `◇ eff:ultracode` で段を置き換えていた）。
+- **判定**（`Test-Ultracode`）を、transcript を前から順に追う形にした。enter/exit・`/effort` の結果（状態が一意に決まる文言だけ＝`Get-UltracodeFromStdout`・` · Ultracode on|off` の接尾辞と `/effort status` を含む。それ以外は読み飛ばす）・`compact_boundary`（その時 ON なら保留）・人のプロンプト行（保留中なら OFF。ON のままなら直後の enter/full で ON に戻る）。
+  - 保留は「圧縮の後、本体が圧縮前の enter を忘れる」穴への手当て: 読み飛ばすと stdout の残らない OFF で永久に嘘の ON、圧縮で OFF にすると長いターンの途中の自動圧縮のたびに消える。
+  - 人のプロンプト行から、attachment の入れ子（`queued_command`）・スキルの起動行・`/` で始まる入力を除く（zIr が走らない）。人の行は stdout より先に見る（`<local-command-stdout>` で始まる文の貼り付けを取り違えない）。
+- **ゲート**: 旧ゲート「xhigh の時だけ読む」を撤去。effort が payload に無い時と、xhigh 非対応モデルの表（`$UC_NO_XHIGH`・本体 `Zgt` の既定の表）に当たる時は読まない（ON にした直後に `/model` でそこへ替えると exit が永久に書かれない穴を塞ぐ）。sessionId・startedAt のゲートは行ごとに残した。pid ファイルが書きかけ（空・途中で切れた JSON）の時だけ、同じ会話の控えの startedAt を使う。
+- **読んだ所までの控え**（`%TEMP%\claude-statusline\uc-<CLAUDE_PID>.json`）: 段を問わず毎回読むようになったので、次回は追記分だけ読む。控えた位置の直前 4KB の指紋（SHA-256）で、本体が行を消して詰め直した時（墓標の削除）を見抜く。値の形まで確かめ、別名に書いてから置き換え、7 日より古い `uc-*` を片付ける。旧版の毎回の全走査（負荷の高い時に 40MB 手前で約 1 秒）と、40MB 超の会話で末尾 32MB の窓が最後の enter を切り落とす取りこぼしの両方が解けた。
+
+### 検証
+- 本体を 4 観点（`/effort` の文言・attachment の書かれ方・payload と再描画・実 transcript の並び）で読み、反証を 2 回。
+- 実 transcript を途中で切った写し 1,771 か所で、規則の文面だけから独立に書いた Python の判定と不一致 0。少しずつ伸ばす再生 1,447 回（510MB の会話も最後まで）で、控えを使った差分読みが窓なしの全走査と毎回一致。
+- 合成の試験 約 500 件（文言・保留・ゲート・控えの壊れ方・同時実行・墓標の削除・モデルの表 40 表記・表示）で、外れは意図して残した参考の 2 件だけ（うち 1 件は `-ceq` に直した）。
+- 本セッション（xhigh・OFF）の実物で `◇ eff:xhigh`、ON の写しで `◇ eff:high+ultracode` を確認。
+- 詳細と残るリスクは `statusline-spec.md`「effort セグメントと ultracode 検出」。
+
 ## 2026-08-20 (2) — ultracode 検出を transcript の attachment レコードに置き換え
 
 ### 背景
