@@ -149,6 +149,8 @@ xhigh に対応しないモデルでは ultracode は効かない。本体 `Zgt`
 
 #### 残るリスク
 
+> **1〜5 は直さない**（2026-10-20 本人「弱点はしょうがない気がする　克服はする方がデメリットでは？」）。直す手（`refreshInterval`・`history.jsonl` を読む・前の会話の状態を引き継ぐ）は、どれも常時の負荷（セッションの数だけ数秒ごとに pwsh が起動する）か嘘の ON の危険と引き換えで、得られるのは次のプロンプトまでの数秒〜1 ターンだけ。どれも次のプロンプトで自然に直る。本体が statusLine の payload に ultracode を載せたら、そちらへ切り替えてこの仕組みごと外す（backlog W5）。
+
 1. **1 ターンの遅れ（stdout の残らない切り替え）**: 次の経路では transcript に何も残らないので、次の普通のプロンプトの enter/exit まで表示が前のまま（自己修復する）。
    - Remote Control の `apply_flag_settings` で effortLevel だけ送る（ultracode も切れる）
    - **作業中（ターンの途中）に打った `/effort`**: 即時実行の local-jsx で、結果は通知に出るだけで transcript に残らない。ultracode のターンは長いので、この窓は長くなりうる
