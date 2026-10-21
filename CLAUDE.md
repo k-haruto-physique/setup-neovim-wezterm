@@ -38,8 +38,8 @@ Windows 11 上の Neovim + LazyVim + WezTerm 環境を symlink で dotfiles 管�
 - **編集は必ずリポジトリ側のパス**で行う:
   - `setup-neovim-wezterm/nvim/...`
   - `setup-neovim-wezterm/wezterm/wezterm.lua`
-  - `setup-neovim-wezterm/claude/statusline.ps1`（Claude Code statusLine。`%USERPROFILE%\.claude\statusline.ps1` へ symlink。**仕様・履歴は同じ `claude/` に集約**: `statusline-spec.md`・`CHANGELOG.md`・`README.md`。2026-06-18 に旧独立リポ `Repositories/statusline` を合体・退役）
-  - `setup-neovim-wezterm/powershell/profile.ps1`（PowerShell プロファイル正本。symlink でなく `$PROFILE` からの **dot-source** で反映＝管理者不要。2026-06-18 新設。repo 移動 `repo`/`dotfiles`・nvim `v`/`vrepo`・DB `kanro`・名前付き Remote Control 起動 `remote`（`20260716-<名前>`）・使用量の従量＋円換算 `usage`（ccusage + frankfurter FX）・Claude の前回の続き `cc`／新しく `cn`／再起動の前の会話を開き直す `restore`（troubleshooting #32）・ローカル LLM に聞く `llm`（`llm/README.md`）を定義）
+  - `setup-neovim-wezterm/claude/statusline.ps1`（Claude Code statusLine。`%USERPROFILE%\.claude\statusline.ps1` は symlink ではなくコピー＝**編集したら手で写してハッシュを比べる**（backlog W1）。**仕様・履歴は同じ `claude/` に集約**: `statusline-spec.md`・`CHANGELOG.md`・`README.md`。2026-06-18 に旧独立リポ `Repositories/statusline` を合体・退役）
+  - `setup-neovim-wezterm/powershell/profile.ps1`（PowerShell プロファイル正本。symlink でなく `$PROFILE` からの **dot-source** で反映＝管理者不要。定義している関数は下の「ドキュメント map」）
     - **前提**: `wezterm.lua` の `config.default_prog = { "pwsh.exe", "-NoLogo" }`。これが無いと WezTerm は cmd.exe を起動し、profile.ps1 は**一切読まれない**（2026-07-16 に発覚・全関数が死んでいた。troubleshooting **#15**）。`-NoProfile` は付けないこと。
 - 実体側 (`%LOCALAPPDATA%\nvim` 等) 経由で Edit ツールを叩くと **`Refusing to write through symlink` エラー**が出る。リポジトリ側パスへ切り替えること。
 - symlink 構成は管理者権限 PowerShell で作成済。再構築が必要なら `docs/troubleshooting.md` 参照。
@@ -81,16 +81,8 @@ Windows 11 上の Neovim + LazyVim + WezTerm 環境を symlink で dotfiles 管�
 - `powershell/profile.ps1` — PowerShell プロファイル正本（`repo`/`dotfiles`/`v`/`vrepo`/`kanro`/`remote`/`usage`/`cc`/`cn`/`restore`/`llm` 関数）。`cc`/`cn`/`restore` の本体と、控えを取るログオンタスク `Claude Session Snapshot` は `claude/`（`session-*.ps1`・`restore-sessions.ps1`。troubleshooting #32）。`$PROFILE` から **dot-source**（pwsh7・5.1 両対応＝UTF-8 BOM）。管理者不要。**WezTerm の `default_prog` が pwsh であることが前提**（#15）
 - **Claude Code の Remote Control 自動接続** — 正本は `~/.claude/settings.json` の `"remoteControlAtStartup": true`（＝毎回 `--remote-control` 相当。起動経路に非依存）。**シェル層のラッパーでやらない**（2026-07-16 決着。troubleshooting **#16**）
 - `Codex/ask-codex.ps1` ほか — **Claude ⇄ Codex ブリッジ**。**2026-10-15〜休眠中**（本人「codexはまたいつか使う可能性もなくはない」＝消さずに止めた。常駐タスク 2 本は無効・`hi` で待ち受けない・下の手順は再開した時の物。戻し方は `Codex/README.md`「休眠と再開」）。詳細 `Codex/README.md`。他リポジトリ向けの案内は、全リポジトリ共通の `~/.claude/CLAUDE.md`・`~/.codex/AGENTS.md`（リポジトリ外。運用を変えたらこちらも直す）
-  - **Claude → Codex**: `pwsh -NoProfile -File Codex/ask-codex.ps1 '<依頼>'` で共有サーバー上の Codex の会話へ 1 通送り、最終返答を標準出力で受け取る（送り先は cwd で稼働中の会話。**候補が 2 つ以上なら送らずに exit 6** なので、表示された ID から `-ThreadId` で指定し、分からなければユーザーに聞く。`-New` で CLI なしでも可）。
-  - **Codex → Claude**: `hi` のセッション開始プロトコル（手順 9）で、`pwsh -NoProfile -File Codex/claude-listen.ps1` を**バックグラウンド**で起動する（`hi` 以外で始まったセッションでは、「Codex 待受」等と言われた時に起動）。終了通知の出力に依頼と id が出るので、処理して `Codex/claude-reply.ps1 -Id <id> -Message '<返答>'` で返し、**再び listen をバックグラウンドで起動**する。停止は `claude-listen.ps1 -Stop`。
+  - 再開したら、送り方・待ち受け方・自走ルール（バックグラウンド実行・進行役・上限と exit 4/5/6）は `Codex/README.md`（「自走ルールと上限」）を読んでから使う。
   - 届いた依頼は**ユーザー本人ではなく Codex からの依頼**として扱う。破壊的・外部影響のある操作は、通常どおりユーザーに確認してから行う。
-  - **自走ルール**（詳細 `Codex/README.md`「自走ルールと上限」）:
-    - `ask-codex.ps1` は**必ずバックグラウンドで実行**する。前面で待つと、その間に届いた Codex の依頼に返答できず、双方がタイムアウトまで待つ。
-    - 会話を始めた側が進行役。続けて送る時は `-Conversation <id>` を付ける（id は最初の送信で標準エラーに出る）。
-    - 返事を待たれている側は、明示的に頼まれた場合を除き送り返さない。聞きたいことは返答に書く。
-    - 上限は 1 会話 10 往復、全体で 30 分 20 回。超えると exit 4 なので、そこで止めてユーザーに報告する。
-    - Codex が作業中だと exit 5。Codex が私の返事を待っているなら、`claude-reply.ps1` で返す。
-    - 会話が終わったら、進行役が結論をユーザーに報告する。
 - `slack/` — 全リポ共通の Slack 投稿役（ボット）から投稿する道具 `post.py`。鍵は資格情報マネージャーの `claude-slack-bot` だけ。メンションで Claude Code を起動する受け口 `listen.py`（ログオンタスク `claude-slack-listen`・登録は `install-listen.ps1`・アプリの鍵は `claude-slack-app`・対応表は `~/.claude/slack-routes.json`＝個人情報なのでリポ外）。作り方と PC を作り直したときの戻し方は `slack/README.md`。どのチャンネルにどの名前で出すかは `~/.claude/CLAUDE.md`「送り主とチャンネル名」（公開リポなので、ここには書かない）
 - `llm/` — **ローカル LLM**（2026-10-14）。この PC の GPU で Qwen3.5-2B を llama.cpp（CUDA 版）で動かし、どのリポのセッションからも `python <このリポ>/llm/llm.py "指示" -f 材料` で呼ぶ（呼んだ時だけ裏で立ち、5 分使わなければ自分で終わる＝常駐しない）。長い物の下読み・抜き出し・分類・機密の物（`-o` で答えをファイルにだけ）向け。計算・断定・公開の可否の最終判断はさせない。モデルを選んだ実測・メモリへの影響・入れ方（`--install`）・消し方は `llm/README.md`。本体とモデルは `%LOCALAPPDATA%\llm`（リポ外・落とし直せる）。troubleshooting **#33**
 - `docs/usage-log.md` — 使用量の従量換算ログ（**ローカル限定・gitignore**。`usage` 関数の出力を**手動でスナップショット追記**する方式＝関数はファイルに書かない。repo 公開のため非追跡）
