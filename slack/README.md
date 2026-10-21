@@ -166,11 +166,13 @@ Slack で投稿役をメンションすると、そのチャンネルに対応�
 |---|---|---|
 | `game-channel-watch` | 毎週日曜 13:00（2026-10-01〜） | ゲーム実況用の非公開リポ（`gh repo list` で探す・2026-10-08 に動画のリポから独立した）で `powershell -ExecutionPolicy Bypass -File scripts\setup_game_watch_task.ps1` |
 | `game-sale-watch` | 毎週 水曜・土曜 18:00（2026-10-07〜） | 同じリポで `powershell -ExecutionPolicy Bypass -File scripts\setup_sale_watch_task.ps1` |
+| `author-mail-watch` | 平日 9:00・12:00・15:00（2026-10-21〜） | 仕事のプラグインのリポで、先に `%LOCALAPPDATA%\author_mail_watch\config.json`（`{"sender": "見張る差出人のアドレス"}`）を置いてから `powershell -ExecutionPolicy Bypass -File tools\author_mail_watch\setup_task.ps1` |
 
 - 消すとき: `schtasks /delete /tn game-channel-watch /f`
 - `game-channel-watch` の中では Claude（`claude -p`）が調べて本文を返すだけで、Slack に書けるのは `post.py` だけ（Claude には投稿の道具を渡していない）。同じ週に2回は出さない印をリポ側に残す。
 - ログは `%LOCALAPPDATA%\game_watch\logs\`（`RESULT:` 行が無いログは失敗）。
 - `game-sale-watch` は Claude を使わない（公式ストアの値段を Python で読んで下書きを作り、`post.py` で出すだけ）。消すとき: `schtasks /delete /tn game-sale-watch /f`。ログは `%LOCALAPPDATA%\game_sale_watch\logs\`。
+- `author-mail-watch` の中の Claude（`claude -p`）は Gmail の検索だけを使い、差出人・日時・番号しか読まない（件名と本文は読まない）。新しいメールがあった時だけ、`post.py` で仕事用のチャンネルに本人宛てで届いた時刻を出す。知らせ済みの控えは `%LOCALAPPDATA%\author_mail_watch\state.json`。消すとき: `setup_task.ps1 -Uninstall`。ログは `%LOCALAPPDATA%\author_mail_watch\logs\`（`RESULT:` 行が無いログは失敗）。
 
 ## 困ったとき
 
