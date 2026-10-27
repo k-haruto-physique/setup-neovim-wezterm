@@ -22,6 +22,8 @@ Claude Code 入力欄の真上に出る 2 段ステータスラインの**正本
 
 **起動時の1画面の配線**（2026-10-08〜・本人 OK）: `~/.claude/settings.json` の `hooks.SessionStart` に1本＝`{"matcher": "startup|resume|compact", "hooks": [{"type": "command", "command": "python \"<このリポ>/claude/session_brief.py\""}]}`。全リポ（受け口の `claude -p` も）で起動時に状態板・印・受け口が落とした返事・他リポの依頼・本人待ちが出る。設定は `~/.claude/state/brief.json`（`{"hub": "<ハブのフォルダ>", "routes": ["~/.claude/slack-routes.json", …]}`）。PC を作り直したら、この1本を足して brief.json を置く。
 
+**会話の記憶の知らせ**（2026-10-27〜・本人 GO）: `context_guard.py` を `hooks.PostToolUse` に1本＝`{"matcher": "*", "hooks": [{"type": "command", "command": "python \"<このリポ>/claude/context_guard.py\"", "timeout": 5}]}`。会話の記憶（コンテキスト）の使用率が 60% と 70% を初めて超えた時に1回ずつ、Claude に「控えを書く」と知らせる（50% 未満に下がる＝要約のあとで印を戻す）。使用率はフックに渡らないので、`statusline.ps1` が `~/.claude/state/ctx/<session_id>.json` に書いた値を読む（statusLine の無い `claude -p` では何もしない）。確かめ＝`python claude/context_guard.py selftest` で `RESULT: OK`。**戻し方**＝`~/.claude/settings.json` の `hooks.PostToolUse` のこの1本を消す（`statusline.ps1` の書き出しは残しても害なし・`~/.claude/state/ctx/` は消してよい）。
+
 `~/.claude/state/` は PC の中だけの機械の一時情報（git に入れない・控え不要）。`drives.json`・`defaults.json`（Studio・X の既定）は個人の名前が入るので、このリポには書かず PC を作り直したら手で置く（中身の形は各スクリプトの説明）。決まり（いつ使うか）は `~/.claude/rules/core-shared.md`・`core-slack.md`。
 
 ## アーキテクチャ

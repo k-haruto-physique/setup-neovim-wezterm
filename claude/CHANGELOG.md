@@ -2,6 +2,15 @@
 
 > 旧独立リポ `Repositories/statusline` から 2026-06-18 に本リポへ合体。以降は `claude/statusline.ps1` が正本。
 
+## 2026-10-27 — ctx の値をフック用に書き出す（context_guard.py）
+
+### 背景
+- 本人 GO＝会話の記憶が 6割・7割を超えたら、要約が入る前に控えを書かせたい（同僚の進め方を見て）。フックの入力には使用率が無いので、表示のために受け取っている `context_window.used_percentage` を書き出して渡す。
+
+### 変更
+- 「4. Context window」で使用率を出した直後に、`~/.claude/state/ctx/<session_id>.json`＝`{used, size, ts}` を書く（失敗しても表示は変えない）。
+- 読む側は `claude/context_guard.py`（`hooks.PostToolUse`・60% と 70% で1回ずつ知らせる・50% 未満で印を戻す・3日より古い写しは掃除）。配線と戻し方は README。
+
 ## 2026-10-20 — eff に ultracode のオンオフを出す（2.1.284 の仕様変更に追従）
 
 ### 背景

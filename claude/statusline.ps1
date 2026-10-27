@@ -485,6 +485,15 @@ try {
                 }
             }
             $ctxStr = "${TEAL}◈ ctx:${stageColor}${usedRounded}%${DIM}${sizeLabel}${RESET}"
+            # context_guard.py（PostToolUse のフック）が読む＝フックには使用率が渡らないため
+            try {
+                if ($data.session_id) {
+                    $ctxDir = Join-Path $env:USERPROFILE ".claude/state/ctx"
+                    if (-not (Test-Path $ctxDir)) { New-Item -ItemType Directory -Path $ctxDir -Force | Out-Null }
+                    $ctxObj = @{ used = $usedRounded; size = $winSize; ts = (Get-Date).ToString("s") } | ConvertTo-Json -Compress
+                    Set-Content -LiteralPath (Join-Path $ctxDir "$($data.session_id).json") -Value $ctxObj -Encoding utf8 -ErrorAction SilentlyContinue
+                }
+            } catch {}
         } elseif ($null -ne $winSize) {
             $sizeOnly = ""
             if ($winSize -ge 1000000) {
