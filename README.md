@@ -182,6 +182,11 @@ setup-neovim-wezterm/
 - 削除前に `Get-ChildItem` で事前チェック
 - 「物理削除のみ」を信頼する（リネーム/退避は再混入の温床）
 
+## 一時的に足した物（試しの間だけ・消し方つき）
+
+- **地図配信の試し（2026-10-29〜）**: `C:\Users\81809\qgis_server_poc` に、OSGeo4W の QGIS Server と Apache を入れた（Windows のサービスにはしていない・スタートメニューと登録情報は足していない）。Windows のファイアウォールに受信の許可「Local map server test (phone only)」を足した（TCP 8090・家のネットワークのスマホ 1 台の番号だけ・管理者で追加）。ローカルの PostgreSQL に、試し用のデータベース 1 つとロール 2 つを足した。
+  - 消し方: ① `C:\Users\81809\qgis_server_poc\stop_apache.bat` で止める ② 管理者の PowerShell で `C:\Users\81809\qgis_server_poc\firewall_remove.ps1` を実行する ③ データベースとロールは、同じフォルダの `README.txt` の「消すとき」の手順で消す ④ フォルダごと削除する。
+
 ## 環境
 
 - OS: Windows 11 (build 26200)
