@@ -373,7 +373,7 @@ def main() -> int:
     ap.add_argument("-f", "--file", action="append", default=[], help="材料のファイル（UTF-8・何個でも・- は標準入力）")
     ap.add_argument("-o", "--output", help="答えをこのファイルに書き、画面には出さない（機密の時）")
     ap.add_argument("--model", choices=sorted(MODELS_TABLE), default=DEFAULT_MODEL)
-    ap.add_argument("--system", help="システムの指示")
+    ap.add_argument("--system", default="必ず日本語で答える（固有名詞・コードは原文のまま）。", help="システムの指示（既定＝日本語で答える）")
     ap.add_argument("--json", action="store_true", help="答えを JSON に縛る")
     ap.add_argument("--think", action="store_true", help="考えてから答えさせる（遅い）")
     ap.add_argument("--temp", type=float, default=0.2)
