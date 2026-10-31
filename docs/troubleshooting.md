@@ -1172,3 +1172,22 @@ irm https://antigravity.google/cli/install.ps1 | iex
 
 - つなぎっぱなしの受け口は、受け取りを無期限に待たない。こちらから ping を送り、返事が無ければ自分で切る。
 - 「切れた」と「切れていた間の物」は別の問題。つなぎ直すだけでは、その間の物は戻らない。
+
+## 36. あるリポだけ起動時にオートモードにならない → リポの settings.local.json の defaultMode が上書きしていた（2026-10-31）
+
+### 症状
+
+- 本人「セッション起動時にオートモードにならない」（Instagram-project-v2）。
+
+### 原因
+
+- 全体の `~/.claude/settings.json` は `permissions.defaultMode: "auto"` なのに、そのリポの `.claude/settings.local.json` に `"defaultMode": "bypassPermissions"` が残っていた。設定は 全体 → リポ → local の順に読まれ、後の物が勝つ。
+
+### 対処
+
+- local の `defaultMode` の1行を消した（allow の列などは残した）＝全体の `auto` が効く。ほかのリポの `.claude/settings*.json` に `defaultMode` は無かった（2026-10-31 に grep）。
+- 戻し方＝そのリポの `.claude/settings.local.json` の `permissions` に `"defaultMode": "bypassPermissions",` を足し直す。
+
+### 教訓
+
+- 全体の既定を変えても、リポの local に古い `defaultMode` があると効かない。既定のモードを変えたら `*/.claude/settings*.json` を `defaultMode` で grep する。
