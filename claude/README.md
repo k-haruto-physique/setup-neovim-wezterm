@@ -24,7 +24,9 @@ Claude Code 入力欄の真上に出る 2 段ステータスラインの**正本
 
 **会話の記憶の知らせ**（2026-10-27〜・本人 GO）: `context_guard.py` を `hooks.PostToolUse` に1本＝`{"matcher": "*", "hooks": [{"type": "command", "command": "python \"<このリポ>/claude/context_guard.py\"", "timeout": 5}]}`。会話の記憶（コンテキスト）が 18万トークン・21万トークンを初めて超えた時に1回ずつ、そのあとは10万進むごとに、Claude に「控えを書く」と知らせる（16万未満に下がる＝要約のあとで印を戻す・窓が20万などで小さい時は 60%・70%・50% と小さいほう）。割合でなくトークン数で見るのは、100万の窓でも自動の要約が 22万〜98万のどこで入るか決まらないため（2026-10-29〜・それまでの 60%・70% では 45回中34回が鳴る前に要約された）。使用率はフックに渡らないので、`statusline.ps1` が `~/.claude/state/ctx/<session_id>.json` に書いた `{used, size}` を読んでトークン数に直す（statusLine の無い `claude -p` では何もしない）。確かめ＝`python claude/context_guard.py selftest` で `RESULT: OK`。**戻し方**＝`~/.claude/settings.json` の `hooks.PostToolUse` のこの1本を消す（`statusline.ps1` の書き出しは残しても害なし・`~/.claude/state/ctx/` は消してよい）。
 
-**既定のモデル**（2026-10-28〜・本人「Sonnetでいいよ」「Pro*5 を1週間…もつようなセッティング」）: `~/.claude/settings.json` の `"model"` を `"opus"` → `"sonnet"`（effort は `modelSettings` の `claude-sonnet-5-5`＝high のまま）。重い設計や込み入った調べ物だけ、そのセッションで `/model opus` に切り替える。**戻し方**＝`"model": "opus"` に戻す（起動中のセッションは `/model` で切り替わる）。無人実行のモデルは各リポの `run_*.ps1` の `--model`（life は全部 sonnet）。
+**既定のモデル**（2026-10-28〜・本人「Sonnetでいいよ」「Pro*5 を1週間…もつようなセッティング」）: `~/.claude/settings.json` の `"model"` を `"opus"` → `"sonnet"`（effort は `modelSettings` の `claude-sonnet-5-5`＝high のまま）。重い設計や込み入った調べ物だけ、そのセッションで `/model opus` に切り替える。**戻し方**＝`"model": "opus"` に戻す（起動中のセッションは `/model` で切り替わる）。無人実行のモデルは各リポの `run_*.ps1` の `--model`（life は全部 sonnet）。🔁 2026-11-04 いまの設定は `"opus"` に戻っていて、本人が「opus のまま」と決めた＝**対話の既定は opus**（無人実行は sonnet のまま）。
+
+**バックグラウンドの自動更新**（2026-11-04〜・本人 GO）: `~/.claude.json` の `"autoUpdates"` を `false` → `true`（life の /doctor で止まっているのが見つかった・版は latest の線）。**戻し方**＝`"autoUpdates": false` に戻す（手で上げるときは `claude update`）。
 
 `~/.claude/state/` は PC の中だけの機械の一時情報（git に入れない・控え不要）。`drives.json`・`defaults.json`（Studio・X の既定）は個人の名前が入るので、このリポには書かず PC を作り直したら手で置く（中身の形は各スクリプトの説明）。決まり（いつ使うか）は `~/.claude/rules/core-shared.md`・`core-slack.md`。
 
