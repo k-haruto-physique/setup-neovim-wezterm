@@ -76,6 +76,7 @@ Windows 11 上の Neovim + LazyVim + WezTerm 環境を symlink で dotfiles 管�
 - `docs/vim-mental-model.md` — 「動詞+名詞」文法・レジスタ・buffer/window/tab の思考モデル（初心者向け）
 - `docs/practice-drills.md` — Phase 別の具体練習メニュー（毎日 10-15 分）
 - `docs/troubleshooting.md` — 遭遇問題と対処の永久記録（新規問題は追記必須）
+- `docs/c-drive-cleanup.md` — C: の掃除（2026-11-11）＝何が食っていたか・変えた設定（休止状態・ページファイル・復元ポイント）の戻し方・次に減った時に見る順
 - `docs/backlog.md` — 未完タスク・仕様書の集約台帳（`hi` の GO ゲートで回収。残タスクが出たら troubleshooting/memory と同時に 1 行追加）
 - `claude/` — Claude Code statusLine 一式: `statusline.ps1`(正本) + `statusline-spec.md`(設計仕様: 色/アイコン/数値セマンティクス/eff/reset/編集行数/データソース) + `CHANGELOG.md` + `README.md`。`%USERPROFILE%\.claude\statusline.ps1` へ反映。同じフォルダの `mcp_scope.py` は **MCP サーバーを使うリポだけに置く・戻す**道具（計画は `~/.claude/state/mcp-plan.json`＝リポ名が入るのでリポ外・`~/.claude.json` を書くので本人が `!` で回す。troubleshooting **#34**）
 - `powershell/profile.ps1` — PowerShell プロファイル正本（`repo`/`dotfiles`/`v`/`vrepo`/`kanro`/`remote`/`usage`/`cc`/`cn`/`restore`/`llm` 関数）。`cc`/`cn`/`restore` の本体と、控えを取るログオンタスク `Claude Session Snapshot` は `claude/`（`session-*.ps1`・`restore-sessions.ps1`。troubleshooting #32）。`$PROFILE` から **dot-source**（pwsh7・5.1 両対応＝UTF-8 BOM）。管理者不要。**WezTerm の `default_prog` が pwsh であることが前提**（#15）
