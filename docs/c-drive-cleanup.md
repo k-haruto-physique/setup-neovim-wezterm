@@ -7,7 +7,7 @@ C: の空きが 8.9GB まで減ったので掃除した（本人「ストレー�
 | 物 | 量 | どうしたか |
 |---|---|---|
 | ゲーム（Steam） | 約 160GB | 遊んでいない物を消した（本人の OK） |
-| 撮影の元の動画・動画の作業フォルダ | 約 120GB | 古い版（`v1`〜 の最新以外）だけ消した。元の動画は外付けの SSD にもあるが、まだ使うので残した |
+| 動画の作業フォルダ・作業中の素材の写し | 約 120GB | 古い版（`v1`〜 の最新以外）だけ消した。撮影の元の動画の多くは、もう外付けの SSD にしか無い（C: の `Videos\<日付>_…` は SSD へのジャンクション）。C: に実物があるのは作業中の物だけ＝残した |
 | `%LOCALAPPDATA%\Temp\claude` | 54GB | **Claude Code の裏の作業のログ（`tasks\*.output`）が 1 本 5GB まで膨らむ**。終わったセッションのフォルダと、24 時間書かれていない `.output` を消した |
 | ページファイル | 30GB | 自動から 8〜16GB に固定（下） |
 | `~/.claude/projects` の会話の記録 | 20GB | 14 日より前の `.jsonl` を消した（memory は残す） |
@@ -34,5 +34,7 @@ C: の空きが 8.9GB まで減ったので掃除した（本人「ストレー�
 3. `~/.claude/projects` の古い `.jsonl`（resume できなくなるだけ・memory は別）。
 4. npm・pip・uv のキャッシュ（`npm cache clean --force`・`python -m pip cache purge`・`uv cache clean`。uv は MCP サーバーが動いていると鍵を持っていて消せない）。
 5. 管理者: `Dism /Online /Cleanup-Image /StartComponentCleanup`、`C:\Windows\SoftwareDistribution\Download`。
+
+🔴 **重なり探しはジャンクションを飛ばす**: Python の `os.walk` や `Get-ChildItem -Recurse` はジャンクションの先までたどる。C: の `Videos\<日付>_…` は SSD へのジャンクションなので、たどると「C: と SSD に同じ物がある」と見えて、それを消すと **SSD の原本を消す**（2026-11-11 に一覧がこれを含み、流す前に気づいて止めた）。大きさを測る・重なりを探す時は reparse point を飛ばし、消すのは本物のフォルダだけにする。素材を C: から外すのは YouTube 側の決まった道具（MD5 で照合 → 消す → ジャンクションに張り直す）に任せる。
 
 Claude Code の自動の許可（auto mode）は、戻せない削除とほかのセッションを止めるのを止める。消す物はスクリプトに書き出し、本人が `!` で流す（管理者の物は `! pwsh -NoProfile -Command "Start-Process pwsh -Verb RunAs -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-NoExit','-File','<スクリプト>'"`。`!` は bash で動くので pwsh で包む）。
