@@ -8,6 +8,7 @@ Claude Code 入力欄の真上に出る 2 段ステータスラインの**正本
 | ファイル | 用途 |
 |---|---|
 | `statusline.ps1` | **正本スクリプト**（`statusLine.command` から呼ばれる）。`~/.claude/statusline.ps1` へ配置（現状は symlink 切れの実体コピー＝ハッシュ一致。次に編集したら再リンク要 → backlog W1） |
+| `agy-statusline.ps1` | **agy（Antigravity CLI）用の変換役**（2026-11-20〜）。agy の `statusLine.command` から呼ばれ、agy の JSON を Claude の形に直して `statusline.ps1` へ渡す＝**表示は Claude と同じ・コードは二重にしない**。下の「agy のステータスライン」 |
 | `statusline-spec.md` | **設計仕様**（カラーパレット / アイコン / 数値セマンティクス / データソース / 既知の罠 / 変遷ログ / 技術的負債） |
 | `CHANGELOG.md` | 修正履歴（2026-06-15 stdin StreamReader 化バグ修正ほか） |
 | `chrome_lock.py` | **Chrome の順番の印**（2026-10-07〜）。🔁 2026-10-08 から `lock.py` の鍵 `chrome` の呼び名（使い方は同じ・札は `~/.claude/state/locks/chrome.json`・古い札＝見込み＋5分） |
@@ -27,6 +28,8 @@ Claude Code 入力欄の真上に出る 2 段ステータスラインの**正本
 **既定のモデル**（2026-10-28〜・本人「Sonnetでいいよ」「Pro*5 を1週間…もつようなセッティング」）: `~/.claude/settings.json` の `"model"` を `"opus"` → `"sonnet"`（effort は `modelSettings` の `claude-sonnet-5-5`＝high のまま）。重い設計や込み入った調べ物だけ、そのセッションで `/model opus` に切り替える。**戻し方**＝`"model": "opus"` に戻す（起動中のセッションは `/model` で切り替わる）。無人実行のモデルは各リポの `run_*.ps1` の `--model`（life は全部 sonnet）。🔁 2026-11-04 いまの設定は `"opus"` に戻っていて、本人が「opus のまま」と決めた＝**対話の既定は opus**（無人実行は sonnet のまま）。
 
 **バックグラウンドの自動更新**（2026-11-04〜・本人 GO）: `~/.claude.json` の `"autoUpdates"` を `false` → `true`（life の /doctor で止まっているのが見つかった・版は latest の線）。**戻し方**＝`"autoUpdates": false` に戻す（手で上げるときは `claude update`）。
+
+**agy のステータスライン**（2026-11-20〜・本人 11/20「agy にも同等の設定ファイルで組んでほしい」・kanro からの依頼）: agy 1.5.13 には Claude と同じ作りの `statusLine`（command を呼び、JSON を stdin で渡し、stdout を描く・多行と ANSI 色が使える・300ms に 1 回・5 秒で打ち切り・Windows では `cmd /c` 経由）がある。設定は `~/.gemini/antigravity-cli/settings.json`（`~/.gemini/settings.json` ではない）の `statusLine`＝`{"type": "command", "command": "pwsh -NoProfile -NonInteractive -File <このリポ>/claude/agy-statusline.ps1"}`（公式＝antigravity.google/docs/cli/statusline）。agy の JSON は Claude とほぼ同名だが、使用制限が `quota.<bucket>.remaining_fraction`（残り）・effort が `model.effort`・git は `vcs.type` だけ、で違う＝`agy-statusline.ps1` が直す（git の枝と状態は `statusline.ps1` が cwd から自分で読む）。agy には編集行数が無い＝1 段目の末尾（+12 -3）は出ない。**bucket の実名は公式に例（`gemini-weekly`）しか無い**ので、名前に week/7d を含む or 残り 2 日超を 7d・それ以外の最初を 5h に振っている。実物を見て直す＝最後に受け取った JSON は `%TEMP%/claude-statusline/agy-last.json` に残る。**戻し方**＝`settings.json` から `statusLine` を消す（agy の中で `/statusline delete`）か、`/statusline off`。一時的に Claude の物と並べたい時は `"stack_with_default": true`。PC を作り直したら、このリポを同じ場所へ clone してから上の 1 本を足す。
 
 `~/.claude/state/` は PC の中だけの機械の一時情報（git に入れない・控え不要）。`drives.json`・`defaults.json`（Studio・X の既定）は個人の名前が入るので、このリポには書かず PC を作り直したら手で置く（中身の形は各スクリプトの説明）。決まり（いつ使うか）は `~/.claude/rules/core-shared.md`・`core-slack.md`。
 

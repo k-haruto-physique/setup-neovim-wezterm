@@ -2,6 +2,16 @@
 
 > 旧独立リポ `Repositories/statusline` から 2026-06-18 に本リポへ合体。以降は `claude/statusline.ps1` が正本。
 
+## 2026-11-20 — agy にも同じ表示（agy-statusline.ps1 を足した）
+
+### 背景
+- 本人「agy にも Claude のステータスラインと同等の設定ファイルで組んでほしい」（kanro 経由・setup の受信箱）。agy 1.5.13 に `statusLine`（command・JSON を stdin）があると公式資料で確かめた。
+
+### 変更
+- `claude/agy-statusline.ps1` を新設＝agy の JSON を Claude の形（`effort.level`・`rate_limits.five_hour`/`seven_day`）に直して `statusline.ps1` へ渡す。`statusline.ps1` は変えていない（`session_id`・`transcript_path` を渡さないので ultracode 判定と ctx の控え書きは動かない）。
+- 見本の JSON（公式の項目名で作った物）で 4 段の表示を確かめた（約 1.4 秒・上限は 5 秒）。実物の payload（特に `quota` の bucket 名）はまだ見ていない。
+- 設定の書き込み（`~/.gemini/antigravity-cli/settings.json`）は README に手順と戻し方。
+
 ## 2026-10-29 — context_guard.py を割合からトークン数へ
 
 ### 背景
