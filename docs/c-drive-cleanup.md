@@ -38,7 +38,7 @@ C: の空きが 8.9GB まで減ったので掃除した（本人「ストレー�
 | Notion（アプリ） | 最後に開いたのが 5 月。Claude の Notion MCP はアプリと関係なく node で動く＝そのまま使える | Microsoft Store の Notion か `winget install Notion.Notion` |
 | GitHub Desktop | 最後が 9 月。普段は `gh`（GitHub CLI）＝こちらは残した | `winget install GitHub.GitHubDesktop` |
 
-Notion は本体のアンインストールのあと、空のフォルダと起動時の登録（`HKCU\...\Run` の `electron.app.Notion`）が残っていたので手で外した。WSL は「アプリと機能」に名前が残り再起動待ちだった＝再起動で消える見込み。Notion Calendar は別のアプリで、まだ残している。
+Notion は本体のアンインストールのあと、空のフォルダと起動時の登録（`HKCU\...\Run` の `electron.app.Notion`）が残っていたので手で外した。WSL は「アプリと機能」に名前が残り再起動待ちだった＝再起動で消える見込み。Notion Calendar も本人の OK で外した（本体はもう無く、空のフォルダ・起動時の登録 `com.cron.electron`・`%APPDATA%\Notion Calendar` だけ残っていた）。要る時は Microsoft Store か公式サイトから入れ直す。
 
 `.ps1` を Write で書く時は BOM を付ける（`! pwsh -NoProfile -File` で流すと BOM なしの日本語の表示が化けた。動きは正しかった）。
 
