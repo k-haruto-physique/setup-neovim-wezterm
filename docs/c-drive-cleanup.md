@@ -40,7 +40,23 @@ C: の空きが 8.9GB まで減ったので掃除した（本人「ストレー�
 
 Notion は本体のアンインストールのあと、空のフォルダと起動時の登録（`HKCU\...\Run` の `electron.app.Notion`）が残っていたので手で外した。WSL は「アプリと機能」に名前が残り再起動待ちだった＝再起動で消える見込み。Notion Calendar も本人の OK で外した（本体はもう無く、空のフォルダ・起動時の登録 `com.cron.electron`・`%APPDATA%\Notion Calendar` だけ残っていた）。要る時は Microsoft Store か公式サイトから入れ直す。
 
-`.ps1` を Write で書く時は BOM を付ける（`! pwsh -NoProfile -File` で流すと BOM なしの日本語の表示が化けた。動きは正しかった）。
+同じ日に、使った跡の無い 7 つも本人の OK で消した（合わせて約 1.5GB・入れ直しはどれも `winget install <ID>`）。
+
+| アプリ | 最後に使った跡 | winget の ID |
+|---|---|---|
+| MuseHub | 2025/9 | `Muse.MuseHub` |
+| PS Remote Play | 跡なし | `PlayStation.PSRemotePlay` |
+| iCloud Outlook（iCloud 本体は残した） | 跡なし | iCloud を入れ直すと付いてくる |
+| SanDisk Memory Zone | 2/15 に 1 回開いただけ | `SanDisk.MemoryZone`（USB メモリを使うのに要らない＝ドライバーではなくファイル整理とバックアップのおまけ。SanDisk の暗号化の金庫は USB メモリの中に入っていて別物） |
+| DBeaver | 4/2（DB は pgAdmin で見る） | `DBeaver.DBeaver.Community` |
+| Canva（PC 版・ブラウザ版で足りる） | 4/2 | Microsoft Store の `XP8K17RNMM8MTN` |
+| Audacity | 2025/10 | Microsoft Store の `XP8K0J757HHRDW` |
+
+設定の残り（`%APPDATA%` の SanDisk・DBeaverData・audacity）も外した。`C:\Program Files\Audacity` の空のフォルダだけ管理者でないと消せず残っている（害なし）。
+
+次に消してよい候補（本人「いずれは全部けしてもいい」）＝ゲームのランチャー（Steam・Epic Games・Epic Online Services・GOG Galaxy＝ゲームは 1 本も入っていない・起動時に立ち上がる）、Tableau（最後 8/13）、QGIS 3.44（仕事のリポで使う＝そちらに聞いてから）。
+
+`!`（bash）から pwsh のスクリプトを流すと、`Write-Host` の日本語が化ける（Shift_JIS で出た物を UTF-8 として読むため。BOM を付けても直らない・動きは正しい）。スクリプトの頭に `[Console]::OutputEncoding = [Text.Encoding]::UTF8` を書く。
 
 ## 次にまた C: が減ったら（見る順）
 
