@@ -27,6 +27,21 @@ C: の空きが 8.9GB まで減ったので掃除した（本人「ストレー�
 
 メモリが足りずに「仮想メモリが不足」と出るようになったら、まずページファイルの上限（16384）を上げる。
 
+## 消したアプリと入れ直し方（2026-11-24・本人「いらないのではないか」）
+
+使った跡が無いので消した（合わせて約 12GB）。要る時は入れ直す。
+
+| アプリ | 消した理由 | 入れ直す |
+|---|---|---|
+| Docker Desktop | データのディスクの最後の書き込みが 4 月。仕事の DB は本番で Docker を使わない決まり＝開発用の compose が残っているだけ | `winget install Docker.DockerDesktop`（WSL も入る） |
+| WSL | 中身は Docker 用の `docker-desktop` だけだった | `wsl --install`（Docker を入れ直せば一緒に入る） |
+| Notion（アプリ） | 最後に開いたのが 5 月。Claude の Notion MCP はアプリと関係なく node で動く＝そのまま使える | Microsoft Store の Notion か `winget install Notion.Notion` |
+| GitHub Desktop | 最後が 9 月。普段は `gh`（GitHub CLI）＝こちらは残した | `winget install GitHub.GitHubDesktop` |
+
+Notion は本体のアンインストールのあと、空のフォルダと起動時の登録（`HKCU\...\Run` の `electron.app.Notion`）が残っていたので手で外した。WSL は「アプリと機能」に名前が残り再起動待ちだった＝再起動で消える見込み。Notion Calendar は別のアプリで、まだ残している。
+
+`.ps1` を Write で書く時は BOM を付ける（`! pwsh -NoProfile -File` で流すと BOM なしの日本語の表示が化けた。動きは正しかった）。
+
 ## 次にまた C: が減ったら（見る順）
 
 1. `%LOCALAPPDATA%\Temp\claude` … 動いているセッションの ID（`~/.claude/sessions/*.json` の `sessionId`）に無いフォルダと、24 時間書かれていない `tasks\*.output` は消してよい。**動いているセッションのフォルダの丸ごとは消さない**（作業の途中の物がある）。
